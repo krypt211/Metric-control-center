@@ -18,6 +18,10 @@ test('real PostgreSQL hotfix: periods, catalog, hierarchy, proxy, provenance and
   browserTimezone=await page.evaluate(()=>Intl.DateTimeFormat().resolvedOptions().timeZone);
   await page.getByRole('navigation',{name:'Раздел'}).getByRole('button',{name:'Статистика',exact:true}).click();
   await expect(page.getByLabel('Набор колонок')).toBeEnabled();
+  const catalogResponse=await page.request.get('/api/stats/filters');expect(catalogResponse.ok()).toBeTruthy();
+  const catalog=(await catalogResponse.json()).options.account;
+  const expectedIds=catalog.map(a=>a.id).sort();
+  expect(expectedIds.length).toBeGreaterThan(0);expect(new Set(expectedIds).size).toBe(expectedIds.length);
   const period=page.getByRole('combobox',{name:/^Период/});
   for(const value of ['1','yesterday','3','7','14','30']){
    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -27,16 +31,18 @@ test('real PostgreSQL hotfix: periods, catalog, hierarchy, proxy, provenance and
    await period.selectOption(value);
    if(value==='1')await page.getByRole('button',{name:'Обновить',exact:true}).click();
    const r=await response;const body=await r.json();const u=new URL(r.url());
-   expect(body.rows).toHaveLength(3);expect(new Set(body.rows.map(x=>x.id)).size).toBe(3);
+   expect(body.rows.map(x=>x.id).sort()).toEqual(expectedIds);expect(new Set(body.rows.map(x=>x.id)).size).toBe(expectedIds.length);
    periods.push({preset:value,start:u.searchParams.get('start'),end:u.searchParams.get('end'),accounts:body.total,spend:body.rows.map(x=>({id:x.id,spend:x.spend,has_facts:x.has_facts}))});
    await expect(page.getByTestId('source-summary')).toHaveCount(1);
   }
-  await period.selectOption('custom');await page.locator('input[type=date]').nth(0).fill('2026-10-09');
-  const custom=page.waitForResponse(r=>r.url().includes('/api/stats/table?')&&new URL(r.url()).searchParams.get('end')==='2026-10-09'&&r.status()===200);
-  await page.locator('input[type=date]').nth(1).fill('2026-10-09');await page.getByRole('button',{name:'Обновить',exact:true}).click();await custom;
-  const params='start=2026-10-09&end=2026-10-09&level=account';
+  const laDay=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const future=new Date(Date.parse(laDay+'T12:00:00Z')+86400000).toISOString().slice(0,10);
+  await period.selectOption('custom');await page.locator('input[type=date]').nth(0).fill(future);
+  const custom=page.waitForResponse(r=>r.url().includes('/api/stats/table?')&&new URL(r.url()).searchParams.get('end')===future&&r.status()===200);
+  await page.locator('input[type=date]').nth(1).fill(future);await page.getByRole('button',{name:'Обновить',exact:true}).click();await custom;
+  const params=`start=${future}&end=${future}&level=account`;
   const backend=await page.request.get('http://127.0.0.1:8000/api/stats/table?'+params);const proxy=await page.request.get('/api/stats/table?'+params);expect(backend.ok()).toBeTruthy();expect(proxy.ok()).toBeTruthy();
-  const b=await backend.json(),p=await proxy.json();expect(p.rows.map(x=>({id:x.id,spend:x.spend}))).toEqual(b.rows.map(x=>({id:x.id,spend:x.spend})));expect(p.total).toBe(3);
+  const b=await backend.json(),p=await proxy.json();expect(p.rows.map(x=>({id:x.id,spend:x.spend}))).toEqual(b.rows.map(x=>({id:x.id,spend:x.spend})));expect(p.rows.map(x=>x.id).sort()).toEqual(expectedIds);expect(p.total).toBe(expectedIds.length);
   await expect(page.getByTestId('statistics-table')).toContainText('America/Los_Angeles');
   await expect(page.getByTestId('statistics-table')).toContainText('Выбранная дата ещё не началась');
   await page.locator('input[type=date]').nth(0).fill('2026-10-08');await page.locator('input[type=date]').nth(1).fill('2026-10-08');
