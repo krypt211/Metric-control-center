@@ -17,11 +17,8 @@
     "components/SourceSummary.tsx",
     "components/ProviderCapabilities.tsx",
     "lib/economics.ts",
-    "lib/smart-rules.ts"
+    "lib/smart-rules.ts",
+    "lib/rule-recommendations.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    ".test-build"
-  ]
+  "exclude": ["node_modules", ".next", ".test-build"]
 }

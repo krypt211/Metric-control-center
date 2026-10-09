@@ -13,5 +13,5 @@ export default function SessionBar(){
  if(r.ok||r.status===401)window.location.assign("/login");else throw new Error();
  }catch{setError("Не удалось завершить сессию. Повторите выход.");}finally{setBusy(false);}
  }
- return <span className="sessionbar">{user?.login}<a href="/rules">Правила рекламы</a><a href="/economics">Экономика рекламы</a>{user?.role==="admin"&&<a href="/settings/connections">{"API \u0438 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f"}</a>}{user?.role==="admin"&&<a href="/admin">Администрирование</a>}<button disabled={busy} onClick={()=>void logout()}>{busy?"Выход…":"Выйти"}</button>{error&&<span role="alert">{error}</span>}</span>;
+ return <span className="sessionbar">{user?.login}<a href="/recommendations">Центр рекомендаций</a><a href="/rules">Правила рекламы</a><a href="/economics">Экономика рекламы</a>{user?.role==="admin"&&<a href="/settings/connections">{"API \u0438 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f"}</a>}{user?.role==="admin"&&<a href="/admin">Администрирование</a>}<button disabled={busy} onClick={()=>void logout()}>{busy?"Выход…":"Выйти"}</button>{error&&<span role="alert">{error}</span>}</span>;
 }

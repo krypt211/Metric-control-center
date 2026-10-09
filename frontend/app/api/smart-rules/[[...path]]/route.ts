@@ -4,7 +4,7 @@ type Context = { params: Promise<{ path?: string[] }> };
 async function proxy(request: NextRequest, context: Context) {
   const suffix = (await context.params).path?.join("/") ?? "";
   if (
-    !/^(|available-scopes|grants|[a-f0-9-]{36}(\/(copy|restore|simulate|history))?|simulations\/[a-f0-9-]{36})$/.test(
+    !/^(|recommendations|available-scopes|grants|[a-f0-9-]{36}(\/(copy|restore|simulate|history))?|simulations\/[a-f0-9-]{36})$/.test(
       suffix,
     )
   )
