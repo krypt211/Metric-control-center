@@ -30,5 +30,5 @@ export default function Economics() {
  {tab==="profiles"&&<EconomicProfiles profiles={settings.profiles} canEdit={settings.can_edit} changed={changed}/>}
  {tab==="approval"&&<EconomicSettings data={settings} dates={dates} changed={()=>changed()}/>}
  </>}
- </>;
+ </div>;
 }
