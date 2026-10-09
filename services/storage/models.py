@@ -454,3 +454,5 @@ class ReadStatistic(Base):
 
 # Register additive provider tables on the shared metadata.
 from services.providers import models as provider_models  # noqa: E402,F401
+
+from services.economics import models as economics_models  # noqa: E402,F401
