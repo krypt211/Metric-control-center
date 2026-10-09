@@ -15,7 +15,8 @@
     "components/StatisticsTable.tsx",
     "lib/reporting-period.ts",
     "components/SourceSummary.tsx",
-    "components/ProviderCapabilities.tsx"
+    "components/ProviderCapabilities.tsx",
+    "lib/economics.ts"
   ],
   "exclude": [
     "node_modules",

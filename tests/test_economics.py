@@ -520,3 +520,22 @@ class EconomicsApiTests(StorageFixture, unittest.IsolatedAsyncioTestCase):
             (await self.client.get("/api/economics/audit")).json()["rows"][0]["event"],
             "PROFILE_CREATE",
         )
+
+
+def test_economic_registry_preserves_old_presets_and_separates_scopes():
+    from services.preferences.registry import normalize_config, system_presets
+
+    old = {
+        "version": 1,
+        "columns": [{"key": "name", "width": 400}, {"key": "roi", "width": 200}],
+        "widths": {"roi": 200},
+        "sorting": {"key": "roi", "direction": "asc"},
+    }
+    assert normalize_config(old, "ad") == old
+    for level in ("account", "campaign", "adset", "ad"):
+        keys = [
+            c["key"] for c in system_presets("eco_" + level)[0]["config"]["columns"]
+        ]
+        assert "actual_roi" in keys and "estimated_roi" in keys
+        assert "roi" not in keys
+        assert len("eco_" + level) <= 16

@@ -6,14 +6,19 @@
     "adset": "Группы объявлений",
     "ad": "Объявления",
     "creative": "Креативы",
-    "tracker": "Трекер"
+    "tracker": "Трекер",
+    "eco_account": "Экономика: кабинеты",
+    "eco_campaign": "Экономика: кампании",
+    "eco_adset": "Экономика: группы",
+    "eco_ad": "Экономика: объявления"
   },
   "categories": {
     "basic": "Основные",
     "traffic": "Трафик",
     "conversions": "Конверсии",
     "tracker": "Трекер",
-    "finance": "Финансы"
+    "finance": "Финансы",
+    "economics": "Экономика"
   },
   "metrics": {
     "name": {
@@ -30,7 +35,11 @@
         "adset",
         "ad",
         "creative",
-        "tracker"
+        "tracker",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 280,
       "minWidth": 180,
@@ -51,7 +60,11 @@
         "account",
         "campaign",
         "adset",
-        "ad"
+        "ad",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -69,7 +82,11 @@
       "available": true,
       "scopes": [
         "creative",
-        "tracker"
+        "tracker",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -145,7 +162,11 @@
         "adset",
         "ad",
         "creative",
-        "tracker"
+        "tracker",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -167,7 +188,11 @@
         "adset",
         "ad",
         "creative",
-        "tracker"
+        "tracker",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -188,7 +213,11 @@
         "campaign",
         "adset",
         "ad",
-        "creative"
+        "creative",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -457,7 +486,11 @@
         "adset",
         "ad",
         "creative",
-        "tracker"
+        "tracker",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -789,7 +822,11 @@
       "category": "tracker",
       "available": true,
       "scopes": [
-        "creative"
+        "creative",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -806,7 +843,11 @@
       "category": "tracker",
       "available": true,
       "scopes": [
-        "creative"
+        "creative",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -823,7 +864,11 @@
       "category": "tracker",
       "available": true,
       "scopes": [
-        "creative"
+        "creative",
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -950,6 +995,666 @@
       "maxWidth": 600,
       "precision": 2,
       "availability": "conditional"
+    },
+    "profile_name": {
+      "key": "profile_name",
+      "label": "Экономический профиль",
+      "technicalName": "profile_name",
+      "description": "Экономический профиль. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "profile_version": {
+      "key": "profile_version",
+      "label": "Версия профиля",
+      "technicalName": "profile_version",
+      "description": "Версия профиля. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "payout": {
+      "key": "payout",
+      "label": "Выплата за апрув",
+      "technicalName": "payout",
+      "description": "Выплата за апрув. «—» означает отсутствие совместимых данных.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "target_roi": {
+      "key": "target_roi",
+      "label": "Целевой ROI",
+      "technicalName": "target_roi",
+      "description": "Целевой ROI. «—» означает отсутствие совместимых данных.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "minimum_roi": {
+      "key": "minimum_roi",
+      "label": "Минимальный ROI",
+      "technicalName": "minimum_roi",
+      "description": "Минимальный ROI. «—» означает отсутствие совместимых данных.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "planned_approval_percent": {
+      "key": "planned_approval_percent",
+      "label": "Плановый апрув",
+      "technicalName": "planned_approval_percent",
+      "description": "Плановый апрув. «—» означает отсутствие совместимых данных.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "applied_approval_percent": {
+      "key": "applied_approval_percent",
+      "label": "Применённый апрув",
+      "technicalName": "applied_approval_percent",
+      "description": "Плановый процент или зрелый ручной апрув при явно выбранной политике и достаточном числе решений.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "observed_approval_percent": {
+      "key": "observed_approval_percent",
+      "label": "Наблюдаемый апрув",
+      "technicalName": "observed_approval_percent",
+      "description": "Approved / (Approved + Rejected) × 100. Pending не включается.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "target_cpl": {
+      "key": "target_cpl",
+      "label": "Целевой CPL",
+      "technicalName": "target_cpl",
+      "description": "Выплата × применённый апрув / (1 + целевой ROI / 100).",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "maximum_cpl": {
+      "key": "maximum_cpl",
+      "label": "Максимальный CPL",
+      "technicalName": "maximum_cpl",
+      "description": "Выплата × применённый апрув / (1 + минимальный ROI / 100).",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "actual_cpl": {
+      "key": "actual_cpl",
+      "label": "Фактический CPL",
+      "technicalName": "actual_cpl",
+      "description": "Расход / лиды выбранного источника. Не зависит от апрува.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "cpl_deviation": {
+      "key": "cpl_deviation",
+      "label": "Отклонение CPL",
+      "technicalName": "cpl_deviation",
+      "description": "Отклонение CPL. «—» означает отсутствие совместимых данных.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "target_approved_cps": {
+      "key": "target_approved_cps",
+      "label": "Целевой CPS апрува",
+      "technicalName": "target_approved_cps",
+      "description": "Целевой CPS апрува. «—» означает отсутствие совместимых данных.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "maximum_approved_cps": {
+      "key": "maximum_approved_cps",
+      "label": "Максимальный CPS апрува",
+      "technicalName": "maximum_approved_cps",
+      "description": "Максимальный CPS апрува. «—» означает отсутствие совместимых данных.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "approved_cps": {
+      "key": "approved_cps",
+      "label": "CPS подтверждённого апрува",
+      "technicalName": "approved_cps",
+      "description": "CPS подтверждённого апрува. «—» означает отсутствие совместимых данных.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "observed_purchase_cost": {
+      "key": "observed_purchase_cost",
+      "label": "Стоимость покупки Meta",
+      "technicalName": "observed_purchase_cost",
+      "description": "Расход / покупки Meta. Покупка Meta не подтверждает апрув.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "estimated_sales": {
+      "key": "estimated_sales",
+      "label": "Прогноз апрувов",
+      "technicalName": "estimated_sales",
+      "description": "Прогноз апрувов. «—» означает отсутствие совместимых данных.",
+      "unit": "number",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "estimated_revenue": {
+      "key": "estimated_revenue",
+      "label": "Прогнозная выручка",
+      "technicalName": "estimated_revenue",
+      "description": "Прогноз: лиды × применённый апрув × выплата. Не подтверждённая выручка.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "estimated_roi": {
+      "key": "estimated_roi",
+      "label": "Прогнозный ROI",
+      "technicalName": "estimated_roi",
+      "description": "Прогнозный ROI. «—» означает отсутствие совместимых данных.",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "actual_revenue": {
+      "key": "actual_revenue",
+      "label": "Подтверждённая выручка",
+      "technicalName": "actual_revenue",
+      "description": "Выручка совместимой когорты с явным подтверждением атрибуции и выплаты. Групповая выручка не распределяется по объявлениям.",
+      "unit": "currency",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "actual_roi": {
+      "key": "actual_roi",
+      "label": "Подтверждённый ROI",
+      "technicalName": "actual_roi",
+      "description": "Подтверждённая прибыль / расход × 100. Неизвестный результат и нулевой расход показаны как «—».",
+      "unit": "percent",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "approved_sales": {
+      "key": "approved_sales",
+      "label": "Подтверждённые апрувы",
+      "technicalName": "approved_sales",
+      "description": "Подтверждённые апрувы. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "rejected_sales": {
+      "key": "rejected_sales",
+      "label": "Отклонённые лиды",
+      "technicalName": "rejected_sales",
+      "description": "Отклонённые лиды. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "pending_sales": {
+      "key": "pending_sales",
+      "label": "В ожидании",
+      "technicalName": "pending_sales",
+      "description": "В ожидании. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "processed_decisions": {
+      "key": "processed_decisions",
+      "label": "Обработанные решения",
+      "technicalName": "processed_decisions",
+      "description": "Обработанные решения. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "economics_status": {
+      "key": "economics_status",
+      "label": "Финансовый статус",
+      "technicalName": "economics_status",
+      "description": "Финансовый статус. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "economics_data_quality": {
+      "key": "economics_data_quality",
+      "label": "Качество экономики",
+      "technicalName": "economics_data_quality",
+      "description": "Качество экономики. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "approval_source": {
+      "key": "approval_source",
+      "label": "Источник применённого апрува",
+      "technicalName": "approval_source",
+      "description": "Источник применённого апрува. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "maturity_status": {
+      "key": "maturity_status",
+      "label": "Зрелость данных",
+      "technicalName": "maturity_status",
+      "description": "Зрелость данных. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "economics_reasons": {
+      "key": "economics_reasons",
+      "label": "Причины оценки",
+      "technicalName": "economics_reasons",
+      "description": "Причины оценки. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "last_updated": {
+      "key": "last_updated",
+      "label": "Обновление данных",
+      "technicalName": "last_updated",
+      "description": "Обновление данных. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "late_event_changes": {
+      "key": "late_event_changes",
+      "label": "Поздние изменения",
+      "technicalName": "late_event_changes",
+      "description": "Поздние изменения. «—» означает отсутствие совместимых данных.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 190,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "meta_leads": {
+      "key": "meta_leads",
+      "label": "Лиды Meta",
+      "technicalName": "meta_leads",
+      "description": "Лиды Meta. «—» означает отсутствие совместимых данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "conditional"
     }
   },
   "systems": {
@@ -1045,5 +1750,21 @@
         "tracker_sales"
       ]
     }
-  }
+  },
+  "economics_default": [
+    "name",
+    "profile_name",
+    "spend",
+    "leads",
+    "actual_cpl",
+    "target_cpl",
+    "maximum_cpl",
+    "applied_approval_percent",
+    "estimated_revenue",
+    "estimated_roi",
+    "actual_revenue",
+    "actual_roi",
+    "economics_status",
+    "economics_data_quality"
+  ]
 }

@@ -7,6 +7,9 @@ const flushers=new Set<()=>Promise<unknown>>();
 const pending=new Set<Promise<unknown>>();
 // CSRF rotates on GET: serialize token acquisition with its write across all scopes.
 let transportQueue:Promise<unknown>=Promise.resolve();
+export function serializeAuthenticatedWrite<T>(fn:()=>Promise<T>):Promise<T>{
+ const task=transportQueue.then(fn);transportQueue=task.catch(()=>{});return task;
+}
 export async function flushColumnPreferences(){await Promise.all([...Array.from(flushers,fn=>fn()),...pending]);}
 export function useColumnPreferences(scope:TableScope){
   const [bundle,setBundle]=useState(()=>initialBundle(scope));
@@ -21,7 +24,7 @@ export function useColumnPreferences(scope:TableScope){
     if(mounted.current)setBundle(result);
   }
   async function request(path:string,method:string,body?:unknown):Promise<Bundle>{
-    const operation=transportQueue.then(async()=>{
+    const operation=serializeAuthenticatedWrite(async()=>{
     const csrf=await fetch("/api/auth/csrf",{cache:"no-store"});
     if(!csrf.ok)throw new Error("Сессия истекла или сервер недоступен. Повторите вход.");
     const token=(await csrf.json()).csrf_token;
@@ -29,7 +32,7 @@ export function useColumnPreferences(scope:TableScope){
     if(!response.ok)throw new Error(response.status===409?"Настройки изменены в другой вкладке. Загрузите серверные настройки перед сохранением.":response.status===401?"Сессия истекла. Повторите вход.":response.status===422?"Проверьте название, колонки и допустимую ширину.":"Не удалось сохранить настройки.");
     return response.json() as Promise<Bundle>;
     });
-    transportQueue=operation.catch(()=>{});return operation;
+    return operation;
   }
   function enqueue<T>(fn:()=>Promise<T>):Promise<T>{
     const task=queue.current.then(fn);queue.current=task.then(()=>{},()=>{});return task;

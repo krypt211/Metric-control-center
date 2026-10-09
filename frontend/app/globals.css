@@ -110,3 +110,13 @@ summary { cursor: pointer; }
 @media(max-width:700px){.column-dialog-grid{grid-template-columns:1fr}.column-dialog{padding:15px}.column-toolbar label{width:100%}.column-toolbar select{max-width:65%}}
 
 .provider-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}.provider-details{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,1fr);gap:8px}.provider-details dd{margin:0;overflow-wrap:anywhere}.provider-credentials{margin-top:16px}.data-sources p{overflow-wrap:anywhere}.provider-cards pre{max-width:100%;overflow:auto}details>summary{cursor:pointer;margin:12px 0}.provider-cards input{max-width:100%}
+.economic-panel {margin:24px 0;padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0}
+.economic-panel p {color:var(--muted);line-height:1.7}
+.economic-fields {border:0;padding:0;margin:20px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:18px}
+.economic-fields label {display:grid;gap:8px;min-width:0;font-size:13px}
+.economic-fields input,.economic-fields select,.economic-fields textarea {max-width:100%;width:100%;box-sizing:border-box}
+.economic-fields textarea {background:var(--panel);color:var(--text);border:1px solid var(--line);padding:10px;border-radius:8px}
+.economic-fields .economic-check {display:flex;align-items:flex-start;grid-column:1/-1;line-height:1.6}
+.economic-check {display:flex;gap:12px;align-items:center;margin:12px 0}.economic-check input[type=checkbox]{width:17px;flex-shrink:0}
+.economic-list {padding:0;list-style:none}.economic-list li {display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+@media(max-width:700px){.economic-panel{padding:16px}.filters label{max-width:100%}.economic-panel .filters select{max-width:100%}}
