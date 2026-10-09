@@ -221,6 +221,18 @@ def leaves(result: dict[str, Any]) -> list[dict[str, Any]]:
     return [leaf for child in result["children"] for leaf in leaves(child)]
 
 
+def witnesses(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Use the TRUE branches for applicable sample gates, especially zero-event OR."""
+    if result["kind"] == "condition":
+        return [result] if result["truth"] == "TRUE" else []
+    return [
+        leaf
+        for child in result["children"]
+        if child["truth"] == "TRUE"
+        for leaf in witnesses(child)
+    ]
+
+
 def decision(
     rule: SmartRuleInput, row: dict[str, Any], profile: dict[str, Any], now: datetime
 ) -> dict[str, Any]:
@@ -229,9 +241,12 @@ def decision(
     values = {k: v["applied"] for k, v in thresholds.items()}
     tree = expression(rule.expression, row)
     checks = leaves(tree)
+    applicable = witnesses(tree) if tree["truth"] == "TRUE" else checks
     reasons = sorted({r for c in checks for r in c["reason_codes"]})
     blockers = ["DRY_RUN_ONLY"]
-    zero_only = all(c["type"] in ("NO_LEADS_SPEND", "SPEND_THRESHOLD") for c in checks)
+    zero_only = all(
+        c["type"] in ("NO_LEADS_SPEND", "SPEND_THRESHOLD") for c in applicable
+    )
     approved_required = any(
         c["type"] == "NO_APPROVED_SALES_SPEND"
         or (
@@ -244,12 +259,12 @@ def decision(
                 "MINIMUM_SALES_GATE",
             )
         )
-        for c in checks
+        for c in applicable
     )
     observed_required = any(
         c["source"] == "observed"
         and c["type"] in ("CPS_ABOVE_LIMIT", "MINIMUM_SALES_GATE")
-        for c in checks
+        for c in applicable
     )
     gates = [("minimum_spend", "spend")]
     if not zero_only:

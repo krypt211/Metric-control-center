@@ -19,10 +19,13 @@ from services.automation.smart_core import decision
 from services.automation.smart_models import RuleSimulation
 from services.automation.smart_schema import SmartRuleInput, period
 from services.automation.smart_store import audit, get_rule, require_editor
-from services.economics.evaluation import chain_for, evaluate
+from services.economics.core import Evidence, calculate
+from services.economics.evaluation import chain_for, evaluate, select_profile
 from services.economics.models import EconomicsEvaluation, EconomicsProfile
+from services.economics.schema import ProfileInput
 from services.economics.store import lock, utcnow
-from services.storage.models import AdAccount, Entity
+from services.providers.matching import identity_maps
+from services.storage.models import AdAccount, Entity, EntityCurrentState
 
 MAX_ADS = 500
 MAX_SECONDS = 10
@@ -64,6 +67,85 @@ def economics_adapter(
         limit=2000,
     )
     sources = {r["canonical_id"]: r for r in table["sources"]}
+    account_map, entity_map = identity_maps(s, workspace)
+    seen = {r["id"] for r in table["rows"]}
+    # Missing statistics remain visible for real catalog ads without invented zeros.
+    catalog = s.execute(
+        select(Entity, AdAccount)
+        .join(AdAccount)
+        .where(AdAccount.workspace_id == workspace, Entity.kind == "ad")
+    ).all()
+    for entity, account in catalog:
+        canonical = account_map.get(account.id, account.id)
+        source = sources.get(canonical, {})
+        ad_id = entity_map.get(entity.id, entity.id)
+        if source.get("account_id") != account.id or ad_id in seen:
+            continue
+        if selected.account_ids and canonical not in selected.account_ids:
+            continue
+        if selected.provider and selected.provider != source.get("provider"):
+            continue
+        chain = chain_for(
+            s, {"id": entity.id, "account_id": canonical}, "ad", workspace
+        )
+        context = {**dict(chain), "ad": ad_id}
+        if any(
+            getattr(selected, k) and getattr(selected, k) != context.get(k)
+            for k in ("campaign", "adset", "ad")
+        ):
+            continue
+        state = s.get(EntityCurrentState, entity.id)
+        if selected.status and (not state or state.status != selected.status):
+            continue
+        if selected.geo or (
+            selected.offer and (entity.labels or {}).get("offer") != selected.offer
+        ):
+            continue
+        p, assigned = select_profile(
+            s,
+            workspace,
+            chain,
+            first,
+            last,
+            config.profile_id,
+            selected.offer,
+            selected.geo,
+        )
+        values = (
+            calculate(
+                ProfileInput.model_validate(p.payload), Evidence(None, None, None)
+            )
+            if p
+            else {}
+        )
+        table["rows"].append(
+            {
+                **values,
+                "id": ad_id,
+                "external_id": entity.external_id,
+                "name": entity.name or entity.external_id,
+                "account_id": canonical,
+                "currency": account.currency,
+                "timezone": account.timezone,
+                "source_provider": account.provider,
+                "source_stale": source.get("stale", True),
+                "source_attribution": None,
+                "spend": None,
+                "leads": None,
+                "observed_meta_purchases": None,
+                "status": state.status if state else None,
+                "profile_id": p.id if p else None,
+                "profile_version": p.version if p else None,
+                "profile_name": p.payload["name"] if p else None,
+                "profile_currency": p.payload["currency"] if p else None,
+                "period_start": first.isoformat(),
+                "period_end": last.isoformat(),
+                "eligible_for_rule_evaluation": False,
+                "reason_codes": ["UNKNOWN_FACTS", assigned],
+                "has_facts": False,
+            }
+        )
+        seen.add(ad_id)
     rows = []
     for base in table["rows"]:
         if selected.account_ids and base["account_id"] not in selected.account_ids:
@@ -124,6 +206,9 @@ def simulate(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     started = monotonic()
+    if s.bind is not None and s.bind.dialect.name == "postgresql":
+        s.execute(text("SET LOCAL statement_timeout = '10s'"))
+        s.execute(text("SET LOCAL lock_timeout = '2s'"))
     lock(s, actor["workspace"])
     require_editor(s, actor)
     row = get_rule(s, actor["workspace"], key)
@@ -138,8 +223,6 @@ def simulate(
         config.effective_end and today > config.effective_end
     ):
         raise HTTPException(409, "RULE_OUTSIDE_EFFECTIVE_DATES")
-    if s.bind is not None and s.bind.dialect.name == "postgresql":
-        s.execute(text("SET LOCAL statement_timeout = '10s'"))
     data = economics_adapter(s, actor["workspace"], config, now)
     previous = s.scalar(
         select(RuleSimulation)

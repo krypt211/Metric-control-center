@@ -36,6 +36,22 @@ class Condition(Contract):
 
     @model_validator(mode="after")
     def meaningful(self) -> Condition:
+        if (
+            self.type
+            in (
+                "CPL_ABOVE_LIMIT",
+                "NO_LEADS_SPEND",
+                "SPEND_THRESHOLD",
+                "MINIMUM_LEADS_GATE",
+            )
+            and self.source != "actual"
+        ):
+            raise ValueError("This condition uses observed spend and lead facts")
+        if (
+            self.type in ("CPL_ABOVE_LIMIT", "CPS_ABOVE_LIMIT")
+            and self.limit == "payout"
+        ):
+            raise ValueError("Payout multiples are only valid for spend thresholds")
         if self.type.startswith("ROI_") and self.source not in ("actual", "estimated"):
             raise ValueError("ROI needs actual or estimated source")
         if self.type in (

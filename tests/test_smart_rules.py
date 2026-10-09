@@ -32,7 +32,7 @@ from services.economics.core import Evidence, calculate
 from services.economics.models import EconomicsEvaluation
 from services.economics.schema import ProfileInput
 from services.economics.store import create_profile
-from services.storage.models import ActionExecution, ActionRequest
+from services.storage.models import ActionExecution, ActionRequest, DailyMetric
 
 
 @pytest.fixture(name="store")
@@ -254,6 +254,66 @@ def test_profile_approval_policy_reused():
     )
     assert pending["approval_source"] == "PLANNED"
     assert "ACTUAL_APPROVAL_INSUFFICIENT" in pending["reason_codes"]
+
+
+def test_missing_catalog_facts_remain_unknown_and_visible(store):
+    with store.begin() as s:
+        s.query(DailyMetric).delete()
+        r = save(s, ACTOR, config())
+        result = simulate(s, ACTOR, r["id"], 1, now=NOW)
+        assert result["total"] == 1
+        assert result["rows"][0]["leads"] is None
+        assert result["rows"][0]["spend"] is None
+        assert result["rows"][0]["status"] == "DATA_STALE"
+
+
+def test_zero_rule_or_non_matching_count_does_not_require_leads():
+    r = config(
+        expression={
+            "operator": "OR",
+            "children": [
+                {
+                    "kind": "condition",
+                    "type": "NO_LEADS_SPEND",
+                    "limit": "custom",
+                    "value": "20",
+                },
+                {
+                    "kind": "condition",
+                    "type": "MINIMUM_LEADS_GATE",
+                    "limit": "custom",
+                    "value": "10",
+                },
+            ],
+        }
+    )
+    assert (
+        decision(r, facts(spend="25", leads=0), CONFIG, NOW)["status"] == "WOULD_PAUSE"
+    )
+
+
+def test_simulation_time_and_selection_bounds_roll_back(store):
+    with store.begin() as s:
+        r = save(s, ACTOR, config())
+    with pytest.raises(HTTPException) as e, store.begin() as s:  # noqa: SIM117 - assert transaction rollback around mocked deadline
+        with (
+            patch(
+                "services.automation.smart_simulation.economics_adapter",
+                return_value={
+                    "rows": [facts()],
+                    "start": str(DAY),
+                    "end": str(END),
+                    "sources": [],
+                },
+            ),
+            patch(
+                "services.automation.smart_simulation.monotonic", side_effect=[0, 11]
+            ),
+        ):
+            simulate(s, ACTOR, r["id"], 1, now=NOW)
+    assert e.value.detail == "SIMULATION_TIME_LIMIT_SELECT_SCOPE"
+    with store() as s:
+        assert s.scalar(select(func.count()).select_from(RuleSimulation)) == 0
 
 
 def test_windows_and_schema_are_bounded():
