@@ -41,6 +41,11 @@ class ProfileInput(Contract):
     planned_approval_rate: Decimal = Field(ge=0, le=1, max_digits=9, decimal_places=8)
     lead_source: Literal["meta", "tracker"] = "meta"
     minimum_leads: int = Field(default=10, ge=1, le=100000000, strict=True)
+    minimum_spend: Decimal = Field(
+        default=Decimal(0), ge=0, max_digits=24, decimal_places=8
+    )
+    minimum_observed_purchases: int = Field(default=0, ge=0, le=100000000, strict=True)
+    minimum_data_age_hours: int = Field(default=0, ge=0, le=8760, strict=True)
     minimum_sales: int = Field(default=2, ge=0, le=100000000, strict=True)
     sale_threshold_type: Literal["approved", "observed", "estimated"] = "approved"
     minimum_processed: int = Field(default=30, ge=1, le=100000000, strict=True)

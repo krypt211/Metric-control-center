@@ -94,6 +94,8 @@ class RuleEngine:
                 rule = session.scalar(select(Rule).where(Rule.id == rule_id, Rule.workspace_id == workspace).with_for_update())
                 if not rule:
                     raise ActionRejected("Rule not found")
+                if rule.payload.get("schema_version") == 3:
+                    raise ActionRejected("Simulation rules require the simulation API")
                 if rule.revision != revision:
                     raise ActionRejected("Rule was changed; reload before editing")
                 changed = session.execute(update(Rule).where(Rule.id == rule_id,
@@ -123,6 +125,8 @@ class RuleEngine:
             if claimed.rowcount != 1:
                 return {"status": "off_or_not_due", "decisions": 0}
             rule = session.get(Rule, rule_id)
+            if rule and rule.payload.get("schema_version") == 3:
+                raise ActionRejected("Simulation rules require the simulation API")
             definition = RuleDefinition.model_validate(rule.payload)
             rule.next_evaluation_at = now + timedelta(seconds=definition.interval_seconds)
             local = now.astimezone(ZoneInfo(definition.timezone))

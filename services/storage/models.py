@@ -300,6 +300,14 @@ Index("uq_rule_evaluation", run_table.c.rule_id, run_table.c.evaluation_key, uni
 
 class Rule(Base):
     __table__ = rule_table
+    id: Mapped[str]
+    workspace_id: Mapped[str]
+    status: Mapped[str]
+    created_at: Mapped[datetime]
+    payload: Mapped[dict[str, Any]]
+    owner_id: Mapped[str | None]
+    revision: Mapped[int]
+    next_evaluation_at: Mapped[datetime | None]
 
 
 class RuleRun(Base):
@@ -456,3 +464,4 @@ class ReadStatistic(Base):
 from services.providers import models as provider_models  # noqa: E402,F401
 
 from services.economics import models as economics_models  # noqa: E402,F401
+from services.automation import smart_models  # noqa: E402,F401

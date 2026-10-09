@@ -101,7 +101,7 @@ async def protect(request, call_next):
                     raise HTTPException(401, "AUTHENTICATION_REQUIRED")
                 if request.method not in SAFE:
                     csrf_check(request, actor)
-                    if not path.startswith(("/api/auth/", "/api/admin/", "/api/preferences/columns", "/api/economics/")):
+                    if not path.startswith(("/api/auth/", "/api/admin/", "/api/preferences/columns", "/api/economics/", "/api/smart-rules")):
                         raise HTTPException(403, "READ_ONLY")
                 if path.startswith("/api/admin/"):
                     admin(request)
