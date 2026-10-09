@@ -11,7 +11,7 @@ export default function EconomicProfiles({profiles,canEdit,changed}:{profiles:Pr
  useEffect(()=>{if(!draft.id){setHistory([]);return;}const abort=new AbortController();void readEconomics<{rows:Audit[]}>("audit?resource_id="+draft.id,abort.signal).then(d=>setHistory(d.rows)).catch(e=>{if(!abort.signal.aborted)setError(e.message);});return()=>abort.abort();},[draft.id,draft.version]);
  function set(key:keyof Profile,value:string|number){setDraft(p=>({...p,[key]:value}));setPreview(null);}
  async function act(fn:()=>Promise<void>){setBusy(true);setError("");try{await fn();}catch(e){setError(e instanceof Error?e.message:"Не удалось сохранить");}finally{setBusy(false);}}
- function command(){return {...profileCommand(draft),planned_approval_rate:percentToRate(percent)};}
+ function command(){if(!draft.name.trim())throw new Error("Введите название профиля.");if(!Number.isFinite(Number(draft.target_roi))||!Number.isFinite(Number(draft.minimum_roi))||Number(draft.minimum_roi)<=-100||Number(draft.target_roi)<=-100||Number(draft.target_roi)<Number(draft.minimum_roi))throw new Error("ROI должен быть больше −100%, целевой — не ниже минимального.");return {...profileCommand(draft),planned_approval_rate:percentToRate(percent)};}
  async function save(){await act(async()=>{const result=await writeEconomics<Profile>(draft.id?"profiles/"+draft.id:"profiles",draft.id?"PUT":"POST",{...command(),...(draft.id?{version:draft.version}:{})});choose(result);await changed(result.id);});}
  return <section className="economic-panel" aria-label="Экономические профили">
  <h2>Экономические профили</h2><p>Выплата и проценты задают прогноз. Подтверждённый ROI требует совместимой когорты и подтверждения выручки.</p>
