@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {flushColumnPreferences} from "../lib/use-column-preferences";
+import {flushColumnPreferences,serializeAuthenticatedWrite} from "../lib/use-column-preferences";
 export default function SessionBar(){
  const [user,setUser]=useState<{login:string;role:string}|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false);
  useEffect(()=>{void fetch("/api/auth/me",{cache:"no-store"}).then(async r=>{if(r.status===401){window.location.assign("/login");return;}if(r.ok)setUser((await r.json()).user);});},[]);
@@ -8,8 +8,8 @@ export default function SessionBar(){
  setBusy(true);
  try{
  try{await flushColumnPreferences();}catch{if(!window.confirm("Настройки колонок не сохранены. Всё равно выйти?"))return;}
- const response=await fetch("/api/auth/csrf",{cache:"no-store"});if(!response.ok)throw new Error();
- const r=await fetch("/api/auth/logout",{method:"POST",headers:{"X-CSRF-Token":(await response.json()).csrf_token}});
+ const r=await serializeAuthenticatedWrite(async()=>{const response=await fetch("/api/auth/csrf",{cache:"no-store"});if(!response.ok)throw new Error();
+ return fetch("/api/auth/logout",{method:"POST",headers:{"X-CSRF-Token":(await response.json()).csrf_token}});});
  if(r.ok||r.status===401)window.location.assign("/login");else throw new Error();
  }catch{setError("Не удалось завершить сессию. Повторите выход.");}finally{setBusy(false);}
  }
