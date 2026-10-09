@@ -583,3 +583,19 @@ def test_snapshot_keeps_selection_context(store):
         inputs = s.get(EconomicsEvaluation, row["evaluation_id"]).payload["inputs"]
         assert inputs["selection"]["campaign"] == "c"
         assert inputs["selection"]["level"] == "ad"
+
+
+def test_tracker_profile_snapshot_preserves_selected_lead_basis(store):
+    with store.begin() as s:
+        p = create_profile(
+            s, ACTOR, ProfileInput.model_validate({**CONFIG, "lead_source": "tracker"})
+        )
+        row = evaluated(s, p["id"])
+        archived = s.get(EconomicsEvaluation, row["evaluation_id"]).payload["result"]
+        assert row["leads"] == archived["leads"] == 70
+        assert (
+            row["estimated_revenue"] == archived["estimated_revenue"] == "336.00000000"
+        )
+        assert archived["planned_approval_percent"] == "30.00000000"
+        assert archived["profile_version"] == p["version"]
+        assert archived["period_start"] == str(DAY)

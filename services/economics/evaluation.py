@@ -368,6 +368,14 @@ def evaluate(
             "assignment_source": assigned,
             "actions_enabled": False,
         }
+        row["period_start"] = filters.start.isoformat()
+        row["period_end"] = filters.end.isoformat()
+        row["leads"] = base.get(
+            "meta_leads"
+            if not p or p.payload.get("lead_source", "meta") == "meta"
+            else "tracker_leads"
+        )
+        row["observed_meta_purchases"] = base.get("meta_purchases")
         if p:
             config = ProfileInput.model_validate(p.payload)
             obs, inherited, problems = observations(
@@ -397,6 +405,26 @@ def evaluate(
                 ):
                     row[field] = None
                 row["economics_status"] = "INCOMPATIBLE"
+            row["last_updated"] = max(
+                [aware(o.updated_at).isoformat() for o in obs]
+                + [row.get("oldest_observation") or ""]
+            )
+            row["applied_approval_percent"] = serial(
+                D(row["applied_approval_rate"]) * 100
+            )
+            row["planned_approval_percent"] = serial(config.planned_approval_rate * 100)
+            row["observed_approval_percent"] = (
+                serial(D(row["observed_approval_rate"]) * 100)
+                if row.get("observed_approval_rate") is not None
+                else None
+            )
+            row.update(
+                {
+                    "profile_id": p.id,
+                    "profile_version": p.version,
+                    "profile_name": p.payload["name"],
+                }
+            )
             row.update(
                 snapshot(
                     session,
@@ -417,27 +445,6 @@ def evaluate(
                     },
                 )
             )
-            row["last_updated"] = max(
-                [aware(o.updated_at).isoformat() for o in obs]
-                + [row.get("oldest_observation") or ""]
-            )
-            row["applied_approval_percent"] = serial(
-                D(row["applied_approval_rate"]) * 100
-            )
-            row["planned_approval_percent"] = serial(config.planned_approval_rate * 100)
-            row["observed_approval_percent"] = (
-                serial(D(row["observed_approval_rate"]) * 100)
-                if row.get("observed_approval_rate") is not None
-                else None
-            )
-        row["period_start"] = filters.start.isoformat()
-        row["period_end"] = filters.end.isoformat()
-        row["leads"] = base.get(
-            "meta_leads"
-            if not p or p.payload.get("lead_source", "meta") == "meta"
-            else "tracker_leads"
-        )
-        row["observed_meta_purchases"] = base.get("meta_purchases")
         row["economics_reasons"] = ", ".join(row["reason_codes"])
         row["late_event_changes"] = (
             json.dumps(row.get("event_changes", {}), ensure_ascii=False)
