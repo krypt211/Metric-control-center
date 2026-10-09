@@ -1,0 +1,8 @@
+{
+  "_note": "Fill and verify against MetricFlow before enabling budget commands. Current-state budgets must use the same major currency unit as the UI.",
+  "verified": false,
+  "field": "REPLACE_WITH_VERIFIED_FIELD",
+  "scale": "1",
+  "encoding": "decimal_string",
+  "fixed_fields": {}
+}

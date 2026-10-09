@@ -1,0 +1,157 @@
+{
+  "captured_at": "2026-10-07T16:24:56.558637+00:00",
+  "period": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "method": "GET",
+  "requests": 16,
+  "accounts_observed": 3,
+  "results": [
+    {
+      "sample": "me",
+      "status": "OK",
+      "root_keys": [
+        "id",
+        "name",
+        "email",
+        "team",
+        "access_state",
+        "api_key",
+        "acting_as"
+      ]
+    },
+    {
+      "sample": "usage",
+      "status": "OK",
+      "root_keys": [
+        "daily_used",
+        "daily_limit",
+        "daily_remaining",
+        "plan",
+        "resets_at",
+        "resources"
+      ]
+    },
+    {
+      "sample": "ad-accounts",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "summary",
+      "status": "OK",
+      "root_keys": [
+        "total_accounts",
+        "total_spend",
+        "total_impressions",
+        "total_clicks",
+        "total_reach",
+        "accounts",
+        "meta"
+      ]
+    },
+    {
+      "sample": "insights",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta",
+        "pagination"
+      ]
+    },
+    {
+      "sample": "campaigns",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "adsets",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "ads",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "daily",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "creatives",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "tracker",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "breakdowns",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "ad-accounts-limit1-page1",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "ad-accounts-limit1-page2",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta"
+      ]
+    },
+    {
+      "sample": "insights-limit1-page1",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta",
+        "pagination"
+      ]
+    },
+    {
+      "sample": "insights-limit1-page2",
+      "status": "OK",
+      "root_keys": [
+        "data",
+        "meta",
+        "pagination"
+      ]
+    }
+  ]
+}

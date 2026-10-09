@@ -1,0 +1,386 @@
+{
+  "plan": {
+    "start": "2026-09-08",
+    "end": "2026-10-07",
+    "days": 30,
+    "windows": 10,
+    "pending_windows": 10,
+    "completed_windows": 0,
+    "daily_budget": 800,
+    "daily_used": 123,
+    "daily_remaining": 677,
+    "provider_blocked": false,
+    "max_attempts_per_window": 96,
+    "hard_max_pending_attempts": 960,
+    "budget_policy": "pause between windows; never raise daily budget"
+  },
+  "before": {
+    "rows": 251,
+    "days_with_facts": 7,
+    "date_counts": {
+      "2026-10-01": 54,
+      "2026-10-02": 38,
+      "2026-10-03": 38,
+      "2026-10-04": 36,
+      "2026-10-05": 26,
+      "2026-10-06": 32,
+      "2026-10-07": 27
+    },
+    "unique_keys": 251,
+    "facts_digest": "c0ff74723f20c2c4d36d4f556ab00e1d2abc63cf10ef7381cac93bdad94ea800"
+  },
+  "first": {
+    "status": "succeeded",
+    "days_completed": 30,
+    "requests": 36,
+    "windows": [
+      {
+        "start": "2026-09-08",
+        "end": "2026-09-10",
+        "run_id": "23c3259b-6303-49d0-80d6-90976b930fa3",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-11",
+        "end": "2026-09-13",
+        "run_id": "6846bea1-61a5-4710-b2e1-7dda6da986ae",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-14",
+        "end": "2026-09-16",
+        "run_id": "5981c569-7e08-41e6-9733-af654eab9fee",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-17",
+        "end": "2026-09-19",
+        "run_id": "78e65cdf-c0a3-46d7-ab26-e0b740a08997",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-20",
+        "end": "2026-09-22",
+        "run_id": "13741026-6da3-4d63-b4fd-3edc43816f9c",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-23",
+        "end": "2026-09-25",
+        "run_id": "0aef7abb-8efd-44e8-864f-84fd26b30197",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-26",
+        "end": "2026-09-28",
+        "run_id": "4e36086f-7092-40f8-9ca6-a4bbf1940d00",
+        "status": "succeeded",
+        "rows": 10,
+        "accounts": 3,
+        "campaigns": 7,
+        "adsets": 9,
+        "ads": 10,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-29",
+        "end": "2026-10-01",
+        "run_id": "f9f24010-94fc-4bb5-a623-68223080d83b",
+        "status": "succeeded",
+        "rows": 156,
+        "accounts": 3,
+        "campaigns": 34,
+        "adsets": 71,
+        "ads": 80,
+        "creatives": 0
+      },
+      {
+        "start": "2026-10-02",
+        "end": "2026-10-04",
+        "run_id": "352b4690-1560-4295-93b8-fbf6aa2bf499",
+        "status": "succeeded",
+        "rows": 112,
+        "accounts": 3,
+        "campaigns": 31,
+        "adsets": 60,
+        "ads": 65,
+        "creatives": 0
+      },
+      {
+        "start": "2026-10-05",
+        "end": "2026-10-07",
+        "run_id": "87b00e86-a16b-4a72-88ee-c12413ee7961",
+        "status": "succeeded",
+        "rows": 85,
+        "accounts": 3,
+        "campaigns": 22,
+        "adsets": 42,
+        "ads": 47,
+        "creatives": 0
+      }
+    ]
+  },
+  "after_first": {
+    "rows": 363,
+    "days_with_facts": 10,
+    "date_counts": {
+      "2026-10-01": 54,
+      "2026-10-02": 38,
+      "2026-10-04": 36,
+      "2026-10-05": 26,
+      "2026-10-03": 38,
+      "2026-09-30": 53,
+      "2026-10-06": 32,
+      "2026-10-07": 27,
+      "2026-09-28": 10,
+      "2026-09-29": 49
+    },
+    "unique_keys": 363,
+    "facts_digest": "139cf7270398a228c687b4751328f8307a6a6fa13c3d5228207bad3534a49d2e"
+  },
+  "resume": {
+    "status": "succeeded",
+    "days_completed": 30,
+    "requests": 0,
+    "windows": [
+      {
+        "start": "2026-09-08",
+        "end": "2026-09-10",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-11",
+        "end": "2026-09-13",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-14",
+        "end": "2026-09-16",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-17",
+        "end": "2026-09-19",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-20",
+        "end": "2026-09-22",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-23",
+        "end": "2026-09-25",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-26",
+        "end": "2026-09-28",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-09-29",
+        "end": "2026-10-01",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-10-02",
+        "end": "2026-10-04",
+        "status": "already_complete"
+      },
+      {
+        "start": "2026-10-05",
+        "end": "2026-10-07",
+        "status": "already_complete"
+      }
+    ]
+  },
+  "replay": {
+    "status": "succeeded",
+    "days_completed": 30,
+    "requests": 22,
+    "windows": [
+      {
+        "start": "2026-09-08",
+        "end": "2026-09-10",
+        "run_id": "903902dd-85d4-45d6-b6e9-4cb74efe8574",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-11",
+        "end": "2026-09-13",
+        "run_id": "2aace396-b260-435f-acf6-7d932f656063",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-14",
+        "end": "2026-09-16",
+        "run_id": "0f9ec483-4a5e-46e7-8df6-eef95870dcc6",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-17",
+        "end": "2026-09-19",
+        "run_id": "3e474dc8-85e6-4d40-a562-aef775bc600c",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-20",
+        "end": "2026-09-22",
+        "run_id": "28c25192-b4fb-42cd-b94c-ae947e40e602",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-23",
+        "end": "2026-09-25",
+        "run_id": "f990c9fc-1ce4-4ba2-b44c-51adee47c173",
+        "status": "succeeded",
+        "rows": 0,
+        "accounts": 3,
+        "campaigns": 0,
+        "adsets": 0,
+        "ads": 0,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-26",
+        "end": "2026-09-28",
+        "run_id": "dfeb7ba6-a6c7-4644-8483-2d6e8a70fcdf",
+        "status": "succeeded",
+        "rows": 10,
+        "accounts": 3,
+        "campaigns": 7,
+        "adsets": 9,
+        "ads": 10,
+        "creatives": 0
+      },
+      {
+        "start": "2026-09-29",
+        "end": "2026-10-01",
+        "run_id": "3cb56f35-9dc5-4805-bbf0-8a15b59c2a17",
+        "status": "succeeded",
+        "rows": 156,
+        "accounts": 3,
+        "campaigns": 34,
+        "adsets": 71,
+        "ads": 80,
+        "creatives": 0
+      },
+      {
+        "start": "2026-10-02",
+        "end": "2026-10-04",
+        "run_id": "e465bc35-102d-4e0e-b945-ccbc9b74e3ee",
+        "status": "succeeded",
+        "rows": 112,
+        "accounts": 3,
+        "campaigns": 31,
+        "adsets": 60,
+        "ads": 65,
+        "creatives": 0
+      },
+      {
+        "start": "2026-10-05",
+        "end": "2026-10-07",
+        "run_id": "ff25964d-8055-475e-98a3-cfa5089208b8",
+        "status": "succeeded",
+        "rows": 85,
+        "accounts": 3,
+        "campaigns": 22,
+        "adsets": 42,
+        "ads": 47,
+        "creatives": 0
+      }
+    ]
+  },
+  "after_replay": {
+    "rows": 363,
+    "days_with_facts": 10,
+    "date_counts": {
+      "2026-10-01": 54,
+      "2026-09-30": 53,
+      "2026-10-02": 38,
+      "2026-10-05": 26,
+      "2026-10-03": 38,
+      "2026-09-29": 49,
+      "2026-10-06": 32,
+      "2026-10-04": 36,
+      "2026-10-07": 27,
+      "2026-09-28": 10
+    },
+    "unique_keys": 363,
+    "facts_digest": "139cf7270398a228c687b4751328f8307a6a6fa13c3d5228207bad3534a49d2e"
+  },
+  "duplicate_test": true,
+  "same_digest": true,
+  "quota_after": {
+    "day": "2026-10-08",
+    "requests": 181,
+    "limit": 800
+  }
+}

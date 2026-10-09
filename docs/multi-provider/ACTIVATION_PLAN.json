@@ -1,0 +1,65 @@
+{
+    "status":  "MULTI_PROVIDER_LOCAL_ACTIVATION_READY",
+    "project":  "E:/Creative_Factory/metric-control-center",
+    "create_secret_file":  ".secrets/provider_encryption_key",
+    "secret_mounts":  {
+                          "backend":  [
+                                          "provider_encryption_key",
+                                          "metricflow_read_key"
+                                      ],
+                          "worker":  [
+                                         "provider_encryption_key",
+                                         "metricflow_read_key"
+                                     ]
+                      },
+    "migration":  {
+                      "from":  "0008_column_preferences",
+                      "to":  "0009_providers",
+                      "operation":  "add eight provider tables; preserve existing rows"
+                  },
+    "rebuild":  [
+                    "backend",
+                    "worker",
+                    "migrate",
+                    "frontend"
+                ],
+    "restart":  [
+                    "backend",
+                    "frontend",
+                    "worker",
+                    "scheduler"
+                ],
+    "source_routing_defaults":  {
+                                    "primary":  "metricflow",
+                                    "fallback":  null,
+                                    "action":  "disabled"
+                                },
+    "meta_initial_state":  "disconnected; no token configured",
+    "safety":  {
+                   "ACTIONS_ENABLED":  false,
+                   "LOCAL_READ_ONLY":  true,
+                   "advertising_writes":  0
+               },
+    "read_verification":  [
+                              "MetricFlow health GET",
+                              "existing UI-1 E2E",
+                              "new settings browser smoke"
+                          ],
+    "new_key_permissions":  "Windows: current user, SYSTEM and Administrators only; verify before use. Existing secrets ACL unchanged.",
+    "completed_date":  "2026-10-09",
+    "report":  "docs/multi-provider/LOCAL_ACTIVATION_REPORT.md",
+    "verification":  {
+                         "playwright_passed":  7,
+                         "playwright_failed":  0,
+                         "browser_errors":  0,
+                         "backend_passed":  264,
+                         "backend_postgresql_passed_separately":  1,
+                         "frontend_unit_passed":  13,
+                         "frontend_build":  "PASS",
+                         "migration":  "0009_providers",
+                         "data_integrity":  "PASS",
+                         "metricflow_live_read":  "PASS",
+                         "meta_live":  "BLOCKED_NO_CREDENTIALS",
+                         "readiness":  "PASS"
+                     }
+}

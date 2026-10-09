@@ -1,0 +1,34 @@
+{
+  "endpoint": "me",
+  "query": {},
+  "body": {
+    "id": 9356,
+    "name": "<redacted>",
+    "email": "<redacted>",
+    "team": {
+      "id": 962,
+      "name": "<redacted>",
+      "role": "<redacted>"
+    },
+    "access_state": "<redacted>",
+    "api_key": {
+      "id": 959,
+      "name": "<redacted>",
+      "prefix": "<redacted>",
+      "scopes": [
+        "analytics:read",
+        "ad_accounts:read",
+        "campaigns:read",
+        "rules:read",
+        "bundles:read",
+        "pages:read",
+        "launches:read",
+        "seeding:read",
+        "team:read",
+        "insights:read"
+      ],
+      "expires_at": null
+    },
+    "acting_as": null
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "status": "PASS",
+  "tables_checked": 15,
+  "before": {
+    "action_executions": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "action_logs": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "action_requests": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ad_accounts": {
+      "count": 3,
+      "sha256": "36baeda2134aba63806c3aad1456428a2eebf8d18d8155e08f6c5844a99ed79f"
+    },
+    "ads": {
+      "count": 120,
+      "sha256": "1917a6ee5a75e457a7f1b7bd1ae757344d85a560250b2e046ce4eb7455ed87e3"
+    },
+    "adsets": {
+      "count": 105,
+      "sha256": "74019a79e91b62173e2ee31a39bef8e5b2677035133f1998a1303a3c0c99c8dc"
+    },
+    "breakdowns": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "campaigns": {
+      "count": 48,
+      "sha256": "f6571abc9b1ed3f78e23d14bb244c2e30dea3c438ca509da29cc79896b21ddc6"
+    },
+    "creatives": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "daily_metrics": {
+      "count": 375,
+      "sha256": "f27fff4542fbf5a0e624e746e7c4e7585386e8301dd7599750d15b4723330a9b"
+    },
+    "entities": {
+      "count": 273,
+      "sha256": "b3c069783b6aaf88cc010b91d5948b41f560e13948ca8f02e69e839da90dccd6"
+    },
+    "entity_current_state": {
+      "count": 273,
+      "sha256": "15d73cb03a4d9fb00ed8e91c250cc1905354be17cfc17df0df86b7e844db6335"
+    },
+    "read_statistics": {
+      "count": 1040,
+      "sha256": "7acdfb22dafc59ddf69b6e2da4da55f80b623009acdc8c4045ff12cb28902a72"
+    },
+    "tracker_metrics": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users": {
+      "count": 1,
+      "sha256": "997c97003d52cd7ab9d9e13d331d85c9a3d8d4fb9e14999864d4b505f1b45c2b"
+    }
+  },
+  "after": {
+    "action_executions": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "action_logs": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "action_requests": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ad_accounts": {
+      "count": 3,
+      "sha256": "36baeda2134aba63806c3aad1456428a2eebf8d18d8155e08f6c5844a99ed79f"
+    },
+    "ads": {
+      "count": 120,
+      "sha256": "1917a6ee5a75e457a7f1b7bd1ae757344d85a560250b2e046ce4eb7455ed87e3"
+    },
+    "adsets": {
+      "count": 105,
+      "sha256": "74019a79e91b62173e2ee31a39bef8e5b2677035133f1998a1303a3c0c99c8dc"
+    },
+    "breakdowns": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "campaigns": {
+      "count": 48,
+      "sha256": "f6571abc9b1ed3f78e23d14bb244c2e30dea3c438ca509da29cc79896b21ddc6"
+    },
+    "creatives": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "daily_metrics": {
+      "count": 375,
+      "sha256": "f27fff4542fbf5a0e624e746e7c4e7585386e8301dd7599750d15b4723330a9b"
+    },
+    "entities": {
+      "count": 273,
+      "sha256": "b3c069783b6aaf88cc010b91d5948b41f560e13948ca8f02e69e839da90dccd6"
+    },
+    "entity_current_state": {
+      "count": 273,
+      "sha256": "15d73cb03a4d9fb00ed8e91c250cc1905354be17cfc17df0df86b7e844db6335"
+    },
+    "read_statistics": {
+      "count": 1040,
+      "sha256": "7acdfb22dafc59ddf69b6e2da4da55f80b623009acdc8c4045ff12cb28902a72"
+    },
+    "tracker_metrics": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users": {
+      "count": 1,
+      "sha256": "997c97003d52cd7ab9d9e13d331d85c9a3d8d4fb9e14999864d4b505f1b45c2b"
+    }
+  }
+}

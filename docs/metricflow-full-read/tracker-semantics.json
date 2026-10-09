@@ -1,0 +1,161 @@
+{
+  "0": {
+    "clicks": {
+      "account_tracker": "2298",
+      "sum_ad_tracker": "2298",
+      "sum_creative_tracker": "2284"
+    },
+    "conversions": {
+      "account_tracker": "28",
+      "sum_ad_tracker": "10",
+      "sum_creative_tracker": "10",
+      "sum_ad_raw_conversions": "28"
+    },
+    "revenue": {
+      "account_tracker": "510.0",
+      "sum_ad_tracker": "510.0",
+      "sum_creative_tracker": "510.0"
+    },
+    "cost": {
+      "account_tracker": "496.36",
+      "sum_ad_tracker": "496.36",
+      "sum_creative_tracker": "496.36"
+    },
+    "profit": {
+      "account_tracker": "13.64",
+      "sum_ad_tracker": "13.64",
+      "sum_creative_tracker": "13.64"
+    },
+    "leads": {
+      "account_tracker": "0",
+      "sum_ad_tracker": "0",
+      "sum_creative_tracker": "0"
+    },
+    "sales": {
+      "account_tracker": "10",
+      "sum_ad_tracker": "10",
+      "sum_creative_tracker": "10"
+    },
+    "provider_roi_example": {
+      "revenue": 102.0,
+      "cost": 94.68,
+      "profit": 7.32,
+      "roi": 107.73,
+      "profit_over_cost_percent": "7.731305449936628643852978454",
+      "revenue_over_cost_percent": "107.7313054499366286438529785"
+    },
+    "source_profit_components": {
+      "t_revenue": "510.0",
+      "t_sale_revenue": "510.0",
+      "t_lead_revenue": "0",
+      "t_cost": "496.36",
+      "t_profit": "13.64"
+    }
+  },
+  "1": {
+    "clicks": {
+      "account_tracker": "8209",
+      "sum_ad_tracker": "8209",
+      "sum_creative_tracker": "8151"
+    },
+    "conversions": {
+      "account_tracker": "172",
+      "sum_ad_tracker": "34",
+      "sum_creative_tracker": "34",
+      "sum_ad_raw_conversions": "172"
+    },
+    "revenue": {
+      "account_tracker": "2036.0",
+      "sum_ad_tracker": "2036.0",
+      "sum_creative_tracker": "2036.0"
+    },
+    "cost": {
+      "account_tracker": "2381.08",
+      "sum_ad_tracker": "2381.08",
+      "sum_creative_tracker": "2381.08"
+    },
+    "profit": {
+      "account_tracker": "-345.08",
+      "sum_ad_tracker": "-455.08",
+      "sum_creative_tracker": "-455.08"
+    },
+    "leads": {
+      "account_tracker": "15",
+      "sum_ad_tracker": "15",
+      "sum_creative_tracker": "15"
+    },
+    "sales": {
+      "account_tracker": "34",
+      "sum_ad_tracker": "34",
+      "sum_creative_tracker": "34"
+    },
+    "provider_roi_example": {
+      "revenue": 357.0,
+      "cost": 511.44,
+      "profit": -154.44,
+      "roi": 69.8,
+      "profit_over_cost_percent": "-30.19709056780854059127170343",
+      "revenue_over_cost_percent": "69.80290943219145940872829657"
+    },
+    "source_profit_components": {
+      "t_revenue": "2036.0",
+      "t_sale_revenue": "1926.0",
+      "t_lead_revenue": "110.0",
+      "t_cost": "2381.08",
+      "t_profit": "-455.08"
+    }
+  },
+  "2": {
+    "clicks": {
+      "account_tracker": "37313",
+      "sum_ad_tracker": "37313",
+      "sum_creative_tracker": "37312"
+    },
+    "conversions": {
+      "account_tracker": "1064",
+      "sum_ad_tracker": "205",
+      "sum_creative_tracker": "205",
+      "sum_ad_raw_conversions": "1064"
+    },
+    "revenue": {
+      "account_tracker": "5878.0",
+      "sum_ad_tracker": "5878.0",
+      "sum_creative_tracker": "5878.0"
+    },
+    "cost": {
+      "account_tracker": "3997.32",
+      "sum_ad_tracker": "3997.32",
+      "sum_creative_tracker": "3997.32"
+    },
+    "profit": {
+      "account_tracker": "1880.68",
+      "sum_ad_tracker": "1880.68",
+      "sum_creative_tracker": "1880.68"
+    },
+    "leads": {
+      "account_tracker": "173",
+      "sum_ad_tracker": "173",
+      "sum_creative_tracker": "173"
+    },
+    "sales": {
+      "account_tracker": "205",
+      "sum_ad_tracker": "205",
+      "sum_creative_tracker": "205"
+    },
+    "provider_roi_example": {
+      "revenue": 853.0,
+      "cost": 442.67,
+      "profit": 410.33,
+      "roi": 192.69,
+      "profit_over_cost_percent": "92.69433212099306481125895136",
+      "revenue_over_cost_percent": "192.6943321209930648112589514"
+    },
+    "source_profit_components": {
+      "t_revenue": "5878.0",
+      "t_sale_revenue": "5878.0",
+      "t_lead_revenue": "0",
+      "t_cost": "3997.32",
+      "t_profit": "1880.68"
+    }
+  }
+}

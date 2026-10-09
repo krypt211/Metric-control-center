@@ -1,0 +1,63 @@
+{
+  "endpoint": "summary",
+  "query": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "body": {
+    "total_accounts": 3,
+    "total_spend": 1144.72,
+    "total_impressions": 92388,
+    "total_clicks": 9833,
+    "total_reach": 77921,
+    "accounts": [
+      {
+        "ad_account_id": "act_987018375143402",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 406.9,
+        "impressions": 26252,
+        "clicks": 1289,
+        "reach": 20528,
+        "cpm": 15.5,
+        "cpc": 0.32,
+        "ctr": 4.91
+      },
+      {
+        "ad_account_id": "act_949283863663703",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 0.15,
+        "impressions": 3,
+        "clicks": 0,
+        "reach": 3,
+        "cpm": 50,
+        "cpc": 0,
+        "ctr": 0
+      },
+      {
+        "ad_account_id": "act_9963619898556713",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 737.67,
+        "impressions": 66133,
+        "clicks": 8544,
+        "reach": 57390,
+        "cpm": 11.15,
+        "cpc": 0.09,
+        "ctr": 12.92
+      }
+    ],
+    "meta": {
+      "total": 3,
+      "limit": null,
+      "offset": null,
+      "date_range": {
+        "from": "2026-10-06",
+        "to": "2026-10-07"
+      },
+      "currency": null,
+      "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+    }
+  }
+}

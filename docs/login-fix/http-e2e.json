@@ -1,0 +1,52 @@
+{
+  "bootstrap_database_before": "no users",
+  "checks": {
+    "actual_bootstrap_exit": true,
+    "actual_bootstrap_confirmation": true,
+    "bootstrap_retry_without_password_output": true,
+    "bootstrap_persisted": true,
+    "login_page": true,
+    "bootstrap_scripts_nonce": true,
+    "csrf_issued": true,
+    "invalid_credentials_401": true,
+    "missing_csrf_denied": true,
+    "denied_origin_null": true,
+    "denied_origin_http://localhost:3000": true,
+    "denied_origin_http://attacker.invalid": true,
+    "login_unicode_special_untrimmed_password": true,
+    "http_cookie_flags": true,
+    "session_cookie_received": true,
+    "session_record_persisted": true,
+    "dashboard_html": true,
+    "refresh_session": true,
+    "dashboard_api": true,
+    "private_stats": true,
+    "logout": true,
+    "after_logout_denied": true,
+    "session_record_revoked": true,
+    "repeat_login": true,
+    "repeat_logout": true
+  },
+  "status_codes": {
+    "invalid_credentials": 401,
+    "missing_csrf": 403,
+    "origin_null": 403,
+    "origin_http://localhost:3000": 403,
+    "origin_http://attacker.invalid": 403,
+    "login": 200
+  },
+  "bootstrap_info": {
+    "exists": true,
+    "active": true,
+    "role": "admin",
+    "workspace": "default",
+    "argon2id": true,
+    "stdin_encoding": "utf-8",
+    "database": "metric_control",
+    "host": "postgres"
+  },
+  "status": "PASS",
+  "ephemeral_user_cleanup": "PASS",
+  "as_of": "2026-10-08T09:00:23.664746+00:00",
+  "visual_check": "NOT VERIFIED: no available browser"
+}

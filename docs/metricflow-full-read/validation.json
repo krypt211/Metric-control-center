@@ -1,0 +1,28 @@
+{
+  "as_of": "2026-10-08T02:45:09.492395+00:00",
+  "tests": {
+    "command": ".venv/Scripts/python.exe -m unittest discover -s tests",
+    "total": 195,
+    "duration_seconds": 92.167,
+    "status": "PASS"
+  },
+  "frontend_build": "PASS including TypeScript",
+  "status_bat": "PASS",
+  "visual_browser_check": "UNAVAILABLE",
+  "source_sha256": {
+    "services/sync/backfill.py": "5b4165caca8087f86e51c96f665db686e1fbf6e9b13522a22004704dbef09953",
+    "services/sync/optional.py": "4a357f824be520d4c7099c835806ea26502ec58c780b303719948608cd419f2e",
+    "services/analytics/scopes.py": "53f9b356ce5547b9aa8d709e8e95910b7d90ce9e12d44b36b7f84345c79b92b5",
+    "services/analytics/optional.py": "fbda0430aa6dc2c8db6e8d6c1c4c8669e557382c11d6033f8d48c60be89aff41",
+    "services/analytics/dashboard.py": "b17b218aec6f596d342c00f667a046d3d51e24bf1fac559c0a7b977d349bc260",
+    "services/storage/models.py": "a6910021ffbc8cefedd4b3d28a77767910800b18449f4e173f0becde7bb566da",
+    "migrations/versions/0006_read_statistics.py": "185ddb1f31bffd04d68bfbc7591a50a57114cadef7e80eaaee424ccb195a3c2c",
+    "backend/app.py": "8ed4cc3d1b854f4be7a514c785db7bfc04c7fd113801dd9402c47ee8edb4cfad",
+    "frontend/components/OptionalStatistics.tsx": "413cbd83548b483772d6f5745a0c331580b5830808f810bb9a1f95c56170f409",
+    "frontend/components/Statistics.tsx": "4caa9b6e25114d8fad509c957ec6f992f5a9e841cdca5b36e008d4a97389b185",
+    "frontend/app/page.tsx": "e840765a0515a3c1e086f78f4e4b3f29ea46eb8b34e5e37663259287384188ee",
+    "frontend/app/api/stats/[kind]/route.ts": "5f322e11be7aa7029f8f77d1a2c9b85affc3fe3f2c6b1079c75af132c897514d",
+    "tests/test_full_read.py": "519a64709548895aabc1bd29c457c32cd427ecf5c19a4dc37f3088a56b075f1b",
+    "RUN_LOCAL.md": "2e1714a3a12e02fdcb27be3d548035d309cc0fb5b23ac90d98444f3e7f3d30c5"
+  }
+}

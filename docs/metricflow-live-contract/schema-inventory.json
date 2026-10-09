@@ -1,0 +1,1918 @@
+{
+  "notice": "Observed types and nulls in sanitized live samples; absence of null is not a provider non-null guarantee.",
+  "endpoints": {
+    "me": {
+      "endpoint": "me",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.id": [
+          "number"
+        ],
+        "$.name": [
+          "string"
+        ],
+        "$.email": [
+          "string"
+        ],
+        "$.team": [
+          "object"
+        ],
+        "$.team.id": [
+          "number"
+        ],
+        "$.team.name": [
+          "string"
+        ],
+        "$.team.role": [
+          "string"
+        ],
+        "$.access_state": [
+          "string"
+        ],
+        "$.api_key": [
+          "object"
+        ],
+        "$.api_key.id": [
+          "number"
+        ],
+        "$.api_key.name": [
+          "string"
+        ],
+        "$.api_key.prefix": [
+          "string"
+        ],
+        "$.api_key.scopes": [
+          "array"
+        ],
+        "$.api_key.scopes[]": [
+          "string"
+        ],
+        "$.api_key.expires_at": [
+          "null"
+        ],
+        "$.acting_as": [
+          "null"
+        ]
+      }
+    },
+    "usage": {
+      "endpoint": "usage",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.daily_used": [
+          "number"
+        ],
+        "$.daily_limit": [
+          "number"
+        ],
+        "$.daily_remaining": [
+          "number"
+        ],
+        "$.plan": [
+          "string"
+        ],
+        "$.resets_at": [
+          "string"
+        ],
+        "$.resources": [
+          "object"
+        ],
+        "$.resources.ad_accounts": [
+          "object"
+        ],
+        "$.resources.ad_accounts.used": [
+          "number"
+        ],
+        "$.resources.ad_accounts.limit": [
+          "number"
+        ],
+        "$.resources.ad_accounts.remaining": [
+          "number"
+        ],
+        "$.resources.fan_pages": [
+          "object"
+        ],
+        "$.resources.fan_pages.used": [
+          "number"
+        ],
+        "$.resources.fan_pages.limit": [
+          "number"
+        ],
+        "$.resources.fan_pages.remaining": [
+          "number"
+        ],
+        "$.resources.rules": [
+          "object"
+        ],
+        "$.resources.rules.used": [
+          "number"
+        ],
+        "$.resources.rules.limit": [
+          "number"
+        ],
+        "$.resources.rules.remaining": [
+          "number"
+        ],
+        "$.resources.bundles": [
+          "object"
+        ],
+        "$.resources.bundles.used": [
+          "number"
+        ],
+        "$.resources.bundles.limit": [
+          "number"
+        ],
+        "$.resources.bundles.remaining": [
+          "number"
+        ]
+      }
+    },
+    "ad-accounts": {
+      "endpoint": "ad-accounts",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "700"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].id": [
+          "string"
+        ],
+        "$.data[].internal_id": [
+          "number"
+        ],
+        "$.data[].name": [
+          "string"
+        ],
+        "$.data[].custom_name": [
+          "null"
+        ],
+        "$.data[].profile_id": [
+          "number"
+        ],
+        "$.data[].profile_name": [
+          "string"
+        ],
+        "$.data[].currency": [
+          "string"
+        ],
+        "$.data[].timezone": [
+          "string"
+        ],
+        "$.data[].status": [
+          "string"
+        ],
+        "$.data[].spend_cap": [
+          "null"
+        ],
+        "$.data[].daily_budget": [
+          "null"
+        ],
+        "$.data[].currency_ratio_to_usd": [
+          "number"
+        ],
+        "$.data[].is_active": [
+          "boolean"
+        ],
+        "$.data[].auto_sync_enabled": [
+          "boolean"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].business_id": [
+          "string"
+        ],
+        "$.data[].business_name": [
+          "string"
+        ],
+        "$.data[].payment_method": [
+          "object"
+        ],
+        "$.data[].payment_method.kind": [
+          "string"
+        ],
+        "$.data[].payment_method.type": [
+          "number"
+        ],
+        "$.data[].payment_method.display_string": [
+          "string"
+        ],
+        "$.data[].payment_method.id": [
+          "string"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "summary": {
+      "endpoint": "summary",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.total_accounts": [
+          "number"
+        ],
+        "$.total_spend": [
+          "number"
+        ],
+        "$.total_impressions": [
+          "number"
+        ],
+        "$.total_clicks": [
+          "number"
+        ],
+        "$.total_reach": [
+          "number"
+        ],
+        "$.accounts": [
+          "array"
+        ],
+        "$.accounts[]": [
+          "object"
+        ],
+        "$.accounts[].ad_account_id": [
+          "string"
+        ],
+        "$.accounts[].name": [
+          "string"
+        ],
+        "$.accounts[].currency": [
+          "string"
+        ],
+        "$.accounts[].spend": [
+          "number"
+        ],
+        "$.accounts[].impressions": [
+          "number"
+        ],
+        "$.accounts[].clicks": [
+          "number"
+        ],
+        "$.accounts[].reach": [
+          "number"
+        ],
+        "$.accounts[].cpm": [
+          "number"
+        ],
+        "$.accounts[].cpc": [
+          "number"
+        ],
+        "$.accounts[].ctr": [
+          "number"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "insights": {
+      "endpoint": "insights",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "4821"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].ad_account_id": [
+          "string"
+        ],
+        "$.data[].ad_account_name": [
+          "string"
+        ],
+        "$.data[].custom_name": [
+          "null"
+        ],
+        "$.data[].currency": [
+          "string"
+        ],
+        "$.data[].campaign_id": [
+          "string"
+        ],
+        "$.data[].campaign_name": [
+          "string"
+        ],
+        "$.data[].adset_id": [
+          "string"
+        ],
+        "$.data[].adset_name": [
+          "string"
+        ],
+        "$.data[].ad_id": [
+          "string"
+        ],
+        "$.data[].ad_name": [
+          "string"
+        ],
+        "$.data[].date": [
+          "string"
+        ],
+        "$.data[].status": [
+          "string"
+        ],
+        "$.data[].effective_status": [
+          "string"
+        ],
+        "$.data[].targeting_country": [
+          "array"
+        ],
+        "$.data[].targeting_country[]": [
+          "string"
+        ],
+        "$.data[].targeting_age": [
+          "string"
+        ],
+        "$.data[].targeting_gender": [
+          "string"
+        ],
+        "$.data[].landing_url": [
+          "string"
+        ],
+        "$.data[].url_tags": [
+          "string"
+        ],
+        "$.data[].app_link": [
+          "null"
+        ],
+        "$.data[].call_to_action_type": [
+          "string"
+        ],
+        "$.data[].google_play_link": [
+          "null"
+        ],
+        "$.data[].currency_ratio_to_usd": [
+          "number"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].frequency": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].unique_inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].video_views": [
+          "number"
+        ],
+        "$.data[].app_installs": [
+          "number"
+        ],
+        "$.data[].landing_page_views": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].video_3s_views": [
+          "number"
+        ],
+        "$.data[].video_p100_views": [
+          "number"
+        ],
+        "$.data[].video_starts": [
+          "number"
+        ],
+        "$.data[].video_total_watch_time": [
+          "number"
+        ],
+        "$.data[].video_avg_time_watched": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "number"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ],
+        "$.pagination": [
+          "object"
+        ],
+        "$.pagination.cursor": [
+          "null"
+        ],
+        "$.pagination.has_more": [
+          "boolean"
+        ]
+      }
+    },
+    "campaigns": {
+      "endpoint": "ad-accounts/act_949283863663703/campaigns",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1488"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].id": [
+          "string"
+        ],
+        "$.data[].name": [
+          "string"
+        ],
+        "$.data[].status": [
+          "string"
+        ],
+        "$.data[].effective_status": [
+          "string"
+        ],
+        "$.data[].objective": [
+          "string"
+        ],
+        "$.data[].daily_budget": [
+          "null"
+        ],
+        "$.data[].lifetime_budget": [
+          "null"
+        ],
+        "$.data[].bid_strategy": [
+          "null"
+        ],
+        "$.data[].created_time": [
+          "string"
+        ],
+        "$.data[].currency": [
+          "string"
+        ],
+        "$.data[].currency_ratio_to_usd": [
+          "number"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].frequency": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].results": [
+          "array"
+        ],
+        "$.data[].results[]": [
+          "object"
+        ],
+        "$.data[].results[].type": [
+          "string"
+        ],
+        "$.data[].results[].count": [
+          "number"
+        ],
+        "$.data[].tracker": [
+          "null",
+          "object"
+        ],
+        "$.data[].tracker.t_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_unique_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions_raw": [
+          "number"
+        ],
+        "$.data[].tracker.t_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_sale_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_lead_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_cost": [
+          "number"
+        ],
+        "$.data[].tracker.t_profit": [
+          "number"
+        ],
+        "$.data[].tracker.t_roi": [
+          "number"
+        ],
+        "$.data[].tracker.t_cr": [
+          "number"
+        ],
+        "$.data[].tracker.t_epc": [
+          "number"
+        ],
+        "$.data[].tracker.t_approve": [
+          "number"
+        ],
+        "$.data[].tracker.t_leads": [
+          "number"
+        ],
+        "$.data[].tracker.t_sales": [
+          "number"
+        ],
+        "$.data[].tracker.t_regs": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposits": [
+          "number"
+        ],
+        "$.data[].tracker.t_rejected": [
+          "number"
+        ],
+        "$.data[].tracker.t_reg_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposit_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_events": [
+          "object"
+        ],
+        "$.data[].inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].unique_inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].video_views": [
+          "number"
+        ],
+        "$.data[].app_installs": [
+          "number"
+        ],
+        "$.data[].landing_page_views": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].video_3s_views": [
+          "number"
+        ],
+        "$.data[].video_p100_views": [
+          "number"
+        ],
+        "$.data[].video_starts": [
+          "number"
+        ],
+        "$.data[].video_total_watch_time": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.data[].video_avg_time_watched": [
+          "null"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "adsets": {
+      "endpoint": "ad-accounts/act_949283863663703/adsets",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "2746"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].id": [
+          "string"
+        ],
+        "$.data[].name": [
+          "string"
+        ],
+        "$.data[].status": [
+          "string"
+        ],
+        "$.data[].effective_status": [
+          "string"
+        ],
+        "$.data[].parent_id": [
+          "string"
+        ],
+        "$.data[].campaign_id": [
+          "string"
+        ],
+        "$.data[].daily_budget": [
+          "number"
+        ],
+        "$.data[].lifetime_budget": [
+          "number"
+        ],
+        "$.data[].bid_strategy": [
+          "string"
+        ],
+        "$.data[].bid_amount": [
+          "number"
+        ],
+        "$.data[].roas_average_floor": [
+          "null"
+        ],
+        "$.data[].optimization_goal": [
+          "string"
+        ],
+        "$.data[].currency": [
+          "string"
+        ],
+        "$.data[].currency_ratio_to_usd": [
+          "number"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].frequency": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].unique_inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].video_views": [
+          "number"
+        ],
+        "$.data[].app_installs": [
+          "number"
+        ],
+        "$.data[].landing_page_views": [
+          "number"
+        ],
+        "$.data[].video_3s_views": [
+          "number"
+        ],
+        "$.data[].video_p100_views": [
+          "number"
+        ],
+        "$.data[].video_starts": [
+          "number"
+        ],
+        "$.data[].video_total_watch_time": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.data[].video_avg_time_watched": [
+          "null"
+        ],
+        "$.data[].creative_key": [
+          "null"
+        ],
+        "$.data[].results": [
+          "array"
+        ],
+        "$.data[].results[]": [
+          "object"
+        ],
+        "$.data[].results[].type": [
+          "string"
+        ],
+        "$.data[].results[].count": [
+          "number"
+        ],
+        "$.data[].tracker": [
+          "null",
+          "object"
+        ],
+        "$.data[].tracker.t_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_unique_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions_raw": [
+          "number"
+        ],
+        "$.data[].tracker.t_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_sale_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_lead_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_cost": [
+          "number"
+        ],
+        "$.data[].tracker.t_profit": [
+          "number"
+        ],
+        "$.data[].tracker.t_roi": [
+          "number"
+        ],
+        "$.data[].tracker.t_cr": [
+          "number"
+        ],
+        "$.data[].tracker.t_epc": [
+          "number"
+        ],
+        "$.data[].tracker.t_approve": [
+          "number"
+        ],
+        "$.data[].tracker.t_leads": [
+          "number"
+        ],
+        "$.data[].tracker.t_sales": [
+          "number"
+        ],
+        "$.data[].tracker.t_rejected": [
+          "number"
+        ],
+        "$.data[].tracker.t_regs": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposits": [
+          "number"
+        ],
+        "$.data[].tracker.t_reg_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposit_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_events": [
+          "object"
+        ],
+        "$.data[].tracker.t_calc": [
+          "object"
+        ],
+        "$.data[].landing_url": [
+          "null"
+        ],
+        "$.data[].url_tags": [
+          "null"
+        ],
+        "$.data[].app_link": [
+          "null"
+        ],
+        "$.data[].call_to_action_type": [
+          "null"
+        ],
+        "$.data[].page_id": [
+          "null"
+        ],
+        "$.data[].page_name": [
+          "null"
+        ],
+        "$.data[].page_is_published": [
+          "null"
+        ],
+        "$.data[].pixels": [
+          "null"
+        ],
+        "$.data[].custom_event_type": [
+          "null"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "ads": {
+      "endpoint": "ad-accounts/act_949283863663703/ads",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "4813"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].id": [
+          "string"
+        ],
+        "$.data[].name": [
+          "string"
+        ],
+        "$.data[].status": [
+          "string"
+        ],
+        "$.data[].effective_status": [
+          "string"
+        ],
+        "$.data[].parent_id": [
+          "string"
+        ],
+        "$.data[].campaign_id": [
+          "string"
+        ],
+        "$.data[].daily_budget": [
+          "null"
+        ],
+        "$.data[].lifetime_budget": [
+          "null"
+        ],
+        "$.data[].bid_strategy": [
+          "null"
+        ],
+        "$.data[].bid_amount": [
+          "null"
+        ],
+        "$.data[].roas_average_floor": [
+          "null"
+        ],
+        "$.data[].optimization_goal": [
+          "null"
+        ],
+        "$.data[].currency": [
+          "string"
+        ],
+        "$.data[].currency_ratio_to_usd": [
+          "number"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].frequency": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].unique_inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].video_views": [
+          "number"
+        ],
+        "$.data[].app_installs": [
+          "number"
+        ],
+        "$.data[].landing_page_views": [
+          "number"
+        ],
+        "$.data[].video_3s_views": [
+          "number"
+        ],
+        "$.data[].video_p100_views": [
+          "number"
+        ],
+        "$.data[].video_starts": [
+          "number"
+        ],
+        "$.data[].video_total_watch_time": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.data[].video_avg_time_watched": [
+          "null"
+        ],
+        "$.data[].creative_key": [
+          "string"
+        ],
+        "$.data[].results": [
+          "array"
+        ],
+        "$.data[].results[]": [
+          "object"
+        ],
+        "$.data[].results[].type": [
+          "string"
+        ],
+        "$.data[].results[].count": [
+          "number"
+        ],
+        "$.data[].tracker": [
+          "null",
+          "object"
+        ],
+        "$.data[].tracker.t_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_unique_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions_raw": [
+          "number"
+        ],
+        "$.data[].tracker.t_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_sale_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_lead_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_cost": [
+          "number"
+        ],
+        "$.data[].tracker.t_profit": [
+          "number"
+        ],
+        "$.data[].tracker.t_roi": [
+          "number"
+        ],
+        "$.data[].tracker.t_cr": [
+          "number"
+        ],
+        "$.data[].tracker.t_epc": [
+          "number"
+        ],
+        "$.data[].tracker.t_approve": [
+          "number"
+        ],
+        "$.data[].tracker.t_leads": [
+          "number"
+        ],
+        "$.data[].tracker.t_sales": [
+          "number"
+        ],
+        "$.data[].tracker.t_rejected": [
+          "number"
+        ],
+        "$.data[].tracker.t_regs": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposits": [
+          "number"
+        ],
+        "$.data[].tracker.t_reg_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposit_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_events": [
+          "object"
+        ],
+        "$.data[].tracker.t_calc": [
+          "object"
+        ],
+        "$.data[].landing_url": [
+          "string"
+        ],
+        "$.data[].url_tags": [
+          "string"
+        ],
+        "$.data[].app_link": [
+          "null"
+        ],
+        "$.data[].call_to_action_type": [
+          "null",
+          "string"
+        ],
+        "$.data[].page_id": [
+          "string"
+        ],
+        "$.data[].page_name": [
+          "null",
+          "string"
+        ],
+        "$.data[].page_is_published": [
+          "boolean",
+          "null"
+        ],
+        "$.data[].pixels": [
+          "null"
+        ],
+        "$.data[].custom_event_type": [
+          "null"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "daily": {
+      "endpoint": "ad-accounts/act_949283863663703/daily",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "519"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].date": [
+          "string"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].results": [
+          "array"
+        ],
+        "$.data[].results[]": [
+          "object"
+        ],
+        "$.data[].results[].type": [
+          "string"
+        ],
+        "$.data[].results[].count": [
+          "number"
+        ],
+        "$.data[].tracker": [
+          "object"
+        ],
+        "$.data[].tracker.t_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_unique_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions": [
+          "number"
+        ],
+        "$.data[].tracker.t_conversions_raw": [
+          "number"
+        ],
+        "$.data[].tracker.t_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_sale_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_lead_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_cost": [
+          "number"
+        ],
+        "$.data[].tracker.t_profit": [
+          "number"
+        ],
+        "$.data[].tracker.t_roi": [
+          "number"
+        ],
+        "$.data[].tracker.t_cr": [
+          "number"
+        ],
+        "$.data[].tracker.t_epc": [
+          "number"
+        ],
+        "$.data[].tracker.t_approve": [
+          "number"
+        ],
+        "$.data[].tracker.t_leads": [
+          "number"
+        ],
+        "$.data[].tracker.t_sales": [
+          "number"
+        ],
+        "$.data[].tracker.t_rejected": [
+          "number"
+        ],
+        "$.data[].tracker.t_regs": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposits": [
+          "number"
+        ],
+        "$.data[].tracker.t_reg_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_deposit_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.t_events": [
+          "object"
+        ],
+        "$.data[].tracker.t_calc": [
+          "object"
+        ],
+        "$.data[].frequency": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].unique_inline_link_clicks": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].video_views": [
+          "number"
+        ],
+        "$.data[].app_installs": [
+          "number"
+        ],
+        "$.data[].landing_page_views": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].video_3s_views": [
+          "number"
+        ],
+        "$.data[].video_p100_views": [
+          "number"
+        ],
+        "$.data[].video_starts": [
+          "number"
+        ],
+        "$.data[].video_total_watch_time": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.data[].video_avg_time_watched": [
+          "null"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "creatives": {
+      "endpoint": "ad-accounts/act_949283863663703/creatives",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "827"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].creative_key": [
+          "string"
+        ],
+        "$.data[].creative_type": [
+          "string"
+        ],
+        "$.data[].thumbnail_url": [
+          "string"
+        ],
+        "$.data[].body": [
+          "string"
+        ],
+        "$.data[].title": [
+          "string"
+        ],
+        "$.data[].ads_count": [
+          "number"
+        ],
+        "$.data[].campaigns_count": [
+          "number"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].cpa": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].hook_rate": [
+          "number"
+        ],
+        "$.data[].hold_rate": [
+          "number"
+        ],
+        "$.data[].tracker": [
+          "object"
+        ],
+        "$.data[].tracker.clicks": [
+          "number"
+        ],
+        "$.data[].tracker.unique_clicks": [
+          "number"
+        ],
+        "$.data[].tracker.conversions": [
+          "number"
+        ],
+        "$.data[].tracker.revenue": [
+          "number"
+        ],
+        "$.data[].tracker.sale_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.lead_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.cost": [
+          "number"
+        ],
+        "$.data[].tracker.profit": [
+          "number"
+        ],
+        "$.data[].tracker.roi": [
+          "number"
+        ],
+        "$.data[].tracker.cr": [
+          "number"
+        ],
+        "$.data[].tracker.epc": [
+          "number"
+        ],
+        "$.data[].tracker.leads": [
+          "number"
+        ],
+        "$.data[].tracker.sales": [
+          "number"
+        ],
+        "$.data[].tracker.regs": [
+          "number"
+        ],
+        "$.data[].tracker.deposits": [
+          "number"
+        ],
+        "$.data[].tracker.reg_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.deposit_revenue": [
+          "number"
+        ],
+        "$.data[].tracker.events": [
+          "object"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "tracker": {
+      "endpoint": "ad-accounts/act_949283863663703/tracker",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].date": [
+          "string"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].unique_clicks": [
+          "number"
+        ],
+        "$.data[].conversions": [
+          "number"
+        ],
+        "$.data[].revenue": [
+          "number"
+        ],
+        "$.data[].sale_revenue": [
+          "number"
+        ],
+        "$.data[].lead_revenue": [
+          "number"
+        ],
+        "$.data[].cost": [
+          "number"
+        ],
+        "$.data[].profit": [
+          "number"
+        ],
+        "$.data[].roi": [
+          "number"
+        ],
+        "$.data[].cr": [
+          "number"
+        ],
+        "$.data[].epc": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].sales": [
+          "number"
+        ],
+        "$.data[].regs": [
+          "number"
+        ],
+        "$.data[].deposits": [
+          "number"
+        ],
+        "$.data[].reg_revenue": [
+          "number"
+        ],
+        "$.data[].deposit_revenue": [
+          "number"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ]
+      }
+    },
+    "breakdowns": {
+      "endpoint": "ad-accounts/act_949283863663703/breakdowns",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "343"
+      },
+      "fields": {
+        "$": [
+          "object"
+        ],
+        "$.data": [
+          "array"
+        ],
+        "$.data[]": [
+          "object"
+        ],
+        "$.data[].dimension": [
+          "string"
+        ],
+        "$.data[].date": [
+          "null"
+        ],
+        "$.data[].ad_account_id": [
+          "null"
+        ],
+        "$.data[].spend": [
+          "number"
+        ],
+        "$.data[].impressions": [
+          "number"
+        ],
+        "$.data[].clicks": [
+          "number"
+        ],
+        "$.data[].reach": [
+          "number"
+        ],
+        "$.data[].ctr": [
+          "number"
+        ],
+        "$.data[].cpc": [
+          "number"
+        ],
+        "$.data[].cpm": [
+          "number"
+        ],
+        "$.data[].purchases": [
+          "number"
+        ],
+        "$.data[].leads": [
+          "number"
+        ],
+        "$.data[].registrations": [
+          "number"
+        ],
+        "$.data[].results": [
+          "number"
+        ],
+        "$.data[].cost_per_result": [
+          "number"
+        ],
+        "$.data[].campaign_id": [
+          "null"
+        ],
+        "$.data[].campaign_name": [
+          "null"
+        ],
+        "$.data[].adset_id": [
+          "null"
+        ],
+        "$.data[].adset_name": [
+          "null"
+        ],
+        "$.data[].ad_id": [
+          "null"
+        ],
+        "$.data[].ad_name": [
+          "null"
+        ],
+        "$.meta": [
+          "object"
+        ],
+        "$.meta.total": [
+          "number"
+        ],
+        "$.meta.limit": [
+          "null"
+        ],
+        "$.meta.offset": [
+          "null"
+        ],
+        "$.meta.date_range": [
+          "object"
+        ],
+        "$.meta.date_range.from": [
+          "string"
+        ],
+        "$.meta.date_range.to": [
+          "string"
+        ],
+        "$.meta.currency": [
+          "null"
+        ],
+        "$.meta.data_updated_at": [
+          "string"
+        ],
+        "$.meta.failed_accounts": [
+          "null"
+        ]
+      }
+    }
+  }
+}

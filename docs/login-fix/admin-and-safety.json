@@ -1,0 +1,1 @@
+{"database": "PostgreSQL metric_control", "workspace": "default", "migration": "0007_auth", "users": 0, "sessions": 0, "action_requests": 0, "action_executions": 0, "actions_enabled": "false", "write_key_used": false, "write_key_mounted": false}

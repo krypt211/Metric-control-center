@@ -1,0 +1,17 @@
+{
+  "_note": "Synthetic example, not a verified MetricFlow contract. Confirm every field and pagination before copying to metricflow-schema.json.",
+  "entity_level": "ad",
+  "items_path": "items",
+  "pagination": {"mode": "cursor", "next_cursor_path": "next_cursor", "cursor_parameter": "cursor"},
+  "query": {"level": "ad"},
+  "fields": {
+    "account_id": "account.id", "account_name": "account.name",
+    "currency": "account.currency", "timezone": "account.timezone",
+    "entity_id": "entity.id", "entity_name": "entity.name", "date": "date",
+    "spend": "metrics.spend", "impressions": "metrics.impressions", "clicks": "metrics.clicks",
+    "leads": "metrics.leads", "sales": "metrics.sales", "revenue": "metrics.revenue",
+    "tracker_present": "has_tracker", "tracker_currency": "tracker.currency",
+    "tracker_clicks": "tracker.clicks", "tracker_leads": "tracker.leads",
+    "tracker_sales": "tracker.sales", "tracker_revenue": "tracker.revenue"
+  }
+}

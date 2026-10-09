@@ -1,0 +1,38 @@
+{
+  "counts": {
+    "ad_accounts": 0,
+    "campaigns": 0,
+    "adsets": 0,
+    "ads": 0,
+    "creatives": 0,
+    "daily_metrics": 0,
+    "tracker_metrics": 0,
+    "breakdowns": 0,
+    "raw_snapshots": 0,
+    "sync_runs": 0,
+    "entity_current_state": 0,
+    "action_requests": 0,
+    "action_executions": 0
+  },
+  "checks": {
+    "daily_duplicate_groups": 0,
+    "entity_duplicate_groups": 0,
+    "ads_without_adset": 0,
+    "adsets_without_campaign": 0,
+    "bad_account_format": 0,
+    "bad_entity_format": 0,
+    "cross_account_parents": 0,
+    "raw_to_pg_field_mismatches": 0
+  },
+  "facts_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "date_totals": {},
+  "currency_timezones": [],
+  "recent_runs": [],
+  "flags": {
+    "LOCAL_READ_ONLY": "true",
+    "SYNC_ENABLED": "true",
+    "ACTIONS_ENABLED": "false",
+    "AI_ENABLED": null,
+    "TELEGRAM_ENABLED": null
+  }
+}

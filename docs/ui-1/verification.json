@@ -1,0 +1,25 @@
+{
+  "backend_unique_tests": 231,
+  "backend_full_suite": {
+    "discovered": 228,
+    "passed": 227,
+    "initially_skipped": 1
+  },
+  "skipped_postgres_executed_separately": "PASS",
+  "additional_backend_tests_passed": 3,
+  "frontend_unit_tests_passed": 13,
+  "typecheck": "PASS",
+  "frontend_build": "PASS",
+  "browser_e2e": "PASS",
+  "browser_e2e_discovered": 6,
+  "final_http_health": {
+    "login": "PASS",
+    "csrf": "PASS",
+    "backend_ready": "PASS",
+    "private_preferences_unauthenticated": "401 PASS"
+  },
+  "browser_e2e_passed": 6,
+  "browser_console_errors": 0,
+  "browser_page_errors": 0,
+  "real_advertising_data_preserved": true
+}

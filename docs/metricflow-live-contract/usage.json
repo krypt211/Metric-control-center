@@ -1,0 +1,33 @@
+{
+  "endpoint": "usage",
+  "query": {},
+  "body": {
+    "daily_used": 9,
+    "daily_limit": 20000,
+    "daily_remaining": 19991,
+    "plan": "<redacted>",
+    "resets_at": "2026-10-08T00:00:00Z",
+    "resources": {
+      "ad_accounts": {
+        "used": 151,
+        "limit": 200,
+        "remaining": 49
+      },
+      "fan_pages": {
+        "used": 160,
+        "limit": 215,
+        "remaining": 55
+      },
+      "rules": {
+        "used": 0,
+        "limit": 200,
+        "remaining": 200
+      },
+      "bundles": {
+        "used": 0,
+        "limit": 30,
+        "remaining": 30
+      }
+    }
+  }
+}

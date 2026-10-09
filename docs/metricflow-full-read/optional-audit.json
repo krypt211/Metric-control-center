@@ -1,0 +1,102 @@
+{
+  "results": [
+    {
+      "label": "Today",
+      "start": "2026-10-08",
+      "end": "2026-10-08",
+      "status": "succeeded",
+      "run_id": "f2f75725-cf4f-43e5-8673-945480ea5afc",
+      "rows": 14,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "Yesterday",
+      "start": "2026-10-07",
+      "end": "2026-10-07",
+      "status": "succeeded",
+      "run_id": "8ca430ee-b4a1-4bd5-acd7-c4ee484eb8fe",
+      "rows": 64,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "3d",
+      "start": "2026-10-06",
+      "end": "2026-10-08",
+      "status": "succeeded",
+      "run_id": "f049fc00-12de-4245-adfb-53ee70a3f0ce",
+      "rows": 92,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "7d",
+      "start": "2026-10-02",
+      "end": "2026-10-08",
+      "status": "succeeded",
+      "run_id": "322d8f4d-3728-45ce-a13c-4860b2217794",
+      "rows": 198,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "14d",
+      "start": "2026-09-25",
+      "end": "2026-10-08",
+      "status": "succeeded",
+      "run_id": "b061436e-f572-4611-893a-08a8536c7d0c",
+      "rows": 280,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "30d",
+      "start": "2026-09-09",
+      "end": "2026-10-08",
+      "status": "succeeded",
+      "run_id": "b517363d-0da2-489b-ace0-1122f9d07e0f",
+      "rows": 280,
+      "requests": 9,
+      "errors": []
+    },
+    {
+      "label": "Custom",
+      "start": "2026-09-28",
+      "end": "2026-10-02",
+      "status": "succeeded",
+      "run_id": "fe82e9e7-51b0-4a9c-bc24-d9f7b490b786",
+      "rows": 186,
+      "requests": 9,
+      "errors": []
+    }
+  ],
+  "replay": {
+    "status": "succeeded",
+    "run_id": "381f6c0d-3f7c-47f6-aee8-aea5e91c5f97",
+    "rows": 198,
+    "requests": 9,
+    "errors": []
+  },
+  "before_counts": {
+    "tracker": 626,
+    "creative": 414
+  },
+  "after_counts": {
+    "tracker": 626,
+    "creative": 414
+  },
+  "scope_counts": {
+    "tracker/ad/window": 597,
+    "tracker/account/day": 29,
+    "creative/window": 414
+  },
+  "duplicate_test": true,
+  "quota_after": {
+    "requests": 329,
+    "limit": 800
+  },
+  "final_refresh_requests": 72,
+  "previous_account_day_creative_refresh_requests": 72,
+  "total_optional_refresh_requests_this_task": 144
+}

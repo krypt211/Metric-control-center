@@ -1,0 +1,1049 @@
+{
+  "version": 1,
+  "scopes": {
+    "account": "Кабинеты",
+    "campaign": "Кампании",
+    "adset": "Группы объявлений",
+    "ad": "Объявления",
+    "creative": "Креативы",
+    "tracker": "Трекер"
+  },
+  "categories": {
+    "basic": "Основные",
+    "traffic": "Трафик",
+    "conversions": "Конверсии",
+    "tracker": "Трекер",
+    "finance": "Финансы"
+  },
+  "metrics": {
+    "name": {
+      "key": "name",
+      "label": "Название",
+      "technicalName": "name",
+      "description": "Название сущности. Открывает следующий уровень; для трекера идентифицирует кабинет или объявление.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 280,
+      "minWidth": 180,
+      "maxWidth": 720,
+      "precision": 2,
+      "availability": "supported",
+      "required": true
+    },
+    "external_id": {
+      "key": "external_id",
+      "label": "ID",
+      "technicalName": "external_id",
+      "description": "Исходный ID провайдера; отсутствующий ID не заменяется предположением.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "account_name": {
+      "key": "account_name",
+      "label": "Кабинет",
+      "technicalName": "account_name",
+      "description": "Название рекламного кабинета.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "creative_key": {
+      "key": "creative_key",
+      "label": "Ключ креатива",
+      "technicalName": "creative_key",
+      "description": "Непрозрачный creative_key MetricFlow. Это не исторический Meta Creative ID.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "date": {
+      "key": "date",
+      "label": "Дата / период",
+      "technicalName": "date",
+      "description": "День кабинета или точный период наблюдения объявления в трекере.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "tracker"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "status": {
+      "key": "status",
+      "label": "Статус",
+      "technicalName": "status",
+      "description": "Последний наблюдаемый статус сущности.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "currency": {
+      "key": "currency",
+      "label": "Валюта",
+      "technicalName": "currency",
+      "description": "Валюта показателей; валюта трекера пока не подтверждена.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "timezone": {
+      "key": "timezone",
+      "label": "Часовой пояс",
+      "technicalName": "timezone",
+      "description": "Часовой пояс наблюдения. Для трекера неизвестен.",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 160,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "spend": {
+      "key": "spend",
+      "label": "Расходы",
+      "technicalName": "spend",
+      "description": "Расходы на рекламу за выбранный период.",
+      "unit": "currency",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "budget": {
+      "key": "budget",
+      "label": "Бюджет",
+      "technicalName": "budget",
+      "description": "Последний наблюдаемый бюджет, если его единицы подтверждены.",
+      "unit": "currency",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "bid": {
+      "key": "bid",
+      "label": "Ставка",
+      "technicalName": "bid",
+      "description": "Последняя наблюдаемая ставка, если доступна и единицы подтверждены.",
+      "unit": "currency",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "impressions": {
+      "key": "impressions",
+      "label": "Показы",
+      "technicalName": "impressions",
+      "description": "Количество показов рекламы.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "reach": {
+      "key": "reach",
+      "label": "Охват",
+      "technicalName": "reach",
+      "description": "Уникальная аудитория. Только для одного ad/day: охват разных аудиторий не суммируется.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "frequency": {
+      "key": "frequency",
+      "label": "Частота",
+      "technicalName": "frequency",
+      "description": "Среднее число показов на человека. Только для одного ad/day; при несовместимом охвате данных нет.",
+      "unit": "number",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "clicks": {
+      "key": "clicks",
+      "label": "Клики",
+      "technicalName": "clicks",
+      "description": "Количество рекламных кликов; на уровне трекера — подтверждённый счётчик кликов трекера.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "unique_clicks": {
+      "key": "unique_clicks",
+      "label": "Уникальные клики",
+      "technicalName": "unique_clicks",
+      "description": "Уникальные клики: в рекламе только для одного ad/day; в трекере — собственный счётчик.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "unique_inline_link_clicks": {
+      "key": "unique_inline_link_clicks",
+      "label": "Уникальные клики по ссылке",
+      "technicalName": "unique_inline_link_clicks",
+      "description": "Уникальные клики по ссылке; только для одного ad/day.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "inline_link_clicks": {
+      "key": "inline_link_clicks",
+      "label": "Клики по ссылке",
+      "technicalName": "inline_link_clicks",
+      "description": "Подтверждённый рекламный счётчик inline_link_clicks.",
+      "unit": "count",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "ctr": {
+      "key": "ctr",
+      "label": "CTR",
+      "technicalName": "ctr",
+      "description": "Клики / показы × 100%. Рассчитывается из итогов, не из среднего дневных CTR.",
+      "unit": "percent",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "cpc": {
+      "key": "cpc",
+      "label": "CPC",
+      "technicalName": "cpc",
+      "description": "Средняя стоимость рекламного клика: расходы / клики.",
+      "unit": "currency",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "cpm": {
+      "key": "cpm",
+      "label": "CPM",
+      "technicalName": "cpm",
+      "description": "Расходы на тысячу показов: расходы / показы × 1000.",
+      "unit": "currency",
+      "category": "traffic",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "leads": {
+      "key": "leads",
+      "label": "Лиды",
+      "technicalName": "leads",
+      "description": "Лиды выбранного источника. В креативах — Meta; в трекере — отдельный счётчик трекера.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "sales": {
+      "key": "sales",
+      "label": "Покупки / продажи",
+      "technicalName": "sales",
+      "description": "Purchases/sales выбранного источника; Meta и tracker не складываются.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "conversions": {
+      "key": "conversions",
+      "label": "Конверсии",
+      "technicalName": "conversions",
+      "description": "Конверсии выбранного источника. В tracker используются настроенные конверсии.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "conversions_raw": {
+      "key": "conversions_raw",
+      "label": "Наблюдаемые конверсии",
+      "technicalName": "conversions_raw",
+      "description": "Отдельный сырой счётчик t_conversions_raw для ad/window; не равен настроенному t_conversions.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "registrations": {
+      "key": "registrations",
+      "label": "Регистрации",
+      "technicalName": "registrations",
+      "description": "Подтверждённый рекламный счётчик registrations.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "app_installs": {
+      "key": "app_installs",
+      "label": "Установки приложения",
+      "technicalName": "app_installs",
+      "description": "Подтверждённый рекламный счётчик app_installs.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "landing_page_views": {
+      "key": "landing_page_views",
+      "label": "Просмотры посадочной страницы",
+      "technicalName": "landing_page_views",
+      "description": "Подтверждённый счётчик landing_page_views.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "video_views": {
+      "key": "video_views",
+      "label": "Просмотры видео",
+      "technicalName": "video_views",
+      "description": "Подтверждённый счётчик video_views; не подменяется просмотрами 3 секунд.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "video_3s_views": {
+      "key": "video_3s_views",
+      "label": "Просмотры видео 3 сек.",
+      "technicalName": "video_3s_views",
+      "description": "Подтверждённый счётчик video_3s_views.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "video_p100_views": {
+      "key": "video_p100_views",
+      "label": "Просмотры видео 100%",
+      "technicalName": "video_p100_views",
+      "description": "Подтверждённый счётчик полных просмотров video_p100_views.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "video_starts": {
+      "key": "video_starts",
+      "label": "Начала просмотра видео",
+      "technicalName": "video_starts",
+      "description": "Подтверждённый счётчик video_starts.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "ads_count": {
+      "key": "ads_count",
+      "label": "Связанные объявления",
+      "technicalName": "ads_count",
+      "description": "Число объявлений, связанных с creative_key в точном периоде.",
+      "unit": "count",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "cpl": {
+      "key": "cpl",
+      "label": "CPL",
+      "technicalName": "cpl",
+      "description": "Расходы / количество лидов.",
+      "unit": "currency",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "cpa": {
+      "key": "cpa",
+      "label": "CPA",
+      "technicalName": "cpa",
+      "description": "Расходы / количество конверсий.",
+      "unit": "currency",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "cps": {
+      "key": "cps",
+      "label": "CPS",
+      "technicalName": "cps",
+      "description": "Расходы / количество покупок/продаж.",
+      "unit": "currency",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "cr": {
+      "key": "cr",
+      "label": "CR",
+      "technicalName": "cr",
+      "description": "Конверсии / клики соответствующего источника × 100%.",
+      "unit": "percent",
+      "category": "conversions",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "supported"
+    },
+    "tracker_clicks": {
+      "key": "tracker_clicks",
+      "label": "Клики трекера",
+      "technicalName": "tracker_clicks",
+      "description": "Отдельные клики трекера для creative/window.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "tracker_conversions": {
+      "key": "tracker_conversions",
+      "label": "Конверсии трекера",
+      "technicalName": "tracker_conversions",
+      "description": "Отдельный подтверждённый счётчик конверсий трекера для creative/window.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "tracker_leads": {
+      "key": "tracker_leads",
+      "label": "Лиды трекера",
+      "technicalName": "tracker_leads",
+      "description": "Отдельные лиды трекера для creative/window.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "tracker_sales": {
+      "key": "tracker_sales",
+      "label": "Продажи трекера",
+      "technicalName": "tracker_sales",
+      "description": "Отдельные продажи трекера для creative/window.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "creative"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "regs": {
+      "key": "regs",
+      "label": "Регистрации трекера",
+      "technicalName": "regs",
+      "description": "Подтверждённый tracker event regs.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "deposits": {
+      "key": "deposits",
+      "label": "Депозиты трекера",
+      "technicalName": "deposits",
+      "description": "Подтверждённый tracker event deposits.",
+      "unit": "count",
+      "category": "tracker",
+      "available": true,
+      "scopes": [
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "supported"
+    },
+    "revenue": {
+      "key": "revenue",
+      "label": "Выручка",
+      "technicalName": "revenue",
+      "description": "Выручка только при подтверждённых валюте и области данных. Неизвестное — «—», не 0.",
+      "unit": "currency",
+      "category": "finance",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "profit": {
+      "key": "profit",
+      "label": "Прибыль",
+      "technicalName": "profit",
+      "description": "Выручка минус расходы при совместимых валюте/области. Неизвестное — «—».",
+      "unit": "currency",
+      "category": "finance",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "roi": {
+      "key": "roi",
+      "label": "ROI",
+      "technicalName": "roi",
+      "description": "Прибыль / расходы × 100% при подтверждённых финансовых данных.",
+      "unit": "percent",
+      "category": "finance",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad",
+        "creative",
+        "tracker"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "epc": {
+      "key": "epc",
+      "label": "EPC",
+      "technicalName": "epc",
+      "description": "Выручка / клики соответствующего источника, только при подтверждённой выручке.",
+      "unit": "currency",
+      "category": "finance",
+      "available": true,
+      "scopes": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ],
+      "defaultWidth": 140,
+      "minWidth": 80,
+      "maxWidth": 600,
+      "precision": 2,
+      "availability": "conditional"
+    }
+  },
+  "systems": {
+    "basic": {
+      "name": "Базовые",
+      "keys": [
+        "status",
+        "currency",
+        "date",
+        "spend",
+        "impressions",
+        "clicks",
+        "ctr",
+        "cpc",
+        "cpm",
+        "leads",
+        "sales"
+      ]
+    },
+    "traffic": {
+      "name": "Трафик",
+      "keys": [
+        "spend",
+        "impressions",
+        "reach",
+        "frequency",
+        "clicks",
+        "unique_clicks",
+        "inline_link_clicks",
+        "ctr",
+        "cpc",
+        "cpm"
+      ]
+    },
+    "conversions": {
+      "name": "Конверсии",
+      "keys": [
+        "spend",
+        "leads",
+        "sales",
+        "conversions",
+        "cpl",
+        "cpa",
+        "cps",
+        "cr",
+        "registrations",
+        "regs",
+        "deposits"
+      ]
+    },
+    "finance": {
+      "name": "Финансы",
+      "keys": [
+        "currency",
+        "spend",
+        "revenue",
+        "profit",
+        "roi",
+        "epc"
+      ]
+    },
+    "creatives": {
+      "name": "Креативы",
+      "keys": [
+        "ads_count",
+        "creative_key",
+        "spend",
+        "impressions",
+        "clicks",
+        "ctr",
+        "cpc",
+        "leads",
+        "cpl",
+        "video_3s_views",
+        "video_p100_views"
+      ]
+    },
+    "tracker": {
+      "name": "Трекер",
+      "keys": [
+        "date",
+        "clicks",
+        "unique_clicks",
+        "conversions",
+        "conversions_raw",
+        "leads",
+        "sales",
+        "regs",
+        "deposits",
+        "tracker_clicks",
+        "tracker_conversions",
+        "tracker_leads",
+        "tracker_sales"
+      ]
+    }
+  }
+}

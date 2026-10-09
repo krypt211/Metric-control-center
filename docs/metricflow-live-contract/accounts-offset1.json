@@ -1,0 +1,128 @@
+{
+  "endpoint": "ad-accounts",
+  "query": {
+    "limit": 1,
+    "offset": 1
+  },
+  "headers": {
+    "content-type": "<redacted>",
+    "content-length": "700"
+  },
+  "body": {
+    "data": [
+      {
+        "id": "act_949283863663703",
+        "internal_id": 922703,
+        "name": "<redacted>",
+        "custom_name": null,
+        "profile_id": 94859,
+        "profile_name": "<redacted>",
+        "currency": "USD",
+        "timezone": "America/Los_Angeles",
+        "status": "ACTIVE",
+        "spend_cap": null,
+        "daily_budget": null,
+        "currency_ratio_to_usd": 1,
+        "is_active": true,
+        "auto_sync_enabled": true,
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "unique_clicks": 0,
+        "reach": 0,
+        "cpm": 0,
+        "cpc": 0,
+        "ctr": 0,
+        "leads": 0,
+        "purchases": 0,
+        "business_id": "9629299126956405",
+        "business_name": "<redacted>",
+        "payment_method": {
+          "kind": "<redacted>",
+          "type": 1,
+          "display_string": "<redacted>",
+          "id": "94135728395237654"
+        }
+      },
+      {
+        "id": "act_987018375143402",
+        "internal_id": 911323,
+        "name": "<redacted>",
+        "custom_name": null,
+        "profile_id": 94859,
+        "profile_name": "<redacted>",
+        "currency": "USD",
+        "timezone": "Europe/Kiev",
+        "status": "ACTIVE",
+        "spend_cap": null,
+        "daily_budget": null,
+        "currency_ratio_to_usd": 1,
+        "is_active": true,
+        "auto_sync_enabled": true,
+        "spend": 172.61,
+        "impressions": 11023,
+        "clicks": 519,
+        "unique_clicks": 456,
+        "reach": 8850,
+        "cpm": 15.66,
+        "cpc": 0.33,
+        "ctr": 4.71,
+        "leads": 4,
+        "purchases": 1,
+        "business_id": "9629299126956405",
+        "business_name": "<redacted>",
+        "payment_method": {
+          "kind": "<redacted>",
+          "type": 1,
+          "display_string": "<redacted>",
+          "id": "93406451836092889"
+        }
+      },
+      {
+        "id": "act_9963619898556713",
+        "internal_id": 960284,
+        "name": "<redacted>",
+        "custom_name": null,
+        "profile_id": 94859,
+        "profile_name": "<redacted>",
+        "currency": "USD",
+        "timezone": "America/Los_Angeles",
+        "status": "ACTIVE",
+        "spend_cap": null,
+        "daily_budget": null,
+        "currency_ratio_to_usd": 1,
+        "is_active": true,
+        "auto_sync_enabled": true,
+        "spend": 79.36,
+        "impressions": 7432,
+        "clicks": 1011,
+        "unique_clicks": 768,
+        "reach": 6539,
+        "cpm": 10.68,
+        "cpc": 0.08,
+        "ctr": 13.6,
+        "leads": 34,
+        "purchases": 5,
+        "business_id": "9629299126956405",
+        "business_name": "<redacted>",
+        "payment_method": {
+          "kind": "<redacted>",
+          "type": 1,
+          "display_string": "<redacted>",
+          "id": "99295841172827650"
+        }
+      }
+    ],
+    "meta": {
+      "total": 3,
+      "limit": null,
+      "offset": null,
+      "date_range": {
+        "from": "2026-10-07",
+        "to": "2026-10-07"
+      },
+      "currency": null,
+      "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+    }
+  }
+}

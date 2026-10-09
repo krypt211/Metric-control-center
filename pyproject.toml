@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metric-control-center"
+version = "0.6.0"
+description = "Advertising Control Center: statistics, durable actions and deterministic rules"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.27,<1",
+  "cryptography>=46.0.5,<47",
+  "argon2-cffi>=25.1,<26",
+  "redis>=6,<7",
+  "fastapi>=0.128,<1",
+  "uvicorn>=0.40,<1",
+  "SQLAlchemy>=2.0,<2.1",
+  "alembic>=1.13,<2",
+  "psycopg[binary]>=3.2,<4",
+  "tzdata>=2026.1",
+]
+
+[project.optional-dependencies]
+workers = ["celery[redis]>=5.4,<6"]
+test = ["PyYAML>=6,<7", "pytest>=8,<10"]
+
+[tool.setuptools.packages.find]
+include = ["backend*", "services*", "workers*"]

@@ -1,0 +1,154 @@
+{
+  "requests": 7,
+  "cursor_rows": 59,
+  "unique_cursor_rows": 59,
+  "baseline_rows": 59,
+  "same_keys": true,
+  "same_values": true,
+  "results": [
+    {
+      "sample": "insights-baseline-header",
+      "rows": 59,
+      "meta": {
+        "total": 59,
+        "limit": 100,
+        "date_range": {
+          "from": "2026-10-06",
+          "to": "2026-10-07"
+        },
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": {
+        "cursor": null,
+        "has_more": false
+      },
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "4811"
+      }
+    },
+    {
+      "sample": "insights-cursor-page1",
+      "rows": 20,
+      "meta": {
+        "total": 20,
+        "limit": 20,
+        "date_range": {
+          "from": "2026-10-06",
+          "to": "2026-10-07"
+        },
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": {
+        "cursor": "<redacted>",
+        "has_more": true
+      },
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "2385"
+      }
+    },
+    {
+      "sample": "insights-cursor-page2",
+      "rows": 20,
+      "meta": {
+        "total": 20,
+        "limit": 20,
+        "date_range": {
+          "from": "2026-10-06",
+          "to": "2026-10-07"
+        },
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": {
+        "cursor": "<redacted>",
+        "has_more": true
+      },
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "2122"
+      }
+    },
+    {
+      "sample": "insights-cursor-page3",
+      "rows": 19,
+      "meta": {
+        "total": 19,
+        "limit": 20,
+        "date_range": {
+          "from": "2026-10-06",
+          "to": "2026-10-07"
+        },
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": {
+        "cursor": null,
+        "has_more": false
+      },
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "2139"
+      }
+    },
+    {
+      "sample": "accounts-offset1",
+      "rows": 3,
+      "meta": {
+        "total": 3,
+        "limit": null,
+        "offset": null,
+        "date_range": {
+          "from": "2026-10-07",
+          "to": "2026-10-07"
+        },
+        "currency": null,
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": null,
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "700"
+      }
+    },
+    {
+      "sample": "accounts-perpage1",
+      "rows": 3,
+      "meta": {
+        "total": 3,
+        "limit": null,
+        "offset": null,
+        "date_range": {
+          "from": "2026-10-07",
+          "to": "2026-10-07"
+        },
+        "currency": null,
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": null,
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "700"
+      }
+    },
+    {
+      "sample": "accounts-header",
+      "rows": 3,
+      "meta": {
+        "total": 3,
+        "limit": null,
+        "offset": null,
+        "date_range": {
+          "from": "2026-10-07",
+          "to": "2026-10-07"
+        },
+        "currency": null,
+        "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+      },
+      "pagination": null,
+      "headers": {
+        "content-type": "<redacted>",
+        "content-length": "700"
+      }
+    }
+  ]
+}

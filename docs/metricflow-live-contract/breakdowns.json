@@ -1,0 +1,92 @@
+{
+  "endpoint": "ad-accounts/act_949283863663703/breakdowns",
+  "query": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "body": {
+    "data": [
+      {
+        "dimension": "<redacted>",
+        "date": null,
+        "ad_account_id": null,
+        "spend": 0.15,
+        "impressions": 2,
+        "clicks": 0,
+        "reach": 2,
+        "ctr": 0,
+        "cpc": 0,
+        "cpm": 75,
+        "purchases": 0,
+        "leads": 1,
+        "registrations": 0,
+        "results": 1,
+        "cost_per_result": 0.15,
+        "campaign_id": null,
+        "campaign_name": null,
+        "adset_id": null,
+        "adset_name": null,
+        "ad_id": null,
+        "ad_name": null
+      },
+      {
+        "dimension": "<redacted>",
+        "date": null,
+        "ad_account_id": null,
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "reach": 0,
+        "ctr": 0,
+        "cpc": 0,
+        "cpm": 0,
+        "purchases": 1,
+        "leads": 0,
+        "registrations": 0,
+        "results": 1,
+        "cost_per_result": 0,
+        "campaign_id": null,
+        "campaign_name": null,
+        "adset_id": null,
+        "adset_name": null,
+        "ad_id": null,
+        "ad_name": null
+      },
+      {
+        "dimension": "<redacted>",
+        "date": null,
+        "ad_account_id": null,
+        "spend": 0,
+        "impressions": 1,
+        "clicks": 0,
+        "reach": 1,
+        "ctr": 0,
+        "cpc": 0,
+        "cpm": 0,
+        "purchases": 0,
+        "leads": 1,
+        "registrations": 0,
+        "results": 1,
+        "cost_per_result": 0,
+        "campaign_id": null,
+        "campaign_name": null,
+        "adset_id": null,
+        "adset_name": null,
+        "ad_id": null,
+        "ad_name": null
+      }
+    ],
+    "meta": {
+      "total": 3,
+      "limit": null,
+      "offset": null,
+      "date_range": {
+        "from": "2026-10-06",
+        "to": "2026-10-07"
+      },
+      "currency": null,
+      "data_updated_at": "2026-10-07T16:20:51.024797+00:00",
+      "failed_accounts": null
+    }
+  }
+}

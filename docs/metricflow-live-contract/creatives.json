@@ -1,0 +1,64 @@
+{
+  "endpoint": "ad-accounts/act_949283863663703/creatives",
+  "query": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "body": {
+    "data": [
+      {
+        "creative_key": "<redacted>",
+        "creative_type": "<redacted>",
+        "thumbnail_url": "<redacted>",
+        "body": "<redacted>",
+        "title": "<redacted>",
+        "ads_count": 1,
+        "campaigns_count": 1,
+        "spend": 0.15,
+        "impressions": 3,
+        "clicks": 0,
+        "reach": 3,
+        "ctr": 0,
+        "cpc": 0,
+        "cpm": 50,
+        "cpa": 0.02,
+        "conversions": 7,
+        "purchases": 1,
+        "leads": 2,
+        "hook_rate": 0,
+        "hold_rate": 0,
+        "tracker": {
+          "clicks": 4,
+          "unique_clicks": 3,
+          "conversions": 0,
+          "revenue": 0,
+          "sale_revenue": 0,
+          "lead_revenue": 0,
+          "cost": 0.15,
+          "profit": -0.15,
+          "roi": -100,
+          "cr": 0,
+          "epc": 0,
+          "leads": 0,
+          "sales": 0,
+          "regs": 0,
+          "deposits": 0,
+          "reg_revenue": 0,
+          "deposit_revenue": 0,
+          "events": {}
+        }
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "limit": null,
+      "offset": null,
+      "date_range": {
+        "from": "2026-10-06",
+        "to": "2026-10-07"
+      },
+      "currency": null,
+      "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+    }
+  }
+}

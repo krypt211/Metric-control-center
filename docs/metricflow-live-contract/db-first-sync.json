@@ -1,0 +1,80 @@
+{
+  "counts": {
+    "ad_accounts": 3,
+    "campaigns": 19,
+    "adsets": 34,
+    "ads": 39,
+    "creatives": 0,
+    "daily_metrics": 59,
+    "tracker_metrics": 0,
+    "breakdowns": 0,
+    "raw_snapshots": 2,
+    "sync_runs": 1,
+    "entity_current_state": 39,
+    "action_requests": 0,
+    "action_executions": 0
+  },
+  "checks": {
+    "daily_duplicate_groups": 0,
+    "entity_duplicate_groups": 0,
+    "ads_without_adset": 0,
+    "adsets_without_campaign": 0,
+    "bad_account_format": 0,
+    "bad_entity_format": 0,
+    "cross_account_parents": 0,
+    "raw_to_pg_field_mismatches": 0
+  },
+  "facts_digest": "b09167a8aee3b59179bf07c79b1f8429f32ce45bdacc30fcbfb46de2823e25fd",
+  "date_totals": {
+    "2026-10-06": {
+      "spend": "892.79000000",
+      "impressions": "73936",
+      "clicks": "8303",
+      "leads": "217",
+      "sales": "41",
+      "conversions": "557"
+    },
+    "2026-10-07": {
+      "spend": "257.92000000",
+      "impressions": "19024",
+      "clicks": "1604",
+      "leads": "38",
+      "sales": "6",
+      "conversions": "94"
+    }
+  },
+  "currency_timezones": [
+    [
+      "USD",
+      "America/Los_Angeles"
+    ],
+    [
+      "USD",
+      "Europe/Kiev"
+    ],
+    [
+      "USD",
+      "America/Los_Angeles"
+    ]
+  ],
+  "recent_runs": [
+    {
+      "id": "17d1cbe3-99e9-41b7-ac61-89b4d1a85267",
+      "job": "manual_initial",
+      "status": "succeeded",
+      "start": "2026-10-06",
+      "end": "2026-10-07",
+      "rows": 59,
+      "pages": 2,
+      "requests": 2,
+      "error_code": null
+    }
+  ],
+  "flags": {
+    "LOCAL_READ_ONLY": "true",
+    "SYNC_ENABLED": "true",
+    "ACTIONS_ENABLED": "false",
+    "AI_ENABLED": null,
+    "TELEGRAM_ENABLED": null
+  }
+}

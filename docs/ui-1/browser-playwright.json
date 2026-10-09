@@ -1,0 +1,365 @@
+{
+  "config": {
+    "argv": [
+      "E:\\Creative_Factory\\metric-control-center\\.tools\\node-v24.21.0-win-x64\\node.exe",
+      "E:\\Creative_Factory\\metric-control-center\\frontend\\node_modules\\@playwright\\test\\cli.js",
+      "test"
+    ],
+    "configFile": "E:\\Creative_Factory\\metric-control-center\\frontend\\playwright.config.mjs",
+    "rootDir": "E:/Creative_Factory/metric-control-center/frontend/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "E:/Creative_Factory/metric-control-center/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "E:/Creative_Factory/metric-control-center/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "E:\\Creative_Factory\\metric-control-center\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "E:\\Creative_Factory\\metric-control-center\\frontend\\e2e",
+        "snapshotDir": "E:\\Creative_Factory\\metric-control-center\\frontend\\e2e",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 60000,
+        "use": {
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium",
+          "baseURL": "http://127.0.0.1:3000",
+          "trace": "off",
+          "video": "off",
+          "screenshot": "only-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/browser-acceptance.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "columns.spec.mjs",
+      "file": "columns.spec.mjs",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "labels, visibility/search, bounds, keyboard reorder, scope and refresh",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2353,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:07.787Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-09d95787cde029f12fab",
+          "file": "columns.spec.mjs",
+          "line": 50,
+          "column": 1
+        },
+        {
+          "title": "real pointer resize, shrink, double-click autofit, drag, sticky name and sort",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3926,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:13.562Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-f7b96359109a24777b0e",
+          "file": "columns.spec.mjs",
+          "line": 67,
+          "column": 1
+        },
+        {
+          "title": "multiple private presets, rename/duplicate/default/delete, login persistence and isolation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2975,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:17.501Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-4230e1b9e16ed4ea4221",
+          "file": "columns.spec.mjs",
+          "line": 87,
+          "column": 1
+        },
+        {
+          "title": "all six scopes expose independent column manager and system templates",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1074,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:20.488Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-6017f01106bfa7b4d38f",
+          "file": "columns.spec.mjs",
+          "line": 111,
+          "column": 1
+        },
+        {
+          "title": "long Russian names, independent column widths and narrow viewport layout",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2009,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:21.574Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-c36cd1fe8780d19171c0",
+          "file": "columns.spec.mjs",
+          "line": 115,
+          "column": 1
+        },
+        {
+          "title": "rapid scope navigation flushes unsaved width before restoring the view",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 679,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-08T13:05:23.594Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "browser-audit",
+                      "contentType": "application/json",
+                      "body": "eyJjb25zb2xlRXJyb3JzIjpbXSwicGFnZUVycm9ycyI6W10sImFkdmVydGlzaW5nTXV0YXRpb25zIjpbXX0="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "32e9358d8d7d43bca361-8bddf226264641184c58",
+          "file": "columns.spec.mjs",
+          "line": 148,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-08T13:05:07.058Z",
+    "duration": 20133.479,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

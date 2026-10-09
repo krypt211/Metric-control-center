@@ -1,0 +1,66 @@
+{
+  "endpoint": "summary",
+  "query": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "total_accounts": 3,
+    "total_spend": 1155.23,
+    "total_impressions": 93426,
+    "total_clicks": 9969,
+    "total_reach": 78907,
+    "accounts": [
+      {
+        "ad_account_id": "act_987018375143402",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 409,
+        "impressions": 26426,
+        "clicks": 1297,
+        "reach": 20645,
+        "cpm": 15.48,
+        "cpc": 0.32,
+        "ctr": 4.91
+      },
+      {
+        "ad_account_id": "act_949283863663703",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 0.15,
+        "impressions": 3,
+        "clicks": 0,
+        "reach": 3,
+        "cpm": 50,
+        "cpc": 0,
+        "ctr": 0
+      },
+      {
+        "ad_account_id": "act_9963619898556713",
+        "name": "<redacted>",
+        "currency": "USD",
+        "spend": 746.08,
+        "impressions": 66997,
+        "clicks": 8672,
+        "reach": 58259,
+        "cpm": 11.14,
+        "cpc": 0.09,
+        "ctr": 12.94
+      }
+    ],
+    "meta": {
+      "total": 3,
+      "limit": null,
+      "offset": null,
+      "date_range": {
+        "from": "2026-10-06",
+        "to": "2026-10-07"
+      },
+      "currency": null,
+      "data_updated_at": "2026-10-07T16:33:17.402594+00:00"
+    }
+  }
+}

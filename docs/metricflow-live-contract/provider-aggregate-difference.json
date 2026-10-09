@@ -1,0 +1,26 @@
+{
+  "period": {
+    "from": "2026-10-06",
+    "to": "2026-10-07"
+  },
+  "summary_version": "2026-10-07T16:33:17.402594+00:00",
+  "insights_version": "2026-10-07T16:33:17.402594+00:00",
+  "metrics": {
+    "spend": {
+      "summary": "1155.23",
+      "insights": "1155.09",
+      "difference": "0.14"
+    },
+    "impressions": {
+      "summary": "93426",
+      "insights": "93438",
+      "difference": "-12"
+    },
+    "clicks": {
+      "summary": "9969",
+      "insights": "9969",
+      "difference": "0"
+    }
+  },
+  "cause": "Not proven. Local facts/dashboard use insights."
+}

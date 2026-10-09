@@ -1,0 +1,78 @@
+{
+  "endpoint": "insights",
+  "query": {
+    "limit": 1,
+    "page": 1,
+    "from": "2026-10-06",
+    "to": "2026-10-07",
+    "level": "ad"
+  },
+  "body": {
+    "data": [
+      {
+        "ad_account_id": "act_949283863663703",
+        "ad_account_name": "<redacted>",
+        "custom_name": null,
+        "currency": "USD",
+        "campaign_id": "987991017564899376",
+        "campaign_name": "<redacted>",
+        "adset_id": "976899374434909105",
+        "adset_name": "<redacted>",
+        "ad_id": "938726132534163563",
+        "ad_name": "<redacted>",
+        "date": "2026-10-06",
+        "status": "ACTIVE",
+        "effective_status": "ACTIVE",
+        "targeting_country": [
+          "<redacted>"
+        ],
+        "targeting_age": "<redacted>",
+        "targeting_gender": "<redacted>",
+        "landing_url": "<redacted>",
+        "url_tags": "<redacted>",
+        "app_link": null,
+        "call_to_action_type": "<redacted>",
+        "google_play_link": null,
+        "currency_ratio_to_usd": 1,
+        "spend": 0.15,
+        "impressions": 3,
+        "clicks": 0,
+        "reach": 3,
+        "frequency": 1,
+        "cpc": 0,
+        "cpm": 50,
+        "ctr": 0,
+        "unique_clicks": 0,
+        "inline_link_clicks": 0,
+        "unique_inline_link_clicks": 0,
+        "leads": 2,
+        "purchases": 1,
+        "registrations": 0,
+        "video_views": 0,
+        "app_installs": 0,
+        "landing_page_views": 0,
+        "conversions": 7,
+        "video_3s_views": 0,
+        "video_p100_views": 0,
+        "video_starts": 0,
+        "video_total_watch_time": 0,
+        "video_avg_time_watched": 0,
+        "hook_rate": 0,
+        "hold_rate": 0
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "limit": 1,
+      "date_range": {
+        "from": "2026-10-06",
+        "to": "2026-10-07"
+      },
+      "data_updated_at": "2026-10-07T16:20:51.024797+00:00"
+    },
+    "pagination": {
+      "cursor": "<redacted>",
+      "has_more": true
+    }
+  }
+}

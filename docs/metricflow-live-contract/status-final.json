@@ -1,0 +1,19 @@
+{
+  "checked_on": "2026-10-08",
+  "timezone": "Europe/Moscow",
+  "command": "status.bat -NoPause",
+  "exit_code": 0,
+  "backend_readiness": "OK",
+  "frontend_http": "OK",
+  "worker_response": "OK",
+  "schema": "CONFIGURED",
+  "last_sync": "succeeded",
+  "last_sync_at": "2026-10-08T01:40:00.016311+00:00",
+  "last_sync_rows": 28,
+  "actions": "DISABLED",
+  "mode": "READ ONLY",
+  "browser_inventory": {
+    "apps": [],
+    "browsers": []
+  }
+}

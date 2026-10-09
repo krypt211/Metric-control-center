@@ -1,0 +1,42 @@
+{
+  "full_suite": {
+    "total": 216,
+    "host_pass": 215,
+    "fail": 0,
+    "host_skip": 1,
+    "seconds": 109.449,
+    "postgres_skipped_test_separately": {
+      "pass": 1,
+      "fail": 0,
+      "seconds": 0.32
+    }
+  },
+  "auth_bootstrap_subset": {
+    "pass": 20,
+    "fail": 0,
+    "skip": 1
+  },
+  "http_e2e": {
+    "pass": 25,
+    "fail": 0
+  },
+  "login_error_messages": {
+    "pass": 8,
+    "fail": 0
+  },
+  "frontend_build_typescript": "PASS",
+  "status": "PASS",
+  "alembic_check": "PASS",
+  "secret_scan": "PASS",
+  "visual_check": "NOT VERIFIED",
+  "permanent_admin_creation": "OWNER INTERACTIVE INPUT REQUIRED",
+  "source_sha256": {
+    "services/auth/bootstrap.py": "ec0a8d131e281c526f11980dff6b77e4aca6ea883bc877f12b609c4b35550510",
+    "create_admin.bat": "c7e3e521112c06df1e87a2e98796b8884987c35bf16901fdd9d3a065d7d62254",
+    "backend/auth.py": "e9d9cb579a78936353e064187637d9bcb16afdbc83d60632aa9c8e6d78b21804",
+    "frontend/app/login/page.tsx": "89fbcf7e0f3c7be887892662956d74fed832afc0ccdf802b7e17b3aa63d76e1e",
+    "frontend/lib/login-error.ts": "d6988baf4291634948ff73276fb96bb6560c9094e54439541046b8b1fffb8310",
+    "tests/test_auth.py": "98e8e421813bd706090e869777dadc4433b351da5c4ff7ee76a88a0ed1b59e35",
+    "RUN_LOCAL.md": "4b01cb6281428218c44115504523aa834274515e1636c995deb4299b29ca5662"
+  }
+}

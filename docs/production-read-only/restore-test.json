@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "isolated": true,
+  "tables": {
+    "daily_metrics": {
+      "rows": 364,
+      "digest": "1117ce7252d3f394455b3fb64e262aeb"
+    },
+    "ad_accounts": {
+      "rows": 3,
+      "digest": "0c26de86b99fe17b8129f10474860280"
+    },
+    "entities": {
+      "rows": 273,
+      "digest": "53ce2a4d553776ca4a8040bcb2ab128c"
+    },
+    "users": {
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "user_sessions": {
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "read_statistics": {
+      "rows": 1040,
+      "digest": "6811f1a76b52d569187d57bb8c4ccbee"
+    },
+    "sync_runs": {
+      "rows": 136,
+      "digest": "90248cf3e313a60db7da61a831ca32f4"
+    },
+    "action_requests": {
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "action_executions": {
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "migration": "0007_auth"
+  },
+  "backup": {
+    "timestamp": "2026-10-08T06:57:05.203408+00:00",
+    "service": "backup",
+    "level": "INFO",
+    "request_id": null,
+    "event": "backup_created",
+    "file": "mcc-20261008T065704Z-15217539.dump",
+    "bytes": 1303826
+  }
+}

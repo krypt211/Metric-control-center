@@ -1,0 +1,7 @@
+{
+  "_note": "Synthetic mapping fragment, not an API contract or standalone config. Merge only verified field paths into metricflow-schema.json.",
+  "fields": {
+    "reach": "metrics.reach",
+    "frequency": "metrics.frequency"
+  }
+}

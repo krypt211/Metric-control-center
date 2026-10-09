@@ -1,0 +1,91 @@
+{
+  "snapshot_run_id": "a1ec5089-5922-4eb6-9272-9c8e8a9d4da7",
+  "window": [
+    "2026-10-06",
+    "2026-10-07"
+  ],
+  "unique_keys": 59,
+  "same_keys_as_first_replay": true,
+  "comparisons": {
+    "Today": {
+      "spend": {
+        "snapshot": "282.95",
+        "postgresql": "282.95000000",
+        "dashboard_api": "282.95000000",
+        "difference": "0E-8"
+      },
+      "impressions": {
+        "snapshot": "21339",
+        "postgresql": "21339",
+        "dashboard_api": "21339",
+        "difference": "0"
+      },
+      "clicks": {
+        "snapshot": "1894",
+        "postgresql": "1894",
+        "dashboard_api": "1894",
+        "difference": "0"
+      },
+      "leads": {
+        "snapshot": "43",
+        "postgresql": "43",
+        "dashboard_api": "43",
+        "difference": "0"
+      },
+      "sales": {
+        "snapshot": "6",
+        "postgresql": "6",
+        "dashboard_api": "6",
+        "difference": "0"
+      },
+      "conversions": {
+        "snapshot": "104",
+        "postgresql": "104",
+        "dashboard_api": "104",
+        "difference": "0"
+      }
+    },
+    "Yesterday": {
+      "spend": {
+        "snapshot": "892.91",
+        "postgresql": "892.91000000",
+        "dashboard_api": "892.91000000",
+        "difference": "0E-8"
+      },
+      "impressions": {
+        "snapshot": "73950",
+        "postgresql": "73950",
+        "dashboard_api": "73950",
+        "difference": "0"
+      },
+      "clicks": {
+        "snapshot": "8303",
+        "postgresql": "8303",
+        "dashboard_api": "8303",
+        "difference": "0"
+      },
+      "leads": {
+        "snapshot": "217",
+        "postgresql": "217",
+        "dashboard_api": "217",
+        "difference": "0"
+      },
+      "sales": {
+        "snapshot": "41",
+        "postgresql": "41",
+        "dashboard_api": "41",
+        "difference": "0"
+      },
+      "conversions": {
+        "snapshot": "557",
+        "postgresql": "557",
+        "dashboard_api": "557",
+        "difference": "0"
+      }
+    }
+  },
+  "privacy_scan": {
+    "json_files": 56,
+    "credential_email_matches": 0
+  }
+}

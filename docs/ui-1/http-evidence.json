@@ -1,0 +1,26 @@
+{
+  "scope_checks": {
+    "account": "PASS",
+    "campaign": "PASS",
+    "adset": "PASS",
+    "ad": "PASS",
+    "creative": "PASS",
+    "tracker": "PASS"
+  },
+  "browser": "NOT EXECUTED",
+  "authentication_required": "PASS",
+  "login": "PASS",
+  "dashboard": "PASS",
+  "actions_enabled": false,
+  "multiple_rename_duplicate_default_delete": "PASS",
+  "user_isolation": "PASS",
+  "version_conflict": "PASS",
+  "postgresql_concurrent_write_conflict": "PASS",
+  "refresh_http_persistence": "PASS",
+  "logout_login_persistence": "PASS",
+  "docker_restart_sessions_and_settings": "PASS",
+  "full_filtered_server_sort_before_pagination": "PASS",
+  "creative_table_endpoint": "PASS",
+  "tracker_table_endpoint": "PASS",
+  "status": "PASS"
+}

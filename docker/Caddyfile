@@ -1,0 +1,24 @@
+{
+	email {$ACME_EMAIL}
+}
+{$APP_DOMAIN} {
+	request_body {
+		max_size 1MB
+	}
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE:0}"
+		-Server
+	}
+	reverse_proxy frontend:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up -Authorization
+		header_up -X-User-ID
+		header_up -X-Workspace-ID
+	}
+	# Next.js supplies nonce CSP. Caddy enables HTTPS and HTTP redirects.
+	# No access logs: paths/cookies/headers must not enter operational logs.
+}

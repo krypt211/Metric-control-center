@@ -1,0 +1,64 @@
+{
+  "platform": "Windows",
+  "node": "24.21.0",
+  "chromium": "156.0.8078.4 (Playwright v1248)",
+  "mode": "headless",
+  "status": "PASS",
+  "passed": 6,
+  "failed": 0,
+  "console_errors": 0,
+  "page_errors": 0,
+  "advertising_mutations": 0,
+  "real_data_preserved": true,
+  "protected_tables": 15,
+  "tests": [
+    {
+      "test": "labels, visibility/search, bounds, keyboard reorder, scope and refresh",
+      "status": "passed",
+      "duration_ms": 2353,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    },
+    {
+      "test": "real pointer resize, shrink, double-click autofit, drag, sticky name and sort",
+      "status": "passed",
+      "duration_ms": 3926,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    },
+    {
+      "test": "multiple private presets, rename/duplicate/default/delete, login persistence and isolation",
+      "status": "passed",
+      "duration_ms": 2975,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    },
+    {
+      "test": "all six scopes expose independent column manager and system templates",
+      "status": "passed",
+      "duration_ms": 1074,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    },
+    {
+      "test": "long Russian names, independent column widths and narrow viewport layout",
+      "status": "passed",
+      "duration_ms": 2009,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    },
+    {
+      "test": "rapid scope navigation flushes unsaved width before restoring the view",
+      "status": "passed",
+      "duration_ms": 679,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "advertisingMutations": []
+    }
+  ]
+}

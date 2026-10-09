@@ -1,0 +1,15 @@
+.git
+.secrets
+.env
+.env.*
+.venv
+.tools
+**/__pycache__
+frontend/**
+!frontend/lib/
+!frontend/lib/metric-registry.json
+tests
+config/telegram-bindings.json
+
+backups
+.deploy-state
