@@ -129,7 +129,12 @@ def _calculate(profile: ProfileInput, facts: Evidence) -> dict[str, Any]:
     else:
         status = "BELOW_MINIMUM"
     eligible = bool(
-        facts.mature
+        not {
+            "SOURCE_STALE",
+            "UNKNOWN_FACTS",
+            "OBSERVATION_SOURCE_MISMATCH",
+        }.intersection(reasons)
+        and facts.mature
         and facts.compatible
         and not facts.inherited
         and actual_roi is not None
@@ -144,6 +149,7 @@ def _calculate(profile: ProfileInput, facts: Evidence) -> dict[str, Any]:
         if estimated_roi is not None
         else "UNKNOWN"
     )
+    actual_cpl = ratio(facts.spend, facts.leads)
     numeric = {
         "payout": profile.payout,
         "planned_approval_rate": profile.planned_approval_rate,
@@ -156,7 +162,7 @@ def _calculate(profile: ProfileInput, facts: Evidence) -> dict[str, Any]:
         "maximum_cpl": maximum_cpl,
         "target_approved_cps": profile.payout / (1 + profile.target_roi / HUNDRED),
         "maximum_approved_cps": profile.payout / (1 + profile.minimum_roi / HUNDRED),
-        "actual_cpl": ratio(facts.spend, facts.leads),
+        "actual_cpl": actual_cpl,
         "observed_purchase_cost": ratio(facts.spend, facts.purchases),
         "approved_cps": approved_cps,
         "estimated_sales": estimated_sales,
@@ -164,11 +170,9 @@ def _calculate(profile: ProfileInput, facts: Evidence) -> dict[str, Any]:
         "actual_revenue": actual_revenue,
         "estimated_roi": estimated_roi * HUNDRED if estimated_roi is not None else None,
         "actual_roi": actual_roi * HUNDRED if actual_roi is not None else None,
-        "cpl_deviation": ratio(facts.spend, facts.leads) - target_cpl
-        if ratio(facts.spend, facts.leads) is not None
-        else None,
+        "cpl_deviation": actual_cpl - target_cpl if actual_cpl is not None else None,
     }
-    values = {key: serial(value) for key, value in numeric.items()}
+    values: dict[str, Any] = {key: serial(value) for key, value in numeric.items()}
     values.update(
         {
             "approved_sales": approved,

@@ -39,6 +39,7 @@ class ProfileInput(Contract):
     target_roi: Decimal = Field(gt=-100, le=1000000, max_digits=16, decimal_places=8)
     minimum_roi: Decimal = Field(gt=-100, le=1000000, max_digits=16, decimal_places=8)
     planned_approval_rate: Decimal = Field(ge=0, le=1, max_digits=9, decimal_places=8)
+    lead_source: Literal["meta", "tracker"] = "meta"
     minimum_leads: int = Field(default=10, ge=1, le=100000000, strict=True)
     minimum_sales: int = Field(default=2, ge=0, le=100000000, strict=True)
     sale_threshold_type: Literal["approved", "observed", "estimated"] = "approved"
@@ -97,6 +98,7 @@ class ObservationInput(Contract):
     currency: str = Field(pattern=r"^[A-Z]{3}$")
     timezone: str = Field(min_length=1, max_length=64)
     source_provider: Literal["metricflow", "meta"]
+    lead_source: Literal["meta", "tracker"] = "meta"
     decision_definition: Literal["lead_cohort"] = "lead_cohort"
     attribution_confirmed: StrictBool = False
     revenue_confirmed: StrictBool = False

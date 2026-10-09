@@ -123,6 +123,10 @@ def table_data(session, workspace: str, filters: Filters, *, level: str = "accou
             "bid": str(state.bid) if state and state.bid is not None else None,
             "media_url": creatives[selected].media_url if level == "creative" and selected in creatives else None,
             **aggregate(rows, currency, zone, exact_ratios=exact_ratios),
+            **{target: sum(getattr(pair[0], field) for pair in rows) if all(getattr(pair[0], field) is not None for pair in rows) else None
+               for target, field in (("meta_leads", "leads"), ("meta_purchases", "sales"), ("meta_conversions", "conversions"))},
+            **{target: sum(getattr(pair[1], field) for pair in rows) if all(pair[1] is not None and pair[1].currency == currency and pair[1].timezone == zone and getattr(pair[1], field) is not None for pair in rows) else None
+               for target, field in (("tracker_leads", "leads"), ("tracker_sales", "sales"), ("tracker_conversions", "conversions"))},
         }
         if include_daily:
             by_day = {}

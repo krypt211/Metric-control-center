@@ -29,7 +29,7 @@ app.include_router(health_router)
 
 @app.middleware("http")
 async def read_only_guard(request: Request, call_next):
-    if local_read_only() and request.method not in ("GET", "HEAD", "OPTIONS") and not request.url.path.startswith(("/api/auth/", "/api/admin/", "/api/preferences/columns")):
+    if local_read_only() and request.method not in ("GET", "HEAD", "OPTIONS") and not request.url.path.startswith(("/api/auth/", "/api/admin/", "/api/preferences/columns", "/api/economics/")):
         return JSONResponse({"detail": "LOCAL READ ONLY: changes are disabled"}, status_code=403)
     return await call_next(request)
 
@@ -140,3 +140,6 @@ app.include_router(preferences_router)
 
 from backend.provider_api import router as provider_router
 app.include_router(provider_router)
+
+from backend.economics_api import router as economics_router
+app.include_router(economics_router)
