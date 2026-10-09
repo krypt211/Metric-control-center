@@ -11,7 +11,7 @@ if os.environ.get("APP_ENV")=="production" or os.environ.get("LOCAL_READ_ONLY")!
 workspace=os.environ.get("WORKSPACE_ID","default")
 logins=["ui1-"+nonce+"-"+str(i)+"@local.test" for i in range(2)]
 with database_sessions().begin() as s:
- if s.scalar(text("SELECT version_num FROM alembic_version")) not in ("0008_column_preferences","0009_providers","0010_economics"):raise RuntimeError("UI_MIGRATION_REQUIRED")
+ if s.scalar(text("SELECT version_num FROM alembic_version")) not in ("0008_column_preferences","0009_providers","0010_economics","0011_smart_rules"):raise RuntimeError("UI_MIGRATION_REQUIRED")
  if os.environ["UI_FIXTURE_MODE"]=="create":
   password=secrets.token_urlsafe(24);users=[]
   for login,role in zip(logins,["viewer","operator"]):
