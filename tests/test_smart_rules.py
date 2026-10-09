@@ -31,7 +31,7 @@ from services.automation.smart_store import get_rule, save
 from services.economics.core import Evidence, calculate
 from services.economics.models import EconomicsEvaluation
 from services.economics.schema import ProfileInput
-from services.economics.store import create_profile
+from services.economics.store import change_profile, create_profile
 from services.storage.models import ActionExecution, ActionRequest, DailyMetric
 
 
@@ -265,6 +265,39 @@ def test_missing_catalog_facts_remain_unknown_and_visible(store):
         assert result["rows"][0]["leads"] is None
         assert result["rows"][0]["spend"] is None
         assert result["rows"][0]["status"] == "DATA_STALE"
+
+
+def test_real_profile_revision_and_late_leads_preserve_rule_history(store):
+    with store.begin() as s:
+        p = create_profile(s, ACTOR, ProfileInput.model_validate(CONFIG))
+        r = save(s, ACTOR, config(profile_id=p["id"]))
+        first = simulate(s, ACTOR, r["id"], 1, now=NOW)
+        old = deepcopy(first["rows"][0])
+        assert old["profile_version"] == 1 and old["leads"] == 10
+        change_profile(
+            s,
+            ACTOR,
+            p["id"],
+            1,
+            ProfileInput.model_validate({**CONFIG, "payout": "20"}),
+        )
+        revised = simulate(s, ACTOR, r["id"], 1, now=NOW + timedelta(minutes=1))
+        assert revised["rows"][0]["profile_version"] == 2
+        assert revised["rows"][0]["economics_inputs"]["profile"]["payout"] == "20"
+        metric = s.scalar(
+            select(DailyMetric).where(
+                DailyMetric.entity_id == "d", DailyMetric.day == DAY
+            )
+        )
+        metric.leads += 2
+        s.flush()
+        late = simulate(s, ACTOR, r["id"], 1, now=NOW + timedelta(minutes=2))
+        assert late["rows"][0]["leads"] == 12
+        assert late["rows"][0]["actual_cpl"] != old["actual_cpl"]
+        assert late["rows"][0]["changes_since_previous"]["leads"]["delta"] == "2"
+        assert s.get(RuleSimulation, first["id"]).payload["rows"][0] == old
+        assert old["economics_inputs"]["profile"]["payout"] == "16"
+        assert late["rows"][0]["action_eligibility"] is False
 
 
 def test_zero_rule_or_non_matching_count_does_not_require_leads():
