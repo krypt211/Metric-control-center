@@ -16,7 +16,8 @@
     "lib/reporting-period.ts",
     "components/SourceSummary.tsx",
     "components/ProviderCapabilities.tsx",
-    "lib/economics.ts"
+    "lib/economics.ts",
+    "lib/smart-rules.ts"
   ],
   "exclude": [
     "node_modules",

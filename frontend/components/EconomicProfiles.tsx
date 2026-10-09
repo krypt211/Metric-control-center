@@ -242,6 +242,41 @@ export default function EconomicProfiles({
             />
           </label>
           <label>
+            Минимальный расход для правил
+            <input
+              inputMode="decimal"
+              required
+              value={draft.minimum_spend ?? "0"}
+              onChange={(e) => set("minimum_spend", e.target.value)}
+            />
+          </label>
+          <label>
+            Минимум наблюдаемых покупок для правил
+            <input
+              type="number"
+              min={0}
+              max={100000000}
+              required
+              value={draft.minimum_observed_purchases ?? 0}
+              onChange={(e) =>
+                set("minimum_observed_purchases", Number(e.target.value))
+              }
+            />
+          </label>
+          <label>
+            Минимальный возраст периода для правил, часов
+            <input
+              type="number"
+              min={0}
+              max={8760}
+              required
+              value={draft.minimum_data_age_hours ?? 0}
+              onChange={(e) =>
+                set("minimum_data_age_hours", Number(e.target.value))
+              }
+            />
+          </label>
+          <label>
             Минимум продаж
             <input
               type="number"

@@ -7,7 +7,7 @@ export function clampWidth(key:MetricKey,width:number){const m=metricRegistry[ke
 export function systemPresets(scope:TableScope):Preset[]{
   const allowed=new Set(scopeMetrics(scope).map(m=>m.key));
   return Object.entries(data.systems).map(([key,item])=>{
-    const keys=["name",...(scope.startsWith("eco_")&&key==="basic"?data.economics_default:item.keys).filter(k=>allowed.has(k as MetricKey)&&k!=="name")] as MetricKey[];
+    const keys=["name",...(scope==="rule_ad"&&key==="basic"?data.rules_default:scope.startsWith("eco_")&&key==="basic"?data.economics_default:item.keys).filter(k=>allowed.has(k as MetricKey)&&k!=="name")] as MetricKey[];
     const sort=keys.includes("spend")?"spend":keys.includes("clicks")?"clicks":"name";
     return {id:"system:"+key,name:item.name,scope,system:true,version:0,config:{version:1,columns:keys.map(k=>({key:k,width:metricRegistry[k].defaultWidth})),widths:{},sorting:{key:sort,direction:sort==="name"?"asc":"desc"}}};
   });

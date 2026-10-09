@@ -15,6 +15,9 @@ export type Profile = {
   planned_approval_rate: string;
   lead_source: "meta" | "tracker";
   minimum_leads: number;
+  minimum_spend: string;
+  minimum_observed_purchases: number;
+  minimum_data_age_hours: number;
   minimum_sales: number;
   sale_threshold_type: "approved" | "observed" | "estimated";
   minimum_processed: number;
@@ -32,6 +35,9 @@ export const emptyProfile: Profile = {
   planned_approval_rate: "0.3",
   lead_source: "meta",
   minimum_leads: 10,
+  minimum_spend: "0",
+  minimum_observed_purchases: 0,
+  minimum_data_age_hours: 0,
   minimum_sales: 2,
   sale_threshold_type: "approved",
   minimum_processed: 30,

@@ -10,7 +10,8 @@
     "eco_account": "Экономика: кабинеты",
     "eco_campaign": "Экономика: кампании",
     "eco_adset": "Экономика: группы",
-    "eco_ad": "Экономика: объявления"
+    "eco_ad": "Экономика: объявления",
+    "rule_ad": "Результаты правил · объявления"
   },
   "categories": {
     "basic": "Основные",
@@ -39,7 +40,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 280,
       "minWidth": 180,
@@ -64,7 +66,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -86,7 +89,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -166,7 +170,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -192,7 +197,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -217,7 +223,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -490,7 +497,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -1008,7 +1016,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 190,
       "minWidth": 90,
@@ -1028,7 +1037,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1088,7 +1098,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1128,7 +1139,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1168,7 +1180,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1188,7 +1201,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1208,7 +1222,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1288,7 +1303,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1308,7 +1324,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1368,7 +1385,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1408,7 +1426,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1428,7 +1447,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1468,7 +1488,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1528,7 +1549,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 190,
       "minWidth": 90,
@@ -1568,7 +1590,8 @@
         "eco_account",
         "eco_campaign",
         "eco_adset",
-        "eco_ad"
+        "eco_ad",
+        "rule_ad"
       ],
       "defaultWidth": 190,
       "minWidth": 90,
@@ -1695,6 +1718,108 @@
       "maxWidth": 720,
       "precision": 0,
       "availability": "conditional"
+    },
+    "observed_meta_purchases": {
+      "key": "observed_meta_purchases",
+      "label": "Покупки Meta (не апрувы)",
+      "technicalName": "observed_meta_purchases",
+      "description": "Покупки Meta (не апрувы). Результат симуляции, рекламное действие не выполняется.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "rule_status": {
+      "key": "rule_status",
+      "label": "Результат правила",
+      "technicalName": "rule_status",
+      "description": "Результат правила. Результат симуляции, рекламное действие не выполняется.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "rule_reason": {
+      "key": "rule_reason",
+      "label": "Причины решения",
+      "technicalName": "rule_reason",
+      "description": "Причины решения. Результат симуляции, рекламное действие не выполняется.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "campaign": {
+      "key": "campaign",
+      "label": "Кампания · ID",
+      "technicalName": "campaign",
+      "description": "Кампания · ID. Результат симуляции, рекламное действие не выполняется.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "adset": {
+      "key": "adset",
+      "label": "Группа · ID",
+      "technicalName": "adset",
+      "description": "Группа · ID. Результат симуляции, рекламное действие не выполняется.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
+    },
+    "last_synced": {
+      "key": "last_synced",
+      "label": "Последняя синхронизация",
+      "technicalName": "last_synced",
+      "description": "Последняя синхронизация. Результат симуляции, рекламное действие не выполняется.",
+      "unit": "text",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "rule_ad"
+      ],
+      "defaultWidth": 220,
+      "minWidth": 90,
+      "maxWidth": 960,
+      "precision": 2,
+      "availability": "conditional"
     }
   },
   "systems": {
@@ -1806,5 +1931,18 @@
     "actual_roi",
     "economics_status",
     "economics_data_quality"
+  ],
+  "rules_default": [
+    "name",
+    "spend",
+    "leads",
+    "actual_cpl",
+    "maximum_cpl",
+    "estimated_roi",
+    "actual_roi",
+    "rule_status",
+    "rule_reason",
+    "economics_data_quality",
+    "account_name"
   ]
 }

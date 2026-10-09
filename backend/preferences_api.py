@@ -10,7 +10,7 @@ from services.preferences.registry import validate_config,normalize_config,syste
 from services.storage.models import UserColumnPreset,UserTablePreference
 
 router=APIRouter()
-Scope=Literal["account","campaign","adset","ad","creative","tracker","eco_account","eco_campaign","eco_adset","eco_ad"]
+Scope=Literal["account","campaign","adset","ad","creative","tracker","eco_account","eco_campaign","eco_adset","eco_ad","rule_ad"]
 BASE="/api/preferences/columns"
 def now():return datetime.now(timezone.utc)
 class StrictModel(BaseModel):
