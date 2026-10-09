@@ -382,6 +382,8 @@ def evaluate(
             row["profile_currency"] = config.currency
             if base["currency"] != config.currency:
                 for field in (
+                    "payout",
+                    "expected_revenue_per_lead",
                     "target_cpl",
                     "maximum_cpl",
                     "target_approved_cps",

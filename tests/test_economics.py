@@ -321,6 +321,8 @@ def test_currency_mismatch_does_not_relabel_spend(store):
             r["actual_roi"] is None
             and r["estimated_roi"] is None
             and r["target_cpl"] is None
+            and r["payout"] is None
+            and r["expected_revenue_per_lead"] is None
         )
 
 
