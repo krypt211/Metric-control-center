@@ -499,6 +499,8 @@ export default function SmartRules() {
                     <label key={k}>
                       {title}
                       <input
+                        aria-label={title}
+                        aria-describedby={`rule-threshold-help-${k}`}
                         inputMode={
                           k === "minimum_spend" ? "decimal" : "numeric"
                         }
@@ -515,7 +517,7 @@ export default function SmartRules() {
                           })
                         }
                       />
-                      <small>
+                      <small id={`rule-threshold-help-${k}`}>
                         Профиль: {String(inherited)}; локально:{" "}
                         {String(draft.thresholds[k] ?? "наследовать")};
                         применяется: {String(draft.thresholds[k] ?? inherited)}
