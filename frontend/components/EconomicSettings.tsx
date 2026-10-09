@@ -1,44 +1,611 @@
 "use client";
-import {useState} from "react";
-import {type Profile,type Level,levelNames,localized} from "../lib/economics";
-import {writeEconomics} from "../lib/economics-api";
-export type Option={id:string;name:string};
-export type Assignment={id:string;profile_id:string;scope_type:string;scope_id:string;effective_start:string;effective_end:string|null};
-export type Observation={id?:string;profile_id:string;scope_type:string;scope_id:string;cohort:string;start:string;end:string;approved:number;rejected:number;pending:number;payout:string;currency:string;timezone:string;source_provider:string;lead_source:string;attribution_confirmed:boolean;revenue_confirmed:boolean;actual_revenue:string|null;comment:string;version:number};
-export type Settings={profiles:Profile[];can_edit:boolean;is_admin:boolean;assignments:Assignment[];observations:Observation[];options:{options:Record<string,Option[]>;unavailable:Record<string,string>};operators:{id:string;login:string;can_edit:boolean}[]};
-export function ScopePicker({scope,id,options,disabled,change,prefix}:{scope:string;id:string;options:Settings["options"];disabled?:boolean;change:(scope:string,id:string)=>void;prefix:string}) {
- return <><label>{prefix}: уровень<select disabled={disabled} value={scope} onChange={e=>change(e.target.value,"")}>{["profile","account","campaign","adset","ad"].map(s=><option key={s} value={s}>{levelNames[s]}</option>)}</select></label>{scope!=="profile"&&<label>{prefix}: объект<select required disabled={disabled} value={id} onChange={e=>change(scope,e.target.value)}><option value="">Выберите объект</option>{(options.options[scope]??[]).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>}</>;
+import { useState } from "react";
+import {
+  type Profile,
+  type Level,
+  levelNames,
+  localized,
+} from "../lib/economics";
+import { writeEconomics } from "../lib/economics-api";
+export type Option = { id: string; name: string };
+export type Assignment = {
+  id: string;
+  profile_id: string;
+  scope_type: string;
+  scope_id: string;
+  effective_start: string;
+  effective_end: string | null;
+};
+export type Observation = {
+  id?: string;
+  profile_id: string;
+  scope_type: string;
+  scope_id: string;
+  cohort: string;
+  start: string;
+  end: string;
+  approved: number;
+  rejected: number;
+  pending: number;
+  payout: string;
+  currency: string;
+  timezone: string;
+  source_provider: string;
+  lead_source: string;
+  attribution_confirmed: boolean;
+  revenue_confirmed: boolean;
+  actual_revenue: string | null;
+  comment: string;
+  version: number;
+};
+export type Settings = {
+  profiles: Profile[];
+  can_edit: boolean;
+  is_admin: boolean;
+  assignments: Assignment[];
+  observations: Observation[];
+  options: {
+    options: Record<string, Option[]>;
+    unavailable: Record<string, string>;
+  };
+  operators: { id: string; login: string; can_edit: boolean }[];
+};
+export function ScopePicker({
+  scope,
+  id,
+  options,
+  disabled,
+  change,
+  prefix,
+}: {
+  scope: string;
+  id: string;
+  options: Settings["options"];
+  disabled?: boolean;
+  change: (scope: string, id: string) => void;
+  prefix: string;
+}) {
+  return (
+    <>
+      <label>
+        {prefix}: уровень
+        <select
+          disabled={disabled}
+          value={scope}
+          onChange={(e) => change(e.target.value, "")}
+        >
+          {["profile", "account", "campaign", "adset", "ad"].map((s) => (
+            <option key={s} value={s}>
+              {levelNames[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {scope !== "profile" && (
+        <label>
+          {prefix}: объект
+          <select
+            required
+            disabled={disabled}
+            value={id}
+            onChange={(e) => change(scope, e.target.value)}
+          >
+            <option value="">Выберите объект</option>
+            {(options.options[scope] ?? []).map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+    </>
+  );
 }
-export default function EconomicSettings({data,dates,changed}:{data:Settings;dates:[string,string];changed:()=>Promise<void>}) {
- const active=data.profiles.filter(p=>!p.deleted);
- const [profileID,setProfileID]=useState(""),[scope,setScope]=useState("account"),[scopeID,setScopeID]=useState("");
- const [effectiveStart,setEffectiveStart]=useState(""),[effectiveEnd,setEffectiveEnd]=useState("");
- const [observation,setObservation]=useState<Observation|null>(null),[revenue,setRevenue]=useState("");
- const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
- const selected=active.find(p=>p.id===profileID);
- function newObservation(p:Profile){setObservation({profile_id:p.id!,scope_type:"profile",scope_id:"",cohort:"",start:dates[0],end:dates[1],approved:0,rejected:0,pending:0,payout:p.payout,currency:p.currency,timezone:"Europe/Moscow",source_provider:"metricflow",lead_source:p.lead_source,attribution_confirmed:false,revenue_confirmed:false,actual_revenue:null,comment:"",version:0});setRevenue("");setError("");}
- function patch(key:keyof Observation,value:string|number|boolean){setObservation(o=>o?{...o,[key]:value}:null);}
- async function act(fn:()=>Promise<unknown>,success:string){setBusy(true);setError("");setMessage("");try{await fn();await changed();setMessage(success);}catch(e){setError(e instanceof Error?e.message:"Не удалось сохранить");}finally{setBusy(false);}}
- function name(id:string){return data.profiles.find(p=>p.id===id)?.name??"Удалённый профиль";}
- return <>
- <section className="economic-panel" aria-label="Назначения профилей"><h2>Назначения профилей</h2><p>Профиль объявления имеет приоритет над группой, кампанией и кабинетом. Назначение действует только в указанных датах. Для группы профиля задайте Оффер / GEO в фильтрах.</p>
- <form onSubmit={e=>{e.preventDefault();void act(()=>writeEconomics("assignments","POST",{profile_id:profileID,scope_type:scope,scope_id:scopeID,effective_start:effectiveStart||dates[0],effective_end:effectiveEnd||null}),"Назначение сохранено");}}><fieldset disabled={!data.can_edit||busy} className="economic-fields"><label>Профиль для назначения<select required value={profileID} onChange={e=>setProfileID(e.target.value)}><option value="">Выберите профиль</option>{active.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><ScopePicker prefix="Назначение" scope={scope} id={scopeID} options={data.options} change={(s,id)=>{setScope(s);setScopeID(id);}}/><label>Действует с<input type="date" required value={effectiveStart||dates[0]} onChange={e=>setEffectiveStart(e.target.value)}/></label><label>Действует до (необязательно)<input type="date" value={effectiveEnd} min={effectiveStart||dates[0]} onChange={e=>setEffectiveEnd(e.target.value)}/></label></fieldset><button disabled={!data.can_edit||busy||!selected}>Назначить профиль</button></form>
- <ul className="economic-list">{data.assignments.map(a=><li key={a.id}>{name(a.profile_id)} · {levelNames[a.scope_type]} · {data.options.options[a.scope_type]?.find(o=>o.id===a.scope_id)?.name??"Группа профиля"} · {a.effective_start}–{a.effective_end??"без окончания"}<button disabled={!data.can_edit||busy} onClick={()=>void act(()=>writeEconomics("assignments/"+a.id,"DELETE"),"Назначение снято")}>Снять назначение</button></li>)}</ul>
- </section>
- <section className="economic-panel" aria-label="Ручной апрув"><h2>Ручной апрув</h2><p>Апрув = Approved / (Approved + Rejected). Pending исключён из процента и задерживает созревание. Апрув группы используется в прогнозе; её продажи и выручка не распределяются по объявлениям.</p>
- <div className="filters"><label>Профиль когорты<select value={observation?.profile_id??""} disabled={!data.can_edit||busy} onChange={e=>{const p=active.find(p=>p.id===e.target.value);if(p)newObservation(p);else setObservation(null);}}><option value="">Выберите профиль</option>{active.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button disabled={!data.can_edit||busy||!observation} onClick={()=>{const p=active.find(p=>p.id===observation?.profile_id);if(p)newObservation(p);}}>Новая когорта</button></div>
- {observation&&<form onSubmit={e=>{e.preventDefault();const body=Object.fromEntries(["profile_id","scope_type","scope_id","cohort","start","end","approved","rejected","pending","payout","currency","timezone","source_provider","lead_source","attribution_confirmed","revenue_confirmed","comment","version"].map(k=>[k,observation[k as keyof Observation]]));void act(async()=>{const result=await writeEconomics<{id:string;version:number}>("observations","POST",{...body,actual_revenue:revenue||null});setObservation(o=>o?{...o,id:result.id,version:result.version}:null);},"Когорта сохранена без суммирования прежних решений");}}>
- <fieldset disabled={!data.can_edit||busy} className="economic-fields"><label>Когорта<input required maxLength={120} disabled={observation.version>0} value={observation.cohort} onChange={e=>patch("cohort",e.target.value)}/></label><ScopePicker prefix="Когорта" scope={observation.scope_type} id={observation.scope_id} disabled={observation.version>0} options={data.options} change={(s,id)=>setObservation(o=>o?{...o,scope_type:s,scope_id:id}:null)}/>
- <label>Начало когорты<input required type="date" value={observation.start} onChange={e=>patch("start",e.target.value)}/></label><label>Конец когорты<input required type="date" min={observation.start} value={observation.end} onChange={e=>patch("end",e.target.value)}/></label>
- {(["approved","rejected","pending"] as const).map(k=><label key={k}>{{approved:"Approved — одобрено",rejected:"Rejected — отклонено",pending:"Pending — в ожидании"}[k]}<input type="number" required min={0} max={100000000} step={1} value={observation[k]} onChange={e=>patch(k,Number(e.target.value))}/></label>)}
- <label>Выплата когорты<input required inputMode="decimal" value={observation.payout} onChange={e=>patch("payout",e.target.value)}/></label><label>Валюта когорты<input required pattern="[A-Z]{3}" maxLength={3} value={observation.currency} onChange={e=>patch("currency",e.target.value.toUpperCase())}/></label>
- <label>Часовой пояс когорты<input required value={observation.timezone} onChange={e=>patch("timezone",e.target.value)}/></label><label>Источник статистики<select value={observation.source_provider} onChange={e=>patch("source_provider",e.target.value)}><option value="metricflow">MetricFlow</option><option value="meta">Meta</option></select></label><label>Источник лидов когорты<select value={observation.lead_source} onChange={e=>patch("lead_source",e.target.value)}><option value="meta">Лиды Meta</option><option value="tracker">Лиды трекера</option></select></label>
- <label>Подтверждённая выручка (необязательно)<input inputMode="decimal" value={revenue} onChange={e=>setRevenue(e.target.value)}/></label><label>Комментарий<textarea maxLength={2000} value={observation.comment} onChange={e=>patch("comment",e.target.value)}/></label>
- <label className="economic-check"><input type="checkbox" checked={observation.attribution_confirmed} onChange={e=>patch("attribution_confirmed",e.target.checked)}/>Подтверждаю совпадение лидов, периода, уровня и атрибуции с рекламной статистикой</label><label className="economic-check"><input type="checkbox" checked={observation.revenue_confirmed} onChange={e=>patch("revenue_confirmed",e.target.checked)}/>Подтверждаю оплаченные апрувы и выручку. Если сумма не задана, выручка = Approved × выплата</label>
- </fieldset><button disabled={!data.can_edit||busy}>Сохранить когорту</button><small>Версия: {observation.version||"новая"}. Уточнение заменяет значения этой когорты, не добавляет их повторно.</small></form>}
- <div className="tablewrap"><table data-testid="approval-observations"><thead><tr><th>Профиль / когорта</th><th>Период / уровень</th><th>Approved / Rejected / Pending</th><th>Апрув</th><th>Источник</th><th>Версия</th><th>Действие</th></tr></thead><tbody>{data.observations.map(o=><tr key={o.id}><td>{name(o.profile_id)}<small>{o.cohort}</small></td><td>{o.start}–{o.end}<small>{levelNames[o.scope_type]} · {o.timezone}</small></td><td>{o.approved} / {o.rejected} / {o.pending}</td><td>{o.approved+o.rejected?new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2}).format(100*o.approved/(o.approved+o.rejected))+"%":"—"}</td><td>Ручной ввод<small>{o.source_provider==="meta"?"Meta":"MetricFlow"} · {o.lead_source==="meta"?"лиды Meta":"лиды трекера"}</small></td><td>{o.version}</td><td><button disabled={!data.can_edit||busy} onClick={()=>{setObservation({...o});setRevenue(o.actual_revenue??"");setError("");}}>Уточнить когорту</button></td></tr>)}</tbody></table></div>
- </section>
- {data.is_admin&&<section className="economic-panel"><h2>Доступ операторов</h2><p>Просмотр доступен всем ролям. Оператор может редактировать экономику только с явным разрешением администратора.</p>{data.operators.length===0?<p>Активных операторов нет.</p>:data.operators.map(o=><label className="economic-check" key={o.id}><input disabled={busy} type="checkbox" checked={o.can_edit} onChange={e=>void act(()=>writeEconomics("grants","PUT",{user_id:o.id,can_edit:e.target.checked}),"Доступ обновлён")}/>{o.login}: редактирование экономики</label>)}</section>}
- {error&&<p className="notice error" role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
- </>;
+export default function EconomicSettings({
+  data,
+  dates,
+  changed,
+}: {
+  data: Settings;
+  dates: [string, string];
+  changed: () => Promise<void>;
+}) {
+  const active = data.profiles.filter((p) => !p.deleted);
+  const [profileID, setProfileID] = useState(""),
+    [scope, setScope] = useState("account"),
+    [scopeID, setScopeID] = useState("");
+  const [effectiveStart, setEffectiveStart] = useState(""),
+    [effectiveEnd, setEffectiveEnd] = useState("");
+  const [observation, setObservation] = useState<Observation | null>(null),
+    [revenue, setRevenue] = useState("");
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [message, setMessage] = useState("");
+  const selected = active.find((p) => p.id === profileID);
+  function newObservation(p: Profile) {
+    setObservation({
+      profile_id: p.id!,
+      scope_type: "profile",
+      scope_id: "",
+      cohort: "",
+      start: dates[0],
+      end: dates[1],
+      approved: 0,
+      rejected: 0,
+      pending: 0,
+      payout: p.payout,
+      currency: p.currency,
+      timezone: "Europe/Moscow",
+      source_provider: "metricflow",
+      lead_source: p.lead_source,
+      attribution_confirmed: false,
+      revenue_confirmed: false,
+      actual_revenue: null,
+      comment: "",
+      version: 0,
+    });
+    setRevenue("");
+    setError("");
+  }
+  function patch(key: keyof Observation, value: string | number | boolean) {
+    setObservation((o) => (o ? { ...o, [key]: value } : null));
+  }
+  async function act(fn: () => Promise<unknown>, success: string) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await fn();
+      await changed();
+      setMessage(success);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сохранить");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function name(id: string) {
+    return data.profiles.find((p) => p.id === id)?.name ?? "Удалённый профиль";
+  }
+  return (
+    <>
+      <section className="economic-panel" aria-label="Назначения профилей">
+        <h2>Назначения профилей</h2>
+        <p>
+          Профиль объявления имеет приоритет над группой, кампанией и кабинетом.
+          Назначение действует только в указанных датах. Для группы профиля
+          задайте Оффер / GEO в фильтрах.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(
+              () =>
+                writeEconomics("assignments", "POST", {
+                  profile_id: profileID,
+                  scope_type: scope,
+                  scope_id: scopeID,
+                  effective_start: effectiveStart || dates[0],
+                  effective_end: effectiveEnd || null,
+                }),
+              "Назначение сохранено",
+            );
+          }}
+        >
+          <fieldset
+            disabled={!data.can_edit || busy}
+            className="economic-fields"
+          >
+            <label>
+              Профиль для назначения
+              <select
+                required
+                value={profileID}
+                onChange={(e) => setProfileID(e.target.value)}
+              >
+                <option value="">Выберите профиль</option>
+                {active.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ScopePicker
+              prefix="Назначение"
+              scope={scope}
+              id={scopeID}
+              options={data.options}
+              change={(s, id) => {
+                setScope(s);
+                setScopeID(id);
+              }}
+            />
+            <label>
+              Действует с
+              <input
+                type="date"
+                required
+                value={effectiveStart || dates[0]}
+                onChange={(e) => setEffectiveStart(e.target.value)}
+              />
+            </label>
+            <label>
+              Действует до (необязательно)
+              <input
+                type="date"
+                value={effectiveEnd}
+                min={effectiveStart || dates[0]}
+                onChange={(e) => setEffectiveEnd(e.target.value)}
+              />
+            </label>
+          </fieldset>
+          <button disabled={!data.can_edit || busy || !selected}>
+            Назначить профиль
+          </button>
+        </form>
+        <ul className="economic-list">
+          {data.assignments.map((a) => (
+            <li key={a.id}>
+              {name(a.profile_id)} · {levelNames[a.scope_type]} ·{" "}
+              {data.options.options[a.scope_type]?.find(
+                (o) => o.id === a.scope_id,
+              )?.name ?? "Группа профиля"}{" "}
+              · {a.effective_start}–{a.effective_end ?? "без окончания"}
+              <button
+                disabled={!data.can_edit || busy}
+                onClick={() =>
+                  void act(
+                    () => writeEconomics("assignments/" + a.id, "DELETE"),
+                    "Назначение снято",
+                  )
+                }
+              >
+                Снять назначение
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="economic-panel" aria-label="Ручной апрув">
+        <h2>Ручной апрув</h2>
+        <p>
+          Апрув = Approved / (Approved + Rejected). Pending исключён из процента
+          и задерживает созревание. Апрув группы используется в прогнозе; её
+          продажи и выручка не распределяются по объявлениям.
+        </p>
+        <div className="filters">
+          <label>
+            Профиль когорты
+            <select
+              value={observation?.profile_id ?? ""}
+              disabled={!data.can_edit || busy}
+              onChange={(e) => {
+                const p = active.find((p) => p.id === e.target.value);
+                if (p) newObservation(p);
+                else setObservation(null);
+              }}
+            >
+              <option value="">Выберите профиль</option>
+              {active.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            disabled={!data.can_edit || busy || !observation}
+            onClick={() => {
+              const p = active.find((p) => p.id === observation?.profile_id);
+              if (p) newObservation(p);
+            }}
+          >
+            Новая когорта
+          </button>
+        </div>
+        {observation && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const body = Object.fromEntries(
+                [
+                  "profile_id",
+                  "scope_type",
+                  "scope_id",
+                  "cohort",
+                  "start",
+                  "end",
+                  "approved",
+                  "rejected",
+                  "pending",
+                  "payout",
+                  "currency",
+                  "timezone",
+                  "source_provider",
+                  "lead_source",
+                  "attribution_confirmed",
+                  "revenue_confirmed",
+                  "comment",
+                  "version",
+                ].map((k) => [k, observation[k as keyof Observation]]),
+              );
+              void act(async () => {
+                const result = await writeEconomics<{
+                  id: string;
+                  version: number;
+                }>("observations", "POST", {
+                  ...body,
+                  actual_revenue: revenue || null,
+                });
+                setObservation((o) =>
+                  o ? { ...o, id: result.id, version: result.version } : null,
+                );
+              }, "Когорта сохранена без суммирования прежних решений");
+            }}
+          >
+            <fieldset
+              disabled={!data.can_edit || busy}
+              className="economic-fields"
+            >
+              <label>
+                Когорта
+                <input
+                  required
+                  maxLength={120}
+                  disabled={observation.version > 0}
+                  value={observation.cohort}
+                  onChange={(e) => patch("cohort", e.target.value)}
+                />
+              </label>
+              <ScopePicker
+                prefix="Когорта"
+                scope={observation.scope_type}
+                id={observation.scope_id}
+                disabled={observation.version > 0}
+                options={data.options}
+                change={(s, id) =>
+                  setObservation((o) =>
+                    o ? { ...o, scope_type: s, scope_id: id } : null,
+                  )
+                }
+              />
+              <label>
+                Начало когорты
+                <input
+                  required
+                  type="date"
+                  value={observation.start}
+                  onChange={(e) => patch("start", e.target.value)}
+                />
+              </label>
+              <label>
+                Конец когорты
+                <input
+                  required
+                  type="date"
+                  min={observation.start}
+                  value={observation.end}
+                  onChange={(e) => patch("end", e.target.value)}
+                />
+              </label>
+              {(["approved", "rejected", "pending"] as const).map((k) => (
+                <label key={k}>
+                  {
+                    {
+                      approved: "Approved — одобрено",
+                      rejected: "Rejected — отклонено",
+                      pending: "Pending — в ожидании",
+                    }[k]
+                  }
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    max={100000000}
+                    step={1}
+                    value={observation[k]}
+                    onChange={(e) => patch(k, Number(e.target.value))}
+                  />
+                </label>
+              ))}
+              <label>
+                Выплата когорты
+                <input
+                  required
+                  inputMode="decimal"
+                  value={observation.payout}
+                  onChange={(e) => patch("payout", e.target.value)}
+                />
+              </label>
+              <label>
+                Валюта когорты
+                <input
+                  required
+                  pattern="[A-Z]{3}"
+                  maxLength={3}
+                  value={observation.currency}
+                  onChange={(e) =>
+                    patch("currency", e.target.value.toUpperCase())
+                  }
+                />
+              </label>
+              <label>
+                Часовой пояс когорты
+                <input
+                  required
+                  value={observation.timezone}
+                  onChange={(e) => patch("timezone", e.target.value)}
+                />
+              </label>
+              <label>
+                Источник статистики
+                <select
+                  value={observation.source_provider}
+                  onChange={(e) => patch("source_provider", e.target.value)}
+                >
+                  <option value="metricflow">MetricFlow</option>
+                  <option value="meta">Meta</option>
+                </select>
+              </label>
+              <label>
+                Источник лидов когорты
+                <select
+                  value={observation.lead_source}
+                  onChange={(e) => patch("lead_source", e.target.value)}
+                >
+                  <option value="meta">Лиды Meta</option>
+                  <option value="tracker">Лиды трекера</option>
+                </select>
+              </label>
+              <label>
+                Подтверждённая выручка (необязательно)
+                <input
+                  inputMode="decimal"
+                  value={revenue}
+                  onChange={(e) => setRevenue(e.target.value)}
+                />
+              </label>
+              <label>
+                Комментарий
+                <textarea
+                  maxLength={2000}
+                  value={observation.comment}
+                  onChange={(e) => patch("comment", e.target.value)}
+                />
+              </label>
+              <label className="economic-check">
+                <input
+                  type="checkbox"
+                  checked={observation.attribution_confirmed}
+                  onChange={(e) =>
+                    patch("attribution_confirmed", e.target.checked)
+                  }
+                />
+                Подтверждаю совпадение лидов, периода, уровня и атрибуции с
+                рекламной статистикой
+              </label>
+              <label className="economic-check">
+                <input
+                  type="checkbox"
+                  checked={observation.revenue_confirmed}
+                  onChange={(e) => patch("revenue_confirmed", e.target.checked)}
+                />
+                Подтверждаю оплаченные апрувы и выручку. Если сумма не задана,
+                выручка = Approved × выплата
+              </label>
+            </fieldset>
+            <button disabled={!data.can_edit || busy}>Сохранить когорту</button>
+            <small>
+              Версия: {observation.version || "новая"}. Уточнение заменяет
+              значения этой когорты, не добавляет их повторно.
+            </small>
+          </form>
+        )}
+        <div className="tablewrap">
+          <table data-testid="approval-observations">
+            <thead>
+              <tr>
+                <th>Профиль / когорта</th>
+                <th>Период / уровень</th>
+                <th>Approved / Rejected / Pending</th>
+                <th>Апрув</th>
+                <th>Источник</th>
+                <th>Версия</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.observations.map((o) => (
+                <tr key={o.id}>
+                  <td>
+                    {name(o.profile_id)}
+                    <small>{o.cohort}</small>
+                  </td>
+                  <td>
+                    {o.start}–{o.end}
+                    <small>
+                      {levelNames[o.scope_type]} · {o.timezone}
+                    </small>
+                  </td>
+                  <td>
+                    {o.approved} / {o.rejected} / {o.pending}
+                  </td>
+                  <td>
+                    {o.approved + o.rejected
+                      ? new Intl.NumberFormat("ru-RU", {
+                          maximumFractionDigits: 2,
+                        }).format(
+                          (100 * o.approved) / (o.approved + o.rejected),
+                        ) + "%"
+                      : "—"}
+                  </td>
+                  <td>
+                    Ручной ввод
+                    <small>
+                      {o.source_provider === "meta" ? "Meta" : "MetricFlow"} ·{" "}
+                      {o.lead_source === "meta" ? "лиды Meta" : "лиды трекера"}
+                    </small>
+                  </td>
+                  <td>{o.version}</td>
+                  <td>
+                    <button
+                      disabled={!data.can_edit || busy}
+                      onClick={() => {
+                        setObservation({ ...o });
+                        setRevenue(o.actual_revenue ?? "");
+                        setError("");
+                      }}
+                    >
+                      Уточнить когорту
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {data.is_admin && (
+        <section className="economic-panel">
+          <h2>Доступ операторов</h2>
+          <p>
+            Просмотр доступен всем ролям. Оператор может редактировать экономику
+            только с явным разрешением администратора.
+          </p>
+          {data.operators.length === 0 ? (
+            <p>Активных операторов нет.</p>
+          ) : (
+            data.operators.map((o) => (
+              <label className="economic-check" key={o.id}>
+                <input
+                  disabled={busy}
+                  type="checkbox"
+                  checked={o.can_edit}
+                  onChange={(e) =>
+                    void act(
+                      () =>
+                        writeEconomics("grants", "PUT", {
+                          user_id: o.id,
+                          can_edit: e.target.checked,
+                        }),
+                      "Доступ обновлён",
+                    )
+                  }
+                />
+                {o.login}: редактирование экономики
+              </label>
+            ))
+          )}
+        </section>
+      )}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      {message && <p role="status">{message}</p>}
+    </>
+  );
 }
