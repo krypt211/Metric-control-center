@@ -13,6 +13,7 @@ from services.automation.smart_models import (
     RuleSimulation,
     RuleVersion,
 )
+from services.automation.smart_recommendations import recommendation_summary
 from services.automation.smart_schema import SmartRuleInput, SmartRuleUpdate
 from services.automation.smart_simulation import simulate, simulation_json
 from services.automation.smart_store import (
@@ -74,6 +75,17 @@ def listing(request: Request) -> dict:
                 }
             )
         return {"rules": output, "can_edit": editor(s, a), "mode": "DRY_RUN"}
+
+
+@router.get("/recommendations")
+def recommendations(
+    request: Request,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+) -> dict:
+    a = actor(request)
+    with factory()() as s:
+        return recommendation_summary(s, a["workspace"], offset=offset, limit=limit)
 
 
 @router.get("/available-scopes")
