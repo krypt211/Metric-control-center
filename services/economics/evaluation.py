@@ -31,14 +31,19 @@ from services.sync.engine import aware
 
 
 def chain_for(
-    session: Session, row: dict[str, Any], level: str, workspace: str
+    session: Session,
+    row: dict[str, Any],
+    level: str,
+    workspace: str,
+    entity_map: dict[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Use real hierarchy and canonical IDs, never infer parents from names."""
     chain = [("profile", ""), ("account", row["account_id"])]
     if level == "account":
         return chain
     entity = session.get(Entity, row["id"])
-    _account_map, entity_map = identity_maps(session, workspace)
+    if entity_map is None:
+        _account_map, entity_map = identity_maps(session, workspace)
     if entity is None:
         return chain + [(level, row["id"])]
     campaign = None
@@ -347,10 +352,11 @@ def evaluate(
         session, workspace, filters, level=level, limit=100000, include_daily=True
     )
     output = []
+    _account_map, entity_map = identity_maps(session, workspace)
     if selected:
         profile_row(session, workspace, selected)
     for base in table["rows"]:
-        chain = chain_for(session, base, level, workspace)
+        chain = chain_for(session, base, level, workspace, entity_map)
         p, assigned = select_profile(
             session,
             workspace,

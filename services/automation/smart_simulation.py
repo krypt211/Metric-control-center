@@ -54,6 +54,7 @@ def economics_adapter(
         Filters(
             first,
             last,
+            account=selected.account_ids[0] if len(selected.account_ids) == 1 else None,
             campaign=selected.campaign,
             adset=selected.adset,
             ad=selected.ad,
@@ -86,7 +87,7 @@ def economics_adapter(
         if selected.provider and selected.provider != source.get("provider"):
             continue
         chain = chain_for(
-            s, {"id": entity.id, "account_id": canonical}, "ad", workspace
+            s, {"id": entity.id, "account_id": canonical}, "ad", workspace, entity_map
         )
         context = {**dict(chain), "ad": ad_id}
         if any(
@@ -167,7 +168,7 @@ def economics_adapter(
         row["account_name"] = source.get("account_name") or row["account_id"]
         row["source_window_status"] = source.get("window_status", "missing")
         row["campaign"] = row["adset"] = None
-        for kind, key in chain_for(s, row, "ad", workspace):
+        for kind, key in chain_for(s, row, "ad", workspace, entity_map):
             if kind in ("campaign", "adset"):
                 row[kind] = key
         snap = (
