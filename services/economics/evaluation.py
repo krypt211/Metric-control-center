@@ -139,6 +139,8 @@ def row_evidence(
         and x["timezone"] == row["timezone"]
         and x["source_provider"] == fact_source
         and x.get("lead_source", "meta") == config.lead_source
+        and x.get("offer", "") == config.offer
+        and x.get("geo", "") == config.geo
         for x in payloads
     )
     if not matching:

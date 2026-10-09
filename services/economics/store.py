@@ -277,6 +277,15 @@ def observe(
     row.payload = {
         k: v for k, v in command.model_dump(mode="json").items() if k != "version"
     }
+    row.payload.update(
+        {
+            "offer": before.get("offer") if before else profile.payload["offer"],
+            "geo": before.get("geo") if before else profile.payload["geo"],
+            "recorded_profile_version": before.get("recorded_profile_version")
+            if before
+            else profile.version,
+        }
+    )
     row.updated_at = utcnow()
     if old is None:
         session.add(row)

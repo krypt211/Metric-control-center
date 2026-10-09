@@ -599,3 +599,61 @@ def test_tracker_profile_snapshot_preserves_selected_lead_basis(store):
         assert archived["planned_approval_percent"] == "30.00000000"
         assert archived["profile_version"] == p["version"]
         assert archived["period_start"] == str(DAY)
+
+
+def test_profile_geo_change_never_relabels_existing_manual_approvals(store):
+    with store.begin() as s:
+        p = create_profile(
+            s,
+            ACTOR,
+            ProfileInput.model_validate({**CONFIG, "geo": "IT", "offer": "Offer"}),
+        )
+        o = observe(s, ACTOR, observation(p["id"]))
+        assert o["geo"] == "IT" and o["recorded_profile_version"] == 1
+        assert evaluated(s, p["id"])["actual_roi"] == "20.00000000"
+        change_profile(
+            s,
+            ACTOR,
+            p["id"],
+            1,
+            ProfileInput.model_validate({**CONFIG, "geo": "ES", "offer": "Offer"}),
+        )
+        changed = evaluated(s, p["id"])
+        assert changed["actual_roi"] is None
+        assert "OBSERVATION_SOURCE_MISMATCH" in changed["reason_codes"]
+        revised = observe(
+            s, ACTOR, observation(p["id"], version=1, approved=4, rejected=6)
+        )
+        assert revised["geo"] == "IT" and revised["recorded_profile_version"] == 1
+        assert evaluated(s, p["id"])["actual_roi"] is None
+
+
+def test_multiple_offer_geo_profiles_require_exact_group_selection(store):
+    from services.economics.evaluation import select_profile
+
+    with store.begin() as s:
+        profiles = {}
+        for geo in ("IT", "ES"):
+            p = create_profile(
+                s,
+                ACTOR,
+                ProfileInput.model_validate({**CONFIG, "geo": geo, "offer": "Offer"}),
+            )
+            assign(
+                s,
+                ACTOR,
+                AssignmentInput(
+                    profile_id=p["id"],
+                    scope_type="profile",
+                    scope_id="",
+                    effective_start=DAY,
+                ),
+            )
+            profiles[geo] = p["id"]
+        chain = [("profile", ""), ("account", "a")]
+        for geo in ("IT", "ES"):
+            p, scope = select_profile(s, "default", chain, DAY, END, None, "Offer", geo)
+            assert p.id == profiles[geo] and scope == "profile"
+        assert (
+            select_profile(s, "default", chain, DAY, END, None, None, None)[0] is None
+        )
