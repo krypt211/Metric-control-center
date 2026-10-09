@@ -10,9 +10,13 @@ function fixture(mode,nonce){
  return JSON.parse(execFileSync(docker,args,{input:readFileSync(new URL("./provider_accounts.py",import.meta.url),"utf8"),encoding:"utf8",windowsHide:true}));
 }
 test("ADMIN connections READ smoke: cards, diagnostics, masked inputs, responsive and no advertising writes",async({page},testInfo)=>{
- test.setTimeout(120000);
- const nonce=randomUUID().replaceAll("-","");const errors=[],advertising=[],providerMutations=[];
+ test.setTimeout(180000);
+ // Let the shared API minute budget expire after the table scenarios.
+ // Rate limits remain enabled; their Redis keys are never cleared.
+ await new Promise(resolve=>setTimeout(resolve,60000));
+ const nonce=randomUUID().replaceAll("-","");const errors=[],advertising=[],providerMutations=[],failedReads=[];
  page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});page.on("pageerror",e=>errors.push(e.message));
+ page.on("response",r=>{const pathname=new URL(r.url()).pathname;if(pathname.startsWith("/api/admin/providers")&&r.status()>=400)failedReads.push({path:pathname,status:r.status()});});
  page.on("request",r=>{const p=new URL(r.url()).pathname;if(!["GET","HEAD","OPTIONS"].includes(r.method())){if(/^\/api\/(actions|ai|automation)(\/|$)/.test(p))advertising.push(p);if(p.startsWith("/api/admin/providers"))providerMutations.push(p);}});
  try{
   const [user,viewer]=fixture("create",nonce);
@@ -54,6 +58,6 @@ test("ADMIN connections READ smoke: cards, diagnostics, masked inputs, responsiv
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
   }
   await testInfo.attach("provider-browser-audit",{body:Buffer.from(JSON.stringify({errors,advertising,providerMutations})),contentType:"application/json"});
-  expect(errors).toEqual([]);expect(advertising).toEqual([]);expect(providerMutations).toHaveLength(4);expect(providerMutations.slice(0,3)).toEqual(["/api/admin/providers/metricflow/check","/api/admin/providers/routing","/api/admin/providers/routing"]);
- }finally{fixture("cleanup",nonce);}
+  expect(failedReads).toEqual([]);expect(errors).toEqual([]);expect(advertising).toEqual([]);expect(providerMutations).toHaveLength(4);expect(providerMutations.slice(0,3)).toEqual(["/api/admin/providers/metricflow/check","/api/admin/providers/routing","/api/admin/providers/routing"]);
+ }finally{fixture("cleanup",nonce);await testInfo.attach("provider-response-audit",{body:Buffer.from(JSON.stringify({failedReads,errors})),contentType:"application/json"});}
 });

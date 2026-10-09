@@ -70,15 +70,18 @@ Health probe сохраняет время измерения quota отдель
 
 Локальный лимит подтверждён runtime: **800 GET/day, UTC**. Provider daily_limit из настоящего usage: **20000**. UI показывает used/limit, remaining и progress; неизвестные provider counters остаются «Неизвестно». Provider usage явно имеет время проверки; счётчик локальных запросов берётся из текущей PostgreSQL quota.
 
-Итоговый runtime snapshot до финального browser retry: local=24/800, provider=21/20000 на 03:57:38 MSK. Эти числа — снимок; продолжающиеся scheduled READ учитываются в том же лимите.
+Итоговый runtime snapshot 2026-10-09T01:27:27.415282+00:00: local=54/800; provider=51/20000, remaining=19949, измерен 2026-10-09T01:27:08.066670+00:00. Продолжающиеся scheduled READ учитываются в том же лимите; provider snapshot не подменяется текущим временем sync.
 
 ## TESTS
 
 - Backend: **276 PASS + 77 subtests PASS**, 1 SKIP за 194.02 s; пропущенный PostgreSQL testcase отдельно **1 PASS** на изолированной БД.
 - Hotfix regressions: 12 PASS, включая timezone/rollover, отсутствие/нулевые факты, incomplete/revision windows, primary, исторические периоды, quota/null values, health != coverage.
 - Frontend: **17 unit/SSR PASS**, TypeScript PASS, Docker Next.js build PASS.
-- Ruff новых Python-файлов PASS; mypy нового модуля PASS. Массовое форматирование прежнего кода не выполнялось ради минимального диффа.
-- Browser: UI-1 шесть сценариев PASS и существующий providers smoke PASS; финальный полный прогон ожидает естественного окончания login rate-limit после повторов. Два новых E2E locator исправлены; проверки данных/периодов/proxy/capabilities уже достигнуты. Safety/rate limits не выключались.
+- Ruff новых Python-файлов PASS; mypy нового модуля PASS. Общий `ruff check .` обнаружил 397 замечаний существующего стиля репозитория; общий `mypy .` останавливается на дублирующем модуле migrations/schema_v1. Это не скрывалось и проверки не выключались. Массовое форматирование прежнего кода не выполнялось ради точечного P0 hotfix.
+- Browser: **Playwright 8/8 PASS** за 121.22 s, Windows Chromium. Drag-and-drop PASS; mouse resize / double-click PASS; presets PASS; logout/login persistence PASS; Russian names / scroll / sticky / responsive PASS. Browser console errors=0, page errors=0, advertising WRITE=0. Browser timezone: Europe/Moscow. Today / Yesterday / 3 / 7 / 14 / 30 days, реальная иерархия и backend/proxy PASS. JSON и 9 audit-блоков сохранены локально в .tools/hotfix-browser-final.json.
+
+
+До финального прогона исправлены два E2E locator и ожидания точных диапазонов дат. Backend подтвердил 429 RATE_LIMITED при плотном прогоне; provider smoke теперь ждёт минуту до старта, сохраняя API limit=240/minute. После повторов дождались естественного истечения login limit=10/15 min. Лимиты не выключались, Redis rate keys не очищались. Повторный полный прогон прошёл без ошибок.
 
 ## DATA INTEGRITY
 
@@ -86,15 +89,15 @@ Health probe сохраняет время измерения quota отдель
 
 Восстановление в отдельную `mcc_hotfix_restore_20261009_004151`: все 50 таблиц совпали с before по count/SHA256. Рабочая БД не заменялась; downgrade/drop/down-v не выполнялись. Старые backups и volumes сохранены.
 
-Исходные users/sessions/presets/views/actions/rules/AI проверяются отдельно по SHA256. Изменения статистики допускаются только в реально успешных READ sync windows, без потери строк.
+Исходные users/sessions/presets/views/actions/rules/AI: 10 защищённых таблиц совпали по SHA256, остались 1 пользователь, 1 preset, 2 сохранённых представления и 3 кабинета. Временные browser users удалены. Изменения daily_metrics за 02–08 октября подтверждены штатными успешными Today / Yesterday / Last7 READ sync; 4 более старых дня совпали, потери исторических строк нет. Tracker не изменён. PostgreSQL и Redis containers/volumes сохранены.
 
 `ACTIONS_ENABLED=false`, `LOCAL_READ_ONLY=true`, AI/Rules/Telegram control выключены. Advertising WRITE=0; Meta READ connection не активирован. Creative Factory не изменялся.
 
 ## FILES CHANGED
 
-`services/providers/{presentation.py,router.py,metricflow.py,manager.py}`, `services/analytics/{table.py,dashboard.py}`, `backend/provider_api.py`, `frontend/components/{SourceSummary.tsx,DataSources.tsx,StatisticsTable.tsx,Statistics.tsx,ProviderCapabilities.tsx}`, `frontend/app/{page.tsx,settings/connections/page.tsx}`, `frontend/lib/reporting-period.ts`, `frontend/tests/hotfix.test.cjs`, `frontend/e2e/dashboard-hotfix.spec.mjs`, `frontend/tsconfig.unit.json`, `tests/test_dashboard_hotfix.py`, `pyproject.toml` (pytest test extra), `.github/workflows/ci.yml` (pytest + frontend unit checks), `.gitignore` (dev caches), этот отчёт.
+`services/providers/{presentation.py,router.py,metricflow.py,manager.py}`, `services/analytics/{table.py,dashboard.py}`, `backend/provider_api.py`, `frontend/components/{SourceSummary.tsx,DataSources.tsx,StatisticsTable.tsx,Statistics.tsx,ProviderCapabilities.tsx}`, `frontend/app/{page.tsx,settings/connections/page.tsx}`, `frontend/lib/reporting-period.ts`, `frontend/tests/hotfix.test.cjs`, `frontend/e2e/{dashboard-hotfix.spec.mjs,providers.spec.mjs}`, `docs/ui-1/WINDOWS_E2E.md`, `frontend/tsconfig.unit.json`, `tests/test_dashboard_hotfix.py`, `pyproject.toml` (pytest test extra), `.github/workflows/ci.yml` (pytest + frontend unit checks), `.gitignore` (dev caches), этот отчёт.
 
-Локальные `.tools`, backups, actual schemas, `.env` и `.secrets` не публикуются в Git. GitHub репозиторий до сохранения пуст; первая запись будет snapshot всей существующей программы с hotfix.
+Локальные `.tools`, backups, actual schemas, `.env` и `.secrets` не публикуются в Git. GitHub репозиторий до сохранения был пуст. Snapshot существующей программы с hotfix отправлен в main: `3674c09f633a3dbe03112a3877578ec870fc9d9e`. Итоговая приёмка сохраняется отдельным коммитом после PASS всех восьми сценариев. Секреты проверены перед публикацией.
 
 ## HOW TO CHECK
 
@@ -107,4 +110,4 @@ Health probe сохраняет время измерения quota отдель
 
 ## FINAL RESULT
 
-DASHBOARD MULTI-PROVIDER HOTFIX: PARTIAL — ожидается финальная браузерная приёмка после естественного окончания login rate limit. Программные исправления уже развёрнуты локально; backend/frontend проверки проходят.
+DASHBOARD MULTI-PROVIDER HOTFIX: READY — программные исправления развёрнуты локально, финальный Playwright 8/8 PASS, backend/frontend PASS, данные и пользовательские настройки сохранены. MetricFlow LIVE READ PASS; Meta LIVE Disabled; Advertising WRITE=0. Следующая фаза не начиналась.

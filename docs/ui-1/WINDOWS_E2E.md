@@ -48,3 +48,5 @@ Set-Location E:\Creative_Factory\metric-control-center
 The fixture now signs in once per worker and reuses legitimate session cookies. The logout/login test still exercises the real UI and refreshes storageState. Do not disable or clear rate limits; after many repeated runs, wait for their normal expiry.
 
 JSON reporter output: frontend/test-results/browser-acceptance.json. Browser audit requires zero console errors, page exceptions and advertising mutation requests. All six scopes and viewport widths 1440/768/390 are covered.
+
+The combined table/hotfix/provider suite shares the backend API rate budget. The provider smoke test waits one minute before starting, so earlier table scenarios cannot exhaust its API window. No limits or Redis rate keys are changed. The provider smoke timeout includes this pause.

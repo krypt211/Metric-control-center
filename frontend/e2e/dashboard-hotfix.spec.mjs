@@ -20,7 +20,10 @@ test('real PostgreSQL hotfix: periods, catalog, hierarchy, proxy, provenance and
   await expect(page.getByLabel('Набор колонок')).toBeEnabled();
   const period=page.getByRole('combobox',{name:/^Период/});
   for(const value of ['1','yesterday','3','7','14','30']){
-   const response=page.waitForResponse(r=>r.url().includes('/api/stats/table?')&&r.status()===200);
+   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+   const shift=n=>new Date(Date.parse(today+'T12:00:00Z')-n*86400000).toISOString().slice(0,10);
+   const expectedStart=value==='yesterday'?shift(1):shift(Number(value)-1),expectedEnd=value==='yesterday'?shift(1):today;
+   const response=page.waitForResponse(r=>{const u=new URL(r.url());return u.pathname==='/api/stats/table'&&u.searchParams.get('start')===expectedStart&&u.searchParams.get('end')===expectedEnd&&r.status()===200;});
    await period.selectOption(value);
    if(value==='1')await page.getByRole('button',{name:'Обновить',exact:true}).click();
    const r=await response;const body=await r.json();const u=new URL(r.url());
