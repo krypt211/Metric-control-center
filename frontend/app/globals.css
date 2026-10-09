@@ -126,3 +126,7 @@ summary { cursor: pointer; }
 .economics-surface details p,.economics-surface .filters span {overflow-wrap:anywhere}
 .sessionbar {min-width:0;overflow-wrap:anywhere}
 @media(max-width:700px){.topbar{flex-wrap:wrap;gap:16px}.sessionbar{max-width:100%}}
+
+/* Wide sticky columns remain inside the table's scrolling and painting surface. */
+.customizable-table-wrap {contain:paint}
+
