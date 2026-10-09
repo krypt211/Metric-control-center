@@ -241,6 +241,7 @@ def snapshot(
     obs: list[ApprovalObservation],
     start: date,
     end: date,
+    selection: dict[str, Any],
 ) -> dict[str, Any]:
     """Freeze all inputs and detect revisions without summing overlapping snapshots."""
     facts = {
@@ -266,6 +267,16 @@ def snapshot(
             {"id": o.id, "version": o.version, "payload": o.payload} for o in obs
         ],
         "facts": facts,
+        "selection": selection,
+        "assessment": {
+            key: row.get(key)
+            for key in (
+                "maturity_status",
+                "economics_status",
+                "source_stale",
+                "reason_codes",
+            )
+        },
     }
     digest = hashlib.sha256(
         json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode()
@@ -384,7 +395,26 @@ def evaluate(
                 ):
                     row[field] = None
                 row["economics_status"] = "INCOMPATIBLE"
-            row.update(snapshot(session, p, row, obs, filters.start, filters.end))
+            row.update(
+                snapshot(
+                    session,
+                    p,
+                    row,
+                    obs,
+                    filters.start,
+                    filters.end,
+                    {
+                        "level": level,
+                        "assignment_source": assigned,
+                        "account": filters.account,
+                        "campaign": filters.campaign,
+                        "adset": filters.adset,
+                        "ad": filters.ad,
+                        "offer": filters.offer,
+                        "geo": filters.geo,
+                    },
+                )
+            )
             row["last_updated"] = max(
                 [aware(o.updated_at).isoformat() for o in obs]
                 + [row.get("oldest_observation") or ""]

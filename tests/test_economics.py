@@ -539,3 +539,45 @@ def test_economic_registry_preserves_old_presets_and_separates_scopes():
         assert "actual_roi" in keys and "estimated_roi" in keys
         assert "roi" not in keys
         assert len("eco_" + level) <= 16
+
+
+def test_snapshot_changes_when_maturity_changes_without_new_events(store):
+    with store.begin() as s:
+        p = create_profile(
+            s, ACTOR, ProfileInput.model_validate({**CONFIG, "maturation_hours": 72})
+        )
+        early = evaluate(
+            s,
+            "default",
+            Filters(DAY, END),
+            selected=p["id"],
+            now=datetime(2026, 10, 8, tzinfo=UTC),
+        )["rows"][0]
+        late = evaluated(s, p["id"])
+        assert early["maturity_status"] == "IMMATURE"
+        assert late["maturity_status"] == "MATURE"
+        assert early["evaluation_id"] != late["evaluation_id"]
+        assert (
+            s.get(EconomicsEvaluation, early["evaluation_id"]).payload["result"][
+                "maturity_status"
+            ]
+            == "IMMATURE"
+        )
+        again = evaluated(s, p["id"])
+        assert again["evaluation_id"] == late["evaluation_id"]
+
+
+def test_snapshot_keeps_selection_context(store):
+    with store.begin() as s:
+        p = create_profile(s, ACTOR, ProfileInput.model_validate(CONFIG))
+        row = evaluate(
+            s,
+            "default",
+            Filters(DAY, END, account="a", campaign="c"),
+            selected=p["id"],
+            level="ad",
+            now=NOW,
+        )["rows"][0]
+        inputs = s.get(EconomicsEvaluation, row["evaluation_id"]).payload["inputs"]
+        assert inputs["selection"]["campaign"] == "c"
+        assert inputs["selection"]["level"] == "ad"
