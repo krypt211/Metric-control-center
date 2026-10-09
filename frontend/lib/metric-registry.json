@@ -1655,6 +1655,46 @@
       "maxWidth": 720,
       "precision": 2,
       "availability": "conditional"
+    },
+    "meta_purchases": {
+      "key": "meta_purchases",
+      "label": "Покупки Meta",
+      "technicalName": "meta_purchases",
+      "description": "Покупки Meta. Независимый счётчик Meta, не подтверждённый апрув. «—» означает отсутствие данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "meta_conversions": {
+      "key": "meta_conversions",
+      "label": "Конверсии Meta",
+      "technicalName": "meta_conversions",
+      "description": "Конверсии Meta. Независимый счётчик Meta, не подтверждённый апрув. «—» означает отсутствие данных.",
+      "unit": "count",
+      "category": "economics",
+      "available": true,
+      "scopes": [
+        "eco_account",
+        "eco_campaign",
+        "eco_adset",
+        "eco_ad"
+      ],
+      "defaultWidth": 170,
+      "minWidth": 90,
+      "maxWidth": 720,
+      "precision": 0,
+      "availability": "conditional"
     }
   },
   "systems": {

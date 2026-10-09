@@ -14,7 +14,7 @@ test("economic default excludes current Moscow day across timezone boundary",()=
 test("economics scopes are independent and existing saved selections survive",()=>{
  const old={version:1,columns:[{key:"name",width:400},{key:"roi",width:200}],widths:{roi:200},sorting:{key:"roi",direction:"asc"}};
  assert.deepEqual(c.normalizeColumns(old,"ad"),old);
- for(const scope of ["eco_account","eco_campaign","eco_adset","eco_ad"]){const keys=c.systemPresets(scope)[0].config.columns.map(x=>x.key);assert.ok(keys.includes("actual_roi"));assert.ok(keys.includes("estimated_roi"));assert.ok(!keys.includes("roi"));assert.ok(r.scopeMetrics(scope).some(m=>m.key==="tracker_sales"));}
+ for(const scope of ["eco_account","eco_campaign","eco_adset","eco_ad"]){const keys=c.systemPresets(scope)[0].config.columns.map(x=>x.key);assert.ok(keys.includes("actual_roi"));assert.ok(keys.includes("estimated_roi"));assert.ok(!keys.includes("roi"));for(const key of ["tracker_sales","meta_leads","meta_purchases","meta_conversions"])assert.ok(r.scopeMetrics(scope).some(m=>m.key===key));}
  assert.ok(!r.scopeMetrics("ad").some(m=>m.key==="actual_roi"));
 });
 test("unknown actual values remain null and source quality is localized",()=>{
