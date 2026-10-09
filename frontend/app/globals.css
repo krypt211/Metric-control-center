@@ -120,3 +120,9 @@ summary { cursor: pointer; }
 .economic-check {display:flex;gap:12px;align-items:center;margin:12px 0}.economic-check input[type=checkbox]{width:17px;flex-shrink:0}
 .economic-list {padding:0;list-style:none}.economic-list li {display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 @media(max-width:700px){.economic-panel{padding:16px}.filters label{max-width:100%}.economic-panel .filters select{max-width:100%}}
+.economics-surface .filters {display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin:20px 0}
+.economics-surface .filters label {display:grid;gap:8px;font-size:13px;min-width:0;max-width:100%}
+.economics-surface .filters select {max-width:min(300px,100%)}
+.economics-surface details p,.economics-surface .filters span {overflow-wrap:anywhere}
+.sessionbar {min-width:0;overflow-wrap:anywhere}
+@media(max-width:700px){.topbar{flex-wrap:wrap;gap:16px}.sessionbar{max-width:100%}}

@@ -15,7 +15,7 @@ export default function Economics() {
  async function changed(id?:string){await load();if(id)setProfile(id);else setProfile("");setRefresh(v=>v+1);}
  const validProfile=settings?.profiles.find(p=>p.id===profile&&!p.deleted);
  const query=new URLSearchParams({start:dates[0],end:dates[1],...(validProfile?{profile_id:profile}:{}),...Object.fromEntries(Object.entries(filters).filter(([,v])=>v))}).toString();
- return <>
+ return <div className="economics-surface">
  <p className="notice">Рекламные действия отключены. Здесь сохраняются только экономические настройки и ручные подтверждения.</p>
  {error&&<p className="notice error" role="alert">{error}</p>}{!settings?<p role="status">Загрузка профилей…</p>:<>
  <nav className="tabs" aria-label="Раздел экономики">{[["stats","Финансовая статистика"],["profiles","Профили"],["approval","Апрув и назначения"]].map(([id,name])=><button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{name}</button>)}</nav>
