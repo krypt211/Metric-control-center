@@ -66,7 +66,10 @@ export default function EconomicsTable({
   const rows = data?.rows.map(economicRow) ?? [],
     card = data?.rows.find((r) => r.id === selected) ?? data?.rows[0];
   return (
-    <section aria-label="Финансовая статистика">
+    <section
+      className="statistics-grid economics-statistics"
+      aria-label="Финансовая статистика"
+    >
       {data && <SourceSummary sources={data.sources} />}
       {error && (
         <p className="notice error" role="alert">
