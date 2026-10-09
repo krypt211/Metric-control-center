@@ -67,7 +67,7 @@ export default function EconomicsTable({
     card = data?.rows.find((r) => r.id === selected) ?? data?.rows[0];
   return (
     <section
-      className="statistics-grid economics-statistics"
+      className="statistics-grid"
       aria-label="Финансовая статистика"
     >
       {data && <SourceSummary sources={data.sources} />}
