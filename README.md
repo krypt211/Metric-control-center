@@ -22,6 +22,11 @@ Production Compose включает frontend/backend/PostgreSQL/Redis/ingestion 
 
 ## Backup и проверки
 
+[Центр рекомендаций](docs/recommendation-center/REPORT.md) доступен после входа
+на `/recommendations`: последние результаты DRY RUN, приоритеты проверки,
+причины, фильтры и переход к истории правила. План развития —
+[roadmap](docs/roadmap.md).
+
 [BACKUP_RESTORE.md](BACKUP_RESTORE.md): custom pg_dump, SHA256, retention, restore в отдельную БД и явный destructive restore. Windows: backup.bat.
 
 [Production READ-only report](docs/production-read-only/REPORT.md): изменения, локальные HTTP/TLS проверки, реальное восстановление и оставшиеся условия запуска на публичном VPS. Публичный домен/сертификат ещё не проверены.
