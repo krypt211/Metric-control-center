@@ -52,6 +52,15 @@ async function choose(page, ad) {
 }
 let freshAd, adminState;
 
+async function restoreAdmin(page, user) {
+  if (!adminState) {
+    await login(page, user);
+    adminState = await page.context().storageState();
+  } else {
+    await page.context().addCookies(adminState.cookies);
+  }
+}
+
 async function catalogPages(page, accountId) {
   const rows = [];
   let offset = 0;
@@ -267,7 +276,7 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
   page,
   accounts,
 }) => {
-  await page.context().addCookies(adminState.cookies);
+  await restoreAdmin(page, accounts.users[0]);
   await open(page);
   const wrap = page.locator(".customizable-table-wrap");
   await expect(wrap).toBeVisible();
@@ -295,13 +304,13 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
   ).toContainText("DISCONNECTED");
   await expect(
     page.getByRole("region", { name: "Безопасность управления" }),
-  ).toContainText("не проверен");
+  ).toContainText("Не проверено");
 });
 
 test("saved real WOULD_PAUSE recommendation prepares a draft without execution", async ({
   page, accounts,
 }) => {
-  await page.context().addCookies(adminState.cookies);
+  await restoreAdmin(page, accounts.users[0]);
   await page.goto("/rules");
   const csrf = await (await page.request.get("/api/auth/csrf")).json();
   const headers = {
@@ -312,7 +321,7 @@ test("saved real WOULD_PAUSE recommendation prepares a draft without execution",
     data: {
       name: "Приёмка ручного перехода из DRY RUN",
       profile_id: accounts.profile.id,
-      selection: { account_ids: [freshAd.canonical_account_id], provider: "metricflow" },
+      selection: { account_ids: [accounts.account_id], provider: "metricflow" },
       thresholds: { minimum_spend: "0", minimum_leads: 0,
         minimum_approved_sales: 0, minimum_observed_purchases: 0,
         minimum_processed: 0, minimum_data_age_hours: 0, maturation_hours: 0 },
