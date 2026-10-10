@@ -381,13 +381,14 @@ test("browser-only mock verifies WOULD_PAUSE prepare button and draft navigation
   expect(base).toBeTruthy();
   const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const mockCard = {
-    ...ruleFixture.simulation.rows[0],
+    ...(ruleFixture.simulation.rows.find((row) => row.external_id === freshAd.meta_ad_id) ??
+      ruleFixture.simulation.rows.find((row) => row.ad_status === "ACTIVE")),
     name: "Изолированный browser mock — не рекламная команда",
     status: "WOULD_PAUSE", reason_codes: [],
   };
   const mockDraft = {
     ...base, id, status: "DRAFT", display_status: "DRAFT", revision: 1,
-    operation: "PAUSE_AD", result: null, preflight: null, events: [],
+    operation: "PAUSE_AD", target_status: "PAUSED", result: null, preflight: null, events: [],
     captured: { ...base.captured, name: mockCard.name },
   };
   // These two responses exist only inside this browser test. Neither the saved
