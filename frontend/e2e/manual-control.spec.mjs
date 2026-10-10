@@ -322,7 +322,7 @@ test("saved real WOULD_PAUSE recommendation prepares a draft without execution",
   const saved = await (await page.request.get("/api/manual-control/requests/" + requestID)).json();
   expect(saved.rule_source.simulation_id).toBe(simulation.id);
   expect(saved.rule_source.rule_revision).toBe(simulation.rule_revision);
-  expect(saved.rule_source.reason_codes).toEqual(candidate.reason_codes);
+  expect(saved.rule_source.reasons).toEqual(candidate.reason_codes);
   await draft.getByRole("button", { name: "Отменить команду" }).click();
   await expect(draft).toContainText("CANCELLED");
 });
