@@ -125,6 +125,8 @@ def snapshot(s, entity: Entity, account: AdAccount) -> dict:
         "effective_status": (state.raw or {}).get("effective_status")
         if state
         else None,
+        "campaign_name": (campaign.name or campaign.external_id) if campaign else None,
+        "adset_name": (parent.name or parent.external_id) if parent else None,
         "name": entity.name or entity.external_id,
         "account_name": account.name or account.external_id,
     }

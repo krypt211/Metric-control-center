@@ -377,7 +377,12 @@ export default function ManualControl({
                 >
                   <option value="">Все кампании на странице</option>
                   {groups(1).map((id) => (
-                    <option key={id}>{id}</option>
+                    <option key={id} value={id}>
+                      {String(
+                        table?.rows.find((r) => r.hierarchy[1] === id)
+                          ?.campaign_name ?? id,
+                      )}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -389,7 +394,12 @@ export default function ManualControl({
                 >
                   <option value="">Все группы на странице</option>
                   {groups(0).map((id) => (
-                    <option key={id}>{id}</option>
+                    <option key={id} value={id}>
+                      {String(
+                        table?.rows.find((r) => r.hierarchy[0] === id)
+                          ?.adset_name ?? id,
+                      )}
+                    </option>
                   ))}
                 </select>
               </label>

@@ -81,8 +81,6 @@ def catalog(
                 "currency": account.currency,
                 "timezone": account.timezone,
                 "external_id": entity.external_id,
-                "campaign_name": captured["hierarchy"][1],
-                "adset_name": captured["hierarchy"][0],
                 "spend": row.get("spend"),
                 "leads": row.get("leads"),
                 "observed_meta_purchases": row.get("observed_meta_purchases"),
