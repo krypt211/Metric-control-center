@@ -50,7 +50,7 @@ async function choose(page, ad) {
     page.getByRole("article", { name: "Выбранное объявление" }),
   ).toBeVisible();
 }
-let freshAd, adminState;
+let freshAd, adminState, ruleFixture;
 
 async function restoreAdmin(page, user) {
   if (!adminState) {
@@ -307,7 +307,7 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
   ).toContainText("Не проверено");
 });
 
-test("saved real WOULD_PAUSE recommendation prepares a draft without execution", async ({
+test("real saved rule decisions permit only eligible WOULD_PAUSE drafts", async ({
   page, accounts,
 }) => {
   await restoreAdmin(page, accounts.users[0]);
@@ -337,14 +337,28 @@ test("saved real WOULD_PAUSE recommendation prepares a draft without execution",
   });
   const simulation = await simulated.json();
   expect(simulated.ok(), JSON.stringify(simulation.detail ?? null)).toBe(true);
+  ruleFixture = { rule, simulation };
   const candidate = simulation.rows.find((row) =>
     row.status === "WOULD_PAUSE" && ["ACTIVE", "PAUSED"].includes(row.ad_status),
   );
-  expect(candidate, "A real saved candidate is required; no rule result is fabricated").toBeTruthy();
+  const card = candidate ?? simulation.rows.find((row) => row.status !== "WOULD_PAUSE");
+  expect(card, "A real saved decision is required; no result is fabricated").toBeTruthy();
   await page.goto("/rules?rule=" + rule.id);
   await page.getByRole("button", { name: /Открыть проверку/ }).first().click();
-  await page.getByLabel("Поиск объявления", { exact: true }).fill(candidate.external_id);
+  await page.getByLabel("Поиск объявления", { exact: true }).fill(card.external_id);
   await page.locator("tbody .rowlink").first().click();
+  if (!candidate) {
+    await expect(page.getByRole("article", { name: "Объяснение решения" })
+      .getByRole("button", { name: "Подготовить отключение", exact: true })).toHaveCount(0);
+    const before = await (await page.request.get("/api/manual-control/requests")).json();
+    const denied = await apiWrite(page, "/from-rule", {
+      simulation_id: simulation.id, entity_id: card.id,
+    }, "non-eligible-rule");
+    expect(denied.status()).toBe(422);
+    const after = await (await page.request.get("/api/manual-control/requests")).json();
+    expect(after.requests).toEqual(before.requests);
+    return;
+  }
   await page.getByRole("article", { name: "Объяснение решения" })
     .getByRole("button", { name: "Подготовить отключение", exact: true }).click();
   await expect(page).toHaveURL(/\/manual-control\?request=/);
@@ -357,4 +371,46 @@ test("saved real WOULD_PAUSE recommendation prepares a draft without execution",
   expect(saved.rule_source.reasons).toEqual(candidate.reason_codes);
   await draft.getByRole("button", { name: "Отменить команду" }).click();
   await expect(draft).toContainText("CANCELLED");
+});
+
+test("browser-only mock verifies WOULD_PAUSE prepare button and draft navigation", async ({ page, accounts }) => {
+  await restoreAdmin(page, accounts.users[0]);
+  await page.goto("/rules?rule=" + ruleFixture.rule.id);
+  const history = await (await page.request.get("/api/manual-control/requests")).json();
+  const base = history.requests.find((request) => request.actor === accounts.users[0].login);
+  expect(base).toBeTruthy();
+  const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const mockCard = {
+    ...ruleFixture.simulation.rows[0],
+    name: "Изолированный browser mock — не рекламная команда",
+    status: "WOULD_PAUSE", reason_codes: [],
+  };
+  const mockDraft = {
+    ...base, id, status: "DRAFT", display_status: "DRAFT", revision: 1,
+    operation: "PAUSE_AD", result: null, preflight: null, events: [],
+    captured: { ...base.captured, name: mockCard.name },
+  };
+  // These two responses exist only inside this browser test. Neither the saved
+  // decision nor an AD fact/request is edited in PostgreSQL.
+  await page.route("**/api/smart-rules/simulations/" + ruleFixture.simulation.id,
+    (route) => route.fulfill({ json: { ...ruleFixture.simulation, rows: [mockCard], total: 1 } }));
+  const calls = [];
+  await page.route("**/api/manual-control/from-rule", async (route) => {
+    calls.push({ method: route.request().method(), body: route.request().postDataJSON() });
+    await route.fulfill({ status: 201, json: mockDraft });
+  });
+  await page.route("**/api/manual-control/requests/" + id,
+    (route) => route.fulfill({ json: mockDraft }));
+  await page.getByRole("button", { name: /Открыть проверку/ }).first().click();
+  await page.getByRole("article", { name: "Объяснение решения" })
+    .getByRole("button", { name: "Подготовить отключение", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp("/manual-control\\?request=" + id));
+  await expect(page.getByRole("region", { name: "Подготовленное действие" })).toContainText(mockCard.name);
+  expect(calls).toEqual([{ method: "POST", body: {
+    simulation_id: ruleFixture.simulation.id, entity_id: mockCard.id,
+  } }]);
+  const real = await (await page.request.get("/api/smart-rules/simulations/" + ruleFixture.simulation.id)).json();
+  expect(real.rows).toEqual(ruleFixture.simulation.rows);
+  expect((await (await page.request.get("/api/manual-control/requests")).json())
+    .requests.some((request) => request.id === id)).toBe(false);
 });
