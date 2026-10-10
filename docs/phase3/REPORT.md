@@ -2,6 +2,10 @@
 
 Статус приёмки: **PHASE 3 SMART RULE ENGINE: READY**.
 Локальная приёмка завершена 10 октября 2026 года (Europe/Moscow).
+Повторная приёмка 10 октября на версии `73af652`: новое вложение полностью
+совпадает с исходным заданием Phase 3. Функциональных изменений не потребовалось.
+Заново проверены backend rules, frontend unit/typecheck, все три Phase 3
+Chromium-сценария, runtime-защита и сохранность данных. Все проверки PASS.
 
 ## Existing Architecture Audit
 
@@ -152,6 +156,9 @@ Restore DB `mcc_rules_activation_20261009_205338`. Volumes не удалялис
 Playwright Chromium: **15 уникальных сценариев PASS**, без retries/flaky:
 3 сценария Phase 3 и 12 сценариев регрессии предыдущих фаз.
 Console/page errors: **0**; рекламных mutation requests: **0**.
+Повторный полный набор Phase 3 на текущей реализации: **3/3 PASS**, без retries
+и flaky. Жизненный цикл, колонки и отдельные role grants проверены заново;
+console/page errors и рекламные mutation requests снова равны нулю.
 
 Drag-and-drop, resize/autofit, presets, logout/login persistence, сортировка,
 длинные русские названия, горизонтальная прокрутка/sticky name и responsive
@@ -172,10 +179,10 @@ MetricFlow READ и настройки подключений: PASS; Meta ост�
 
 ## Backend Tests
 
-Полный прогон перед последними адресными изменениями: 356 PASS, 1 SKIP,
-77 subtests PASS. После оптимизации — 80 целевых regression tests PASS;
-после дополнительного теста долётов — 32 rule tests PASS. PostgreSQL auth/schema
-тест, пропущенный в общем прогоне, отдельно PASS.
+Последний полный прогон текущего репозитория: 368 PASS, 1 SKIP,
+77 subtests PASS (при приёмке центра рекомендаций). Повторный целевой прогон
+Phase 3 по новому вложению: 32 rule tests PASS.
+PostgreSQL auth/schema тест, пропущенный в общем прогоне, отдельно PASS.
 Изолированная PostgreSQL CAS/schema/workspace проверка: PASS, 59 model tables.
 Scoped Ruff и mypy для новых модулей и изменённого evaluation: PASS.
 Security scan: PASS. Старые нарушения глобального lint/typecheck вне этой фазы
@@ -183,7 +190,8 @@ Security scan: PASS. Старые нарушения глобального lint
 
 ## Frontend Tests
 
-26 unit PASS; typecheck PASS; production build PASS; Docker images PASS.
+Повторная проверка: 28 unit PASS; typecheck PASS.
+Последние production build и локальная активация Docker images: PASS.
 
 ## Data Integrity
 
@@ -197,6 +205,11 @@ Security scan: PASS. Старые нарушения глобального lint
 Raw READ snapshots выросли 773 → 783 из-за штатных чтений; прежние записи сохранены.
 Fixtures создают только собственные users/profiles/rules/presets/sessions.
 Фиктивные рекламные факты в рабочую БД не добавляются.
+После повторных трёх Chromium-сценариев вновь совпали 27 защищённых таблиц;
+восемь прежних economics snapshots и все старые рекламные ключи сохранены.
+Схема осталась `0011_smart_rules`; рекламные журналы действий не изменились.
+Артефакты повторной приёмки: `.tools/phase3-reaccept-*.json` и `.log`
+(локальные, не публикуются в GitHub).
 
 ## Safety
 
