@@ -276,3 +276,53 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
     page.getByRole("region", { name: "Безопасность управления" }),
   ).toContainText("не проверен");
 });
+
+test("saved real WOULD_PAUSE recommendation prepares a draft without execution", async ({
+  page, accounts,
+}) => {
+  await page.context().addCookies(adminState.cookies);
+  await page.goto("/rules");
+  const csrf = await (await page.request.get("/api/auth/csrf")).json();
+  const headers = {
+    Origin: new URL(page.url()).origin, "X-CSRF-Token": csrf.csrf_token,
+  };
+  const created = await page.request.post("/api/smart-rules", {
+    headers,
+    data: {
+      name: "Приёмка ручного перехода из DRY RUN",
+      profile_id: accounts.profile.id,
+      selection: { account_ids: [freshAd.canonical_account_id], provider: "metricflow" },
+      thresholds: { minimum_spend: "0", minimum_leads: 0,
+        minimum_approved_sales: 0, minimum_observed_purchases: 0,
+        minimum_processed: 0, minimum_data_age_hours: 0, maturation_hours: 0 },
+      expression: { kind: "group", operator: "AND", children: [
+        { kind: "condition", type: "SPEND_THRESHOLD", limit: "custom", value: "0" },
+      ] },
+    },
+  });
+  expect(created.status()).toBe(201);
+  const rule = await created.json();
+  const simulated = await page.request.post(`/api/smart-rules/${rule.id}/simulate`, { headers });
+  expect(simulated.ok()).toBe(true);
+  const simulation = await simulated.json();
+  const candidate = simulation.rows.find((row) =>
+    row.status === "WOULD_PAUSE" && ["ACTIVE", "PAUSED"].includes(row.ad_status),
+  );
+  expect(candidate, "A real saved candidate is required; no rule result is fabricated").toBeTruthy();
+  await page.goto("/rules?rule=" + rule.id);
+  await page.getByRole("button", { name: /Открыть проверку/ }).first().click();
+  await page.getByLabel("Поиск объявления", { exact: true }).fill(candidate.external_id);
+  await page.locator("tbody .rowlink").first().click();
+  await page.getByRole("article", { name: "Объяснение решения" })
+    .getByRole("button", { name: "Подготовить отключение", exact: true }).click();
+  await expect(page).toHaveURL(/\/manual-control\?request=/);
+  const draft = page.getByRole("region", { name: "Подготовленное действие" });
+  await expect(draft).toContainText("DRAFT");
+  const requestID = new URL(page.url()).searchParams.get("request");
+  const saved = await (await page.request.get("/api/manual-control/requests/" + requestID)).json();
+  expect(saved.rule_source.simulation_id).toBe(simulation.id);
+  expect(saved.rule_source.rule_revision).toBe(simulation.rule_revision);
+  expect(saved.rule_source.reason_codes).toEqual(candidate.reason_codes);
+  await draft.getByRole("button", { name: "Отменить команду" }).click();
+  await expect(draft).toContainText("CANCELLED");
+});
