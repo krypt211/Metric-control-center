@@ -73,6 +73,15 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
 }) => {
   test.setTimeout(120000);
   await login(page, accounts.users[0]);
+  let releaseInitial, initialReady;
+  const release = new Promise((resolve) => { releaseInitial = resolve; });
+  const ready = new Promise((resolve) => { initialReady = resolve; });
+  await page.route("**/api/manual-control/ads?offset=0", async (route) => {
+    const response = await route.fetch();
+    initialReady();
+    await release;
+    await route.fulfill({ response });
+  });
   await open(page);
   const settings = await (
     await page.request.get("/api/manual-control/settings")
@@ -93,7 +102,19 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
     freshAd,
     "A fresh verified real AD is required; no status facts are fabricated",
   ).toBeTruthy();
+  await ready;
   await choose(page, freshAd);
+  const lateResponse = page.waitForResponse((r) =>
+    new URL(r.url()).pathname === "/api/manual-control/ads" &&
+    !new URL(r.url()).searchParams.has("account_id"),
+  );
+  releaseInitial();
+  await lateResponse;
+  await page.evaluate(() => new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+  ));
+  await expect(page.locator("tbody tr").filter({ hasText: freshAd.meta_ad_id })).toHaveCount(1);
+  await page.unroute("**/api/manual-control/ads?offset=0");
   const action = freshAd.status === "ACTIVE" ? "отключение" : "включение";
   await page
     .getByLabel("Причина ручной команды")

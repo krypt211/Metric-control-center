@@ -93,7 +93,8 @@ export default function ManualControl({
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
-    [offset, setOffset] = useState(0);
+    [offset, setOffset] = useState(0),
+    [catalogRevision, setCatalogRevision] = useState(0);
   const columns = useColumnPreferences("manual_ad");
   useEffect(() => {
     void Promise.all([
@@ -113,15 +114,23 @@ export default function ManualControl({
   }, []);
   useEffect(() => {
     if (settingsOnly) return;
+    let ignore = false;
     setTable(null);
     void manualRead<Catalog>(
       "/ads?offset=" +
         offset +
         (account ? "&account_id=" + encodeURIComponent(account) : ""),
     )
-      .then(setTable)
-      .catch((e) => setError(e.message));
-  }, [account, offset, settingsOnly]);
+      .then((data) => {
+        if (!ignore) setTable(data);
+      })
+      .catch((e) => {
+        if (!ignore) setError(e.message);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [account, offset, settingsOnly, catalogRevision]);
   async function run(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -421,17 +430,7 @@ export default function ManualControl({
               </label>
               <button
                 disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    setTable(
-                      await manualRead<Catalog>(
-                        "/ads?offset=" +
-                          offset +
-                          (account ? "&account_id=" + account : ""),
-                      ),
-                    );
-                  })
-                }
+                onClick={() => setCatalogRevision((revision) => revision + 1)}
               >
                 Обновить из БД
               </button>
