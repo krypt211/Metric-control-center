@@ -156,10 +156,7 @@ export default function ManualControl({
           operation,
           expected_status: selected.status,
           reason,
-          simulation_id:
-            operation === "PAUSE_AD"
-              ? (selected.recommendation?.simulation_id ?? null)
-              : null,
+          simulation_id: null,
         },
         crypto.randomUUID(),
       );
