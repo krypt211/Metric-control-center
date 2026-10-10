@@ -23,6 +23,15 @@ async function apiWrite(page, path, body, key) {
 }
 async function choose(page, ad) {
   await page.getByLabel("Кабинет", { exact: true }).selectOption(ad.account_id);
+  const offset = ad.catalog_offset ?? 0;
+  for (let current = 0; current < offset; current += 100) {
+    const response = page.waitForResponse((r) =>
+      r.url().includes("/api/manual-control/ads?offset=" + (current + 100)) &&
+      r.ok(),
+    );
+    await page.getByRole("button", { name: "Следующие", exact: true }).click();
+    await response;
+  }
   await page
     .getByLabel("Поиск объявления", { exact: true })
     .fill(ad.meta_ad_id);
@@ -34,6 +43,21 @@ async function choose(page, ad) {
   ).toBeVisible();
 }
 let freshAd;
+
+async function catalogPages(page, accountId) {
+  const rows = [];
+  let offset = 0;
+  do {
+    const response = await page.request.get(
+      `/api/manual-control/ads?account_id=${accountId}&offset=${offset}`,
+    );
+    expect(response.ok()).toBe(true);
+    const table = await response.json();
+    rows.push(...table.rows.map((row) => ({ ...row, catalog_offset: offset })));
+    offset = table.next_offset;
+  } while (offset !== null);
+  return rows;
+}
 test("manual catalog, status, pause and enable drafts, local confirmation, simulation, audit and persistence", async ({
   page,
   accounts,
@@ -46,10 +70,9 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
     await page.request.get("/api/manual-control/settings")
   ).json();
   for (const account of settings.accounts) {
-    const table = await (
-      await page.request.get("/api/manual-control/ads?account_id=" + account.id)
-    ).json();
-    freshAd = table.rows?.find(
+    if (account.provider !== "metricflow") continue;
+    const rows = await catalogPages(page, account.id);
+    freshAd = rows.find(
       (a) =>
         ["ACTIVE", "PAUSED"].includes(a.status) &&
         Date.now() - Date.parse(a.status_refreshed_at) < 12 * 60 * 1000 &&
@@ -105,12 +128,8 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
   await expect(
     page.getByRole("region", { name: "История операций" }),
   ).toContainText("Локальная симуляция");
-  const after = await (
-    await page.request.get(
-      "/api/manual-control/ads?account_id=" + freshAd.account_id,
-    )
-  ).json();
-  expect(after.rows.find((a) => a.id === freshAd.id).status).toBe(
+  const after = await catalogPages(page, freshAd.account_id);
+  expect(after.find((a) => a.id === freshAd.id).status).toBe(
     freshAd.status,
   );
   await choose(page, freshAd);
