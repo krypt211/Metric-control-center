@@ -50,7 +50,7 @@ async function choose(page, ad) {
     page.getByRole("article", { name: "Выбранное объявление" }),
   ).toBeVisible();
 }
-let freshAd;
+let freshAd, adminState;
 
 async function catalogPages(page, accountId) {
   const rows = [];
@@ -132,6 +132,7 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await login(page, accounts.users[0]);
+  adminState = await page.context().storageState();
   await open(page);
   await expect(
     page.getByRole("region", { name: "История операций" }),
@@ -166,7 +167,7 @@ test("separate OPERATOR grant, VIEWER read-only and server denials", async ({
   accounts,
   audit,
 }) => {
-  await login(page, accounts.users[0]);
+  await page.context().addCookies(adminState.cookies);
   await page.goto("/settings/manual-control");
   const grant = page.getByRole("checkbox", { name: accounts.users[1].login });
   await grant.click();
@@ -245,7 +246,7 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
   page,
   accounts,
 }) => {
-  await login(page, accounts.users[0]);
+  await page.context().addCookies(adminState.cookies);
   await open(page);
   const wrap = page.locator(".customizable-table-wrap");
   await expect(wrap).toBeVisible();
