@@ -17,6 +17,7 @@ does not establish a complete, usable operation contract.
 | SET_CAMPAIGN_BUDGET | `POST /api/v1/entities/{entity_id}/budget` listed | Budget field names, units, daily/lifetime semantics and response unconfirmed | Bearer, `campaigns:write`; permission unverified | Numeric campaign ID and confirmed account; future READ readback | UNVERIFIED |
 | SET_ADSET_BUDGET | Same generic budget route | Same schema gaps; campaign budget ownership must be established | Same as campaign budget | Numeric adset ID plus parents; future READ readback | UNVERIFIED |
 | SET_BID | No confirmed public endpoint | No confirmed request or response | No confirmed operation-specific permission | Bid strategy and entity contract absent | UNVERIFIED, never inferred from MetricFlow UI |
+| GET_OPERATION_RESULT | No confirmed dedicated endpoint or method | No operation ID/result schema confirmed | No operation-specific permission confirmed | Future READ reconciliation of the same AD; not proof of a dedicated operation-result API | UNVERIFIED |
 
 General API errors documented include 401/402/403/429. Exact operation error
 bodies, whether an error can follow a partial change, operation rate limits,
