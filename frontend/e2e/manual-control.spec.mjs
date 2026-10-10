@@ -22,7 +22,15 @@ async function apiWrite(page, path, body, key) {
   });
 }
 async function choose(page, ad) {
-  await page.getByLabel("Кабинет", { exact: true }).selectOption(ad.account_id);
+  const account = page.getByRole("combobox", { name: "Кабинет", exact: true });
+  if ((await account.inputValue()) !== ad.account_id) {
+    const response = page.waitForResponse((r) =>
+      r.url().includes("/api/manual-control/ads?offset=0") &&
+      r.url().includes("account_id=" + ad.account_id) && r.ok(),
+    );
+    await account.selectOption(ad.account_id);
+    await response;
+  }
   const offset = ad.catalog_offset ?? 0;
   for (let current = 0; current < offset; current += 100) {
     const response = page.waitForResponse((r) =>
