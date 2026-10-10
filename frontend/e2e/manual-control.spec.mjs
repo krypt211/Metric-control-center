@@ -332,9 +332,11 @@ test("saved real WOULD_PAUSE recommendation prepares a draft without execution",
   });
   expect(created.status()).toBe(201);
   const rule = await created.json();
-  const simulated = await page.request.post(`/api/smart-rules/${rule.id}/simulate`, { headers });
-  expect(simulated.ok()).toBe(true);
+  const simulated = await page.request.post(`/api/smart-rules/${rule.id}/simulate`, {
+    headers, data: { version: rule.revision },
+  });
   const simulation = await simulated.json();
+  expect(simulated.ok(), JSON.stringify(simulation.detail ?? null)).toBe(true);
   const candidate = simulation.rows.find((row) =>
     row.status === "WOULD_PAUSE" && ["ACTIVE", "PAUSED"].includes(row.ad_status),
   );

@@ -19,7 +19,9 @@ does not establish a complete, usable operation contract.
 | SET_BID | No confirmed public endpoint | No confirmed request or response | No confirmed operation-specific permission | Bid strategy and entity contract absent | UNVERIFIED, never inferred from MetricFlow UI |
 | GET_OPERATION_RESULT | No confirmed dedicated endpoint or method | No operation ID/result schema confirmed | No operation-specific permission confirmed | Future READ reconciliation of the same AD; not proof of a dedicated operation-result API | UNVERIFIED |
 
-General API errors documented include 401/402/403/429. Exact operation error
+Public docs explicitly mention 402/429. The existing local transport also handles
+401/403; their operation-specific schemas are not confirmed by these docs.
+Exact operation error
 bodies, whether an error can follow a partial change, operation rate limits,
 idempotency header semantics, dedicated operation-result endpoint and
 eventual-consistency deadlines remain unconfirmed. They must be obtained from

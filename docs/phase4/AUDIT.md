@@ -48,8 +48,9 @@ ads catalog is available for status discovery with `campaigns:read`.
 | Get Operation Result | No confirmed dedicated route | UNVERIFIED; future READ reconciliation |
 
 Pause/enable bodies, exact response schema, operation errors, idempotency support
-and operation-specific limits are not sufficiently documented. General API uses
-401/402/403/429; these are not proof of a WRITE operation contract. READ quota
+and operation-specific limits are not sufficiently documented. Public docs
+explicitly mention 402/429; the local transport also handles 401/403, whose exact
+provider operation schemas remain unconfirmed. READ quota
 stays 800/day locally. No WRITE probe was made; READ key is never a WRITE key.
 Context7 had no matching MetricFlow library; unrelated matches were not used.
 
