@@ -41,8 +41,11 @@ revision as proof of WRITE permission.
 
 ## 2. Explicitly choose one object and one operation
 
-Later select exactly one numeric AD ID, its `act_<id>` account and campaign/adset
-parents. Show name, workspace, provider, original configured status, effective
+Later select exactly one numeric Meta AD ID, its `act_<id>` account and
+campaign/adset parents. Separately confirm the WRITE endpoint's entity-ID
+namespace and its mapping to that same AD; do not assume its path accepts the
+READ ID just because the local stub does. Show name, workspace, provider,
+original configured status, effective
 status and timestamp. Obtain fresh READ before preview and again immediately
 before execution; reserve necessary GET quota instead of exceeding its cap.
 Reject missing identity, stale facts, paused-parent ambiguity, pending/unknown

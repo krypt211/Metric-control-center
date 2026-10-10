@@ -34,8 +34,9 @@ PostgreSQL, Redis, worker and scheduler are available. Safety remains:
 ## MetricFlow WRITE Capabilities
 
 [Public documentation](https://metricflowit.click/docs), retrieved 2026-10-10,
-lists `POST /api/v1/entities/{entity_id}/pause`, `/enable`, `/budget`, numeric
-provider entity ID, Bearer authentication and `campaigns:write`. GET account
+lists `POST /api/v1/entities/{entity_id}/pause`, `/enable`, `/budget`, Bearer
+authentication and `campaigns:write`. Exact WRITE entity-ID namespace is not
+specified; the local writer assumes numeric IDs observed by READ. GET account
 ads catalog is available for status discovery with `campaigns:read`.
 
 | Operation | Documented route | Phase 4A capability |
