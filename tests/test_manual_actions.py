@@ -342,6 +342,62 @@ def test_rule_recommendation_is_explicit_draft_not_execution(store):
     assert r["status"] == "DRAFT"
 
 
+def test_rule_api_resolves_provider_identity_and_creates_only_draft(store, monkeypatch):
+    from backend import manual_control_api as api
+    from services.actions.manual_schema import RuleDraftInput
+    from services.storage.models import ActionRequest, Rule
+
+    with store.begin() as s:
+        s.add(
+            Rule(
+                id="rule-api",
+                workspace_id="default",
+                status="SMART_DRY_RUN",
+                created_at=NOW,
+                payload={},
+            )
+        )
+        s.flush()
+        s.add(
+            RuleSimulation(
+                id="sim-api",
+                workspace_id="default",
+                rule_id="rule-api",
+                revision=2,
+                actor_id="admin",
+                created_at=NOW,
+                payload={
+                    "rows": [
+                        {
+                            "id": "ad",
+                            "external_id": "1003",
+                            "account_id": "account",
+                            "source_provider": "metricflow",
+                            "ad_status": "ACTIVE",
+                            "status": "WOULD_PAUSE",
+                            "reason_codes": ["THRESHOLD_EXCEEDED"],
+                        }
+                    ]
+                },
+            )
+        )
+    # Authorization/CSRF are exercised separately. This isolated handler test
+    # checks its real mapping query and ActionEngine, with no provider client.
+    monkeypatch.setattr(api, "actor", lambda request, write=False: ACTOR)
+    monkeypatch.setattr(api, "factory", lambda: store)
+    result = api.from_rule(
+        RuleDraftInput(simulation_id="sim-api", entity_id="ad"), None, "rule-api-one"
+    )
+    assert result["status"] == "DRAFT"
+    assert result["meta_ad_id"] == "1003"
+    assert result["rule_source"]["rule_revision"] == 2
+    assert result["rule_source"]["reasons"] == ["THRESHOLD_EXCEEDED"]
+    with store() as s:
+        assert s.scalar(select(func.count()).select_from(ActionRequest)) == 1
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
+        assert s.get(EntityCurrentState, "ad").status == "ACTIVE"
+
+
 @pytest.mark.parametrize(
     "field,value",
     [
