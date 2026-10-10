@@ -69,7 +69,10 @@ commands for that AD. Verify this concurrency behavior in isolated PostgreSQL.
 ## 4. Controlled dispatch and readback
 
 Run a dedicated process bound to that permit, with a hard maximum of **one
-advertising WRITE HTTP attempt**. No retries at transport, worker, proxy or
+advertising WRITE HTTP attempt**. Any later authorized execution flags must be
+scoped to that process; keep the workspace `.env`, backend and READ workers
+disabled for advertising WRITE. Never activate the general legacy action queue
+to conduct a one-object test. No retries at transport, worker, proxy or
 provider routing layers. Recheck the safety gate and all bindings immediately
 before HTTP; toggling global flags alone must never authorize an object.
 Persist attempt start before dispatch. Store sanitized request/result, IDs,
