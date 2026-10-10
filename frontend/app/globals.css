@@ -156,4 +156,15 @@ summary { cursor: pointer; }
 
 /* Controls and tables share a bounded surface; each table keeps its own scroll. */
 .economics-surface {min-width:0;overflow-x:clip}
+.manual-surface{min-width:0;overflow-x:clip}
+.manual-surface section{margin:24px 0;min-width:0}
+.manual-surface article{border:1px solid var(--line);padding:16px;margin:12px 0;border-radius:12px;overflow-wrap:anywhere}
+.manual-surface .filters{display:flex;flex-wrap:wrap;gap:16px;align-items:end;margin:16px 0}
+.manual-surface .filters label{display:grid;gap:8px;min-width:0;max-width:100%}
+.manual-surface select,.manual-surface textarea,.manual-surface input{max-width:100%;box-sizing:border-box}
+.manual-surface textarea{display:block;width:100%;min-height:80px;margin:12px 0;padding:12px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.manual-surface button{white-space:normal;margin:4px}
+.manual-surface fieldset label{display:flex;gap:12px;overflow-wrap:anywhere;margin:12px 0}
+.manual-surface h1{font-size:36px;overflow-wrap:anywhere}
+@media(max-width:700px){.manual-surface h1{font-size:28px}.manual-surface .filters select{max-width:100%}}
 

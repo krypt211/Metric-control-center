@@ -239,8 +239,8 @@ export default function ManualControl({
       ),
     );
   return (
-    <main>
-      <header>
+    <main className="dashboard manual-surface">
+      <header className="topbar">
         <h1>
           {settingsOnly
             ? "Настройки управления рекламой"
@@ -318,6 +318,21 @@ export default function ManualControl({
                 </label>
               ))}
             </fieldset>
+          )}
+          <h3>История локальных проверок</h3>
+          {history
+            .filter((r) => r.preflight)
+            .map((r) => (
+              <p key={r.id}>
+                {time(r.preflight!.checked_at)} · {r.captured.name} ·{" "}
+                {r.provider} · {manualLabel(r.display_status)} ·{" "}
+                {r.preflight!.local_allowed
+                  ? "Локальная симуляция допустима"
+                  : "Локальная симуляция заблокирована"}
+              </p>
+            ))}
+          {!history.some((r) => r.preflight) && (
+            <p>Локальных проверок пока нет.</p>
           )}
         </section>
       )}
@@ -422,6 +437,15 @@ export default function ManualControl({
               change={columns.change}
               commit={() => void columns.persist().catch(() => {})}
               disabled={!columns.ready || columns.busy}
+              rowActions={(r) => (
+                <button
+                  onClick={() =>
+                    setSelected(table?.rows.find((a) => a.id === r.id) ?? null)
+                  }
+                >
+                  Подготовить команду
+                </button>
+              )}
               onName={(r) =>
                 setSelected(table?.rows.find((a) => a.id === r.id) ?? null)
               }
