@@ -17,7 +17,7 @@ def system_presets(scope):
     allowed=metrics(scope)
     out=[]
     for key,item in registry()["systems"].items():
-        preset_keys = registry()["rules_default"] if scope == "rule_ad" and key == "basic" else registry()["economics_default"] if scope.startswith("eco_") and key == "basic" else item["keys"]
+        preset_keys = registry()["manual_default"] if scope == "manual_ad" and key == "basic" else registry()["rules_default"] if scope == "rule_ad" and key == "basic" else registry()["economics_default"] if scope.startswith("eco_") and key == "basic" else item["keys"]
         keys=["name"]+[k for k in preset_keys if k in allowed and k!="name"]
         sorting={"key":"spend" if "spend" in keys else "clicks" if "clicks" in keys else "name","direction":"desc" if "spend" in keys or "clicks" in keys else "asc"}
         out.append({"id":"system:"+key,"name":item["name"],"scope":scope,"system":True,"version":0,

@@ -241,12 +241,16 @@ class ActionRequest(Base):
     baseline_budget: Mapped[Decimal | None] = mapped_column(MONEY)
     provenance: Mapped[dict[str, Any]] = mapped_column(JSON_TYPE, default=dict, server_default=text("'{}'"))
     status: Mapped[str] = mapped_column(String(32), index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("workspace_id", "initiator_id", "idempotency_key"),
         Index("uq_pending_action_entity", "entity_id", unique=True,
               postgresql_where=text("status IN ('queued','executing','verifying','unknown')"),
               sqlite_where=text("status IN ('queued','executing','verifying','unknown')")),
+        Index("uq_manual_pending_entity", "entity_id", unique=True,
+              postgresql_where=text("status IN ('DRAFT','PREFLIGHT_PENDING','PREFLIGHT_PASSED','PREFLIGHT_FAILED','AWAITING_CONFIRMATION','CONFIRMED','BLOCKED','queued','executing','verifying','unknown')"),
+              sqlite_where=text("status IN ('DRAFT','PREFLIGHT_PENDING','PREFLIGHT_PASSED','PREFLIGHT_FAILED','AWAITING_CONFIRMATION','CONFIRMED','BLOCKED','queued','executing','verifying','unknown')")),
     )
 
 
@@ -465,3 +469,4 @@ from services.providers import models as provider_models  # noqa: E402,F401
 
 from services.economics import models as economics_models  # noqa: E402,F401
 from services.automation import smart_models  # noqa: E402,F401
+from services.actions import manual_models  # noqa: E402,F401

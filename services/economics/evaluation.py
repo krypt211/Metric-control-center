@@ -346,6 +346,7 @@ def evaluate(
     limit: int = 100,
     sort_key: str | None = None,
     sort_direction: str = "asc",
+    persist_snapshot: bool = True,
 ) -> dict[str, Any]:
     now = now or utcnow()
     table = table_data(
@@ -433,26 +434,27 @@ def evaluate(
                     "profile_name": p.payload["name"],
                 }
             )
-            row.update(
-                snapshot(
-                    session,
-                    p,
-                    row,
-                    obs,
-                    filters.start,
-                    filters.end,
-                    {
-                        "level": level,
-                        "assignment_source": assigned,
-                        "account": filters.account,
-                        "campaign": filters.campaign,
-                        "adset": filters.adset,
-                        "ad": filters.ad,
-                        "offer": filters.offer,
-                        "geo": filters.geo,
-                    },
+            if persist_snapshot:
+                row.update(
+                    snapshot(
+                        session,
+                        p,
+                        row,
+                        obs,
+                        filters.start,
+                        filters.end,
+                        {
+                            "level": level,
+                            "assignment_source": assigned,
+                            "account": filters.account,
+                            "campaign": filters.campaign,
+                            "adset": filters.adset,
+                            "ad": filters.ad,
+                            "offer": filters.offer,
+                            "geo": filters.geo,
+                        },
+                    )
                 )
-            )
         row["economics_reasons"] = ", ".join(row["reason_codes"])
         row["late_event_changes"] = (
             json.dumps(row.get("event_changes", {}), ensure_ascii=False)

@@ -629,7 +629,7 @@ export default function SmartRules() {
               disabled={!columns.ready || columns.busy}
               onName={(r) => setCardId(String(r.id))}
             />
-            {card && <RuleDecisionDetails card={card} />}
+            {card && <RuleDecisionDetails card={card} simulationId={simulation.id} />}
           </>
         )}
       </section>

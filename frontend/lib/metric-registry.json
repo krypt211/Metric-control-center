@@ -11,7 +11,8 @@
     "eco_campaign": "Экономика: кампании",
     "eco_adset": "Экономика: группы",
     "eco_ad": "Экономика: объявления",
-    "rule_ad": "Результаты правил · объявления"
+    "rule_ad": "Результаты правил · объявления",
+    "manual_ad": "Управление рекламой · объявления"
   },
   "categories": {
     "basic": "Основные",
@@ -41,7 +42,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 280,
       "minWidth": 180,
@@ -67,7 +69,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -90,7 +93,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -144,7 +148,8 @@
         "account",
         "campaign",
         "adset",
-        "ad"
+        "ad",
+        "manual_ad"
       ],
       "defaultWidth": 160,
       "minWidth": 80,
@@ -224,7 +229,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -498,7 +504,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 140,
       "minWidth": 80,
@@ -1223,7 +1230,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1386,7 +1394,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1427,7 +1436,8 @@
         "eco_campaign",
         "eco_adset",
         "eco_ad",
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 170,
       "minWidth": 90,
@@ -1728,7 +1738,8 @@
       "category": "economics",
       "available": true,
       "scopes": [
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 220,
       "minWidth": 90,
@@ -1813,12 +1824,98 @@
       "category": "economics",
       "available": true,
       "scopes": [
-        "rule_ad"
+        "rule_ad",
+        "manual_ad"
       ],
       "defaultWidth": 220,
       "minWidth": 90,
       "maxWidth": 960,
       "precision": 2,
+      "availability": "conditional"
+    },
+    "campaign_name": {
+      "key": "campaign_name",
+      "label": "Кампания",
+      "technicalName": "campaign_name",
+      "description": "Кампания",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "manual_ad"
+      ],
+      "defaultWidth": 200,
+      "minWidth": 100,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "adset_name": {
+      "key": "adset_name",
+      "label": "Группа объявлений",
+      "technicalName": "adset_name",
+      "description": "Группа объявлений",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "manual_ad"
+      ],
+      "defaultWidth": 200,
+      "minWidth": 100,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "effective_status": {
+      "key": "effective_status",
+      "label": "Эффективный статус",
+      "technicalName": "effective_status",
+      "description": "Эффективный статус",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "manual_ad"
+      ],
+      "defaultWidth": 200,
+      "minWidth": 100,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "rule_recommendation": {
+      "key": "rule_recommendation",
+      "label": "Рекомендация правила",
+      "technicalName": "rule_recommendation",
+      "description": "Рекомендация правила",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "manual_ad"
+      ],
+      "defaultWidth": 200,
+      "minWidth": 100,
+      "maxWidth": 600,
+      "precision": 0,
+      "availability": "conditional"
+    },
+    "source_provider": {
+      "key": "source_provider",
+      "label": "Провайдер",
+      "technicalName": "source_provider",
+      "description": "Провайдер",
+      "unit": "text",
+      "category": "basic",
+      "available": true,
+      "scopes": [
+        "manual_ad"
+      ],
+      "defaultWidth": 200,
+      "minWidth": 100,
+      "maxWidth": 600,
+      "precision": 0,
       "availability": "conditional"
     }
   },
@@ -1944,5 +2041,23 @@
     "rule_reason",
     "economics_data_quality",
     "account_name"
+  ],
+  "manual_default": [
+    "name",
+    "external_id",
+    "account_name",
+    "campaign_name",
+    "adset_name",
+    "status",
+    "effective_status",
+    "spend",
+    "leads",
+    "observed_meta_purchases",
+    "actual_cpl",
+    "estimated_roi",
+    "actual_roi",
+    "rule_recommendation",
+    "source_provider",
+    "last_synced"
   ]
 }

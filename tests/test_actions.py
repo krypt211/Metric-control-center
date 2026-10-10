@@ -2,6 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 from uuid import uuid4
 import unittest
+import os
+from unittest.mock import patch
 
 from sqlalchemy import select
 
@@ -30,6 +32,10 @@ class FakeWriter:
 class ActionTests(StorageFixture, unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         super().setUp()
+        # Only fake writers in these legacy execution contract tests.
+        allowed = patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"})
+        allowed.start()
+        self.addCleanup(allowed.stop)
         self.now = NOW
         self.policy = ActionPolicy(enabled=True, budget_contract={"verified": True, "field": "synthetic", "scale": "100", "encoding": "integer"})
         self.engine = ActionEngine(self.sessions, self.policy, clock=lambda: self.now)
@@ -44,6 +50,17 @@ class ActionTests(StorageFixture, unittest.IsolatedAsyncioTestCase):
 
     def enqueue(self, action="pause", value=None, key="one"):
         return self.engine.enqueue("default", "operator", "entity", action, value, key)
+
+    async def test_environment_gate_blocks_legacy_queue_before_attempt(self):
+        request_id = self.enqueue()
+        writer = FakeWriter()
+        with patch.dict(os.environ, {"ACTIONS_ENABLED": "false", "LOCAL_READ_ONLY": "true"}):
+            await self.engine.execute_next(writer)
+        with self.sessions() as s:
+            self.assertEqual(s.get(ActionRequest, request_id).status, "rejected")
+            self.assertIsNone(s.scalar(select(ActionExecution).where(ActionExecution.request_id == request_id)))
+            self.assertIn("WRITE_DISABLED", str(s.scalar(select(ActionLog.details).where(ActionLog.event == "rejected"))))
+        self.assertEqual(writer.calls, [])
 
     async def test_duplicate_request_never_calls_provider_twice(self):
         first = self.enqueue()

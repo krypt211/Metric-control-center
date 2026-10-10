@@ -43,6 +43,11 @@ class Writer:
 class CopilotTests(RecommendationFixture, unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         super().setUp()
+        import os
+        from unittest.mock import patch
+        allowed = patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"})
+        allowed.start()
+        self.addCleanup(allowed.stop)
         self.now = NOW
         self.actions = ActionEngine(self.sessions, ActionPolicy(enabled=True, budget_contract={"verified": True,
             "field": "budget", "scale": "100", "encoding": "integer"}), clock=lambda: self.now)

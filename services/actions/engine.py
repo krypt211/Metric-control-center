@@ -67,6 +67,16 @@ def log(session, request_id: str, event: str, now: datetime, **details):
 
 
 class ActionEngine:
+    def prepare_manual(self, actor, command, key):
+        from .manual import prepare
+
+        return prepare(self, actor, command, key)
+
+    def transition_manual(self, actor, request_id, event, revision):
+        from .manual import transition
+
+        return transition(self, actor, request_id, event, revision)
+
     def __init__(self, sessions, policy: ActionPolicy, *, clock=utc_now):
         self.sessions, self.policy, self.clock = sessions, policy, clock
 
@@ -202,6 +212,9 @@ class ActionEngine:
                 return None
             request_id = request.id
             try:
+                from .safety import ActionSafetyGate
+                if not ActionSafetyGate.allowed():
+                    raise ActionRejected("WRITE_DISABLED")
                 entity, state = self.validate(session, request.workspace_id, request.initiator_id, request.entity_id, request.action, request.value)
                 if request.provenance.get("source") in SOURCES:
                     guard(session, request.workspace_id, now, request.provenance.get("automation_generation", 0))
@@ -244,6 +257,8 @@ class ActionEngine:
                     log(session, request_id, "automation_blocked_before_http", self.clock(), reason=str(error))
                     return request_id
         try:
+            from .safety import ActionSafetyGate
+            ActionSafetyGate.require_write()
             if action == "pause":
                 await connector.pause_entity(external_id)
             elif action == "enable":
@@ -252,6 +267,9 @@ class ActionEngine:
                 await connector.change_budget(external_id, provider_payload=self.policy.budget_payload(value))
         except Exception as error:
             outcome, error_code = "unknown", type(error).__name__
+            from services.providers.contracts import WriteDisabled
+            if isinstance(error, WriteDisabled):
+                outcome, error_code = "rejected", "WRITE_DISABLED"
             if isinstance(error, APIError) and error.status_code in (400, 401, 402, 403, 404, 422, 429):
                 outcome = "rejected"
             if isinstance(error, RateLimitExceeded):

@@ -11,6 +11,7 @@ from sqlalchemy import delete, func, select, text
 
 from backend.app import database_sessions
 from services.auth.sessions import new_user
+from services.actions.manual_models import ManualActionGrant, ManualGrantAudit
 from services.automation.smart_models import (
     RuleAuditLog,
     RuleGrant,
@@ -27,6 +28,9 @@ from services.economics.store import create_profile
 from services.providers.matching import identity_maps
 from services.storage.models import (
     AdAccount,
+    ActionRequest,
+    ActionLog,
+    ActionExecution,
     Entity,
     Rule,
     User,
@@ -46,7 +50,7 @@ if (
 workspace = os.environ.get("WORKSPACE_ID", "default")
 logins = [f"rules-ui-{nonce}-{i}@local.test" for i in range(3)]
 with database_sessions().begin() as s:
-    if s.scalar(text("SELECT version_num FROM alembic_version")) != "0011_smart_rules":
+    if s.scalar(text("SELECT version_num FROM alembic_version")) != "0012_manual_actions":
         raise RuntimeError("RULES_MIGRATION_REQUIRED")
     if os.environ["UI_FIXTURE_MODE"] == "create":
         password = secrets.token_urlsafe(24)
@@ -131,6 +135,13 @@ with database_sessions().begin() as s:
                     )
                 )
         if ids:
+            requests = list(s.scalars(select(ActionRequest.id).where(ActionRequest.workspace_id == workspace, ActionRequest.initiator_id.in_(ids))))
+            if requests:
+                for model in (ActionLog, ActionExecution):
+                    s.execute(delete(model).where(model.request_id.in_(requests)))
+                s.execute(delete(ActionRequest).where(ActionRequest.id.in_(requests)))
+            s.execute(delete(ManualActionGrant).where(ManualActionGrant.workspace_id == workspace, ManualActionGrant.user_id.in_(ids)))
+            s.execute(delete(ManualGrantAudit).where(ManualGrantAudit.workspace_id == workspace, ManualGrantAudit.actor_id.in_(ids)))
             for model in (RuleAuditLog, EconomicsAuditLog):
                 s.execute(
                     delete(model).where(

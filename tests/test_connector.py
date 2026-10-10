@@ -24,6 +24,14 @@ READ, WRITE = "mfk_test_read", "mfk_test_write"
 
 
 class ConnectorTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        import os
+        from unittest.mock import patch
+        # Every remote call in this class uses httpx.MockTransport.
+        allowed = patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"})
+        allowed.start()
+        self.addCleanup(allowed.stop)
+
     async def test_account_endpoints_keep_dates_extra_fields_and_read_key(self):
         requests = []
         data = {"items": [{"spend": "12.50", "unknown_metric": 7}], "next_cursor": "opaque"}

@@ -74,8 +74,16 @@ class MetricFlowTransport:
             json.dumps(dict(payload), allow_nan=False)
         attempts = 1 if self._write else self._read_retries + 1
         for attempt in range(attempts):
+            if self._write:
+                from services.actions.safety import ActionSafetyGate
+
+                ActionSafetyGate.require_write()
             if self._before_request is not None:
                 await self._before_request()
+            if self._write:
+                from services.actions.safety import ActionSafetyGate
+
+                ActionSafetyGate.require_write()
             try:
                 response = await self._client.request(
                     method, path, params=params, json=dict(payload) if payload is not None else None

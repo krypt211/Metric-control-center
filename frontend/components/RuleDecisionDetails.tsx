@@ -1,4 +1,6 @@
 import { formatMetric } from "../lib/column-model";
+import { useEffect, useState } from "react";
+import { manualRead, manualWrite } from "../lib/manual-control";
 import { localized } from "../lib/economics";
 import {
   conditionNames,
@@ -46,9 +48,47 @@ function ConditionResults({ node }: { node: Row }) {
   );
 }
 
-export default function RuleDecisionDetails({ card }: { card: Row }) {
+export default function RuleDecisionDetails({
+  card,
+  simulationId,
+}: {
+  card: Row;
+  simulationId?: string;
+}) {
+  const [allowed, setAllowed] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  useEffect(() => {
+    void manualRead<{ can_control: boolean }>("/settings")
+      .then((s) => setAllowed(s.can_control))
+      .catch((e) => setError(e.message));
+  }, []);
+  async function prepare() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await manualWrite<{ id: string }>(
+        "/from-rule",
+        { simulation_id: simulationId, entity_id: card.id },
+        crypto.randomUUID(),
+      );
+      window.location.assign("/manual-control?request=" + r.id);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Не удалось подготовить команду",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <article className="rule-details" aria-label="Объяснение решения">
+      {card.status === "WOULD_PAUSE" && simulationId && allowed && (
+        <button disabled={busy} onClick={() => void prepare()}>
+          Подготовить отключение
+        </button>
+      )}
+      {error && <p role="alert">{error}</p>}
       <h3>
         {String(card.name)} ·{" "}
         <span className={`rule-badge rule-${card.status}`}>

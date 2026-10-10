@@ -292,7 +292,7 @@ export default function RuleRecommendations() {
               disabled={!columns.ready || columns.busy}
               onName={(row) => setCardId(String(row.id))}
             />
-            {selected && <RuleDecisionDetails card={selected} />}
+            {selected && <RuleDecisionDetails card={selected} simulationId={simulation.id} />}
             {!rows.length && <p>Нет объявлений по выбранному фильтру.</p>}
           </>
         )}
