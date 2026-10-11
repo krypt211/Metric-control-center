@@ -44,6 +44,15 @@ PENDING = (
     "CONFIRMED",
     "BLOCKED",
 )
+IN_FLIGHT = (
+    "queued",
+    "executing",
+    "verifying",
+    "unknown",
+    "EXECUTING",
+    "OUTCOME_UNKNOWN",
+    "RECONCILIATION_REQUIRED",
+)
 TERMINAL = ("SIMULATED", "EXPIRED", "CANCELLED")
 FUTURE = (
     "EXECUTING",
@@ -252,9 +261,7 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
         .where(
             ActionRequest.entity_id == row.entity_id,
             ActionRequest.id != row.id,
-            ActionRequest.status.in_(
-                (*PENDING, "queued", "executing", "verifying", "unknown")
-            ),
+            ActionRequest.status.in_((*PENDING, *IN_FLIGHT)),
         )
         .limit(1)
     )
@@ -331,6 +338,15 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
                 if old.provenance.get("fingerprint") != fingerprint:
                     raise HTTPException(409, "IDEMPOTENCY_CONFLICT")
                 return action_json(s, old, now)
+            if s.scalar(
+                select(ActionRequest.id)
+                .where(
+                    ActionRequest.entity_id == entity.id,
+                    ActionRequest.status.in_(IN_FLIGHT),
+                )
+                .limit(1)
+            ):
+                raise HTTPException(409, "PENDING_ACTION_CONFLICT")
             for pending in s.scalars(
                 select(ActionRequest).where(
                     ActionRequest.entity_id == entity.id,

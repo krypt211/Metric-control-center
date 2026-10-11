@@ -5,7 +5,7 @@ class ProviderError(RuntimeError):
     def __init__(self,code="PROVIDER_UNAVAILABLE",retry_after=None):
         super().__init__(code);self.code=code;self.retry_after=retry_after
 class WriteDisabled(ProviderError):
-    def __init__(self):super().__init__("WRITE_DISABLED")
+    def __init__(self, code="WRITE_DISABLED"):super().__init__(code)
 class ReadProvider(Protocol):
     name:str
     async def get_accounts(self)->list[dict[str,Any]]:...

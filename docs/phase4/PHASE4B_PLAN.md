@@ -14,8 +14,9 @@ local preflight, actor/workspace authorization, separate operator grant,
 idempotency, row locks, pending uniqueness, confirmation, expiry and append-only
 audit. The legacy engine has durable attempts and unknown-outcome READ
 reconciliation without resending. Both engine and HTTP transport enforce the
-environment safety gate. The action router is disabled; provider placeholder
-classes do not implement LIVE execution.
+environment safety gate plus an unconditional unverified-contract rejection.
+Changing global flags cannot enable WRITE. The action router is disabled; provider
+placeholder classes do not implement LIVE execution.
 
 Still required AFTER contract verification: verified provider adapter, separate
 WRITE credential revision/permission metadata, durable single-use authorization,
@@ -26,7 +27,9 @@ Keep this infrastructure disabled until a separate user-authorized task.
 
 ## 1. Contract and credential prerequisites
 
-Resolve every relevant gap in [WRITE API audit](WRITE_API_AUDIT.md). Obtain a
+Resolve every relevant gap in the [current WRITE audit](METRICFLOW_WRITE_AUDIT.md)
+and [earlier contract audit](WRITE_API_AUDIT.md). Only after contract acceptance
+and separate credential storage implementation, provision a
 separate minimal-scope `campaigns:write` credential from MetricFlow. Never send
 it in chat, put it in Git, logs or frontend. The existing Compose secret path is
 `.secrets/metricflow_write_key`, mounted only into the isolated action service as

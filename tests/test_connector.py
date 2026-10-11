@@ -31,6 +31,11 @@ class ConnectorTests(unittest.IsolatedAsyncioTestCase):
         allowed = patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"})
         allowed.start()
         self.addCleanup(allowed.stop)
+        # Isolated fake writers/MockTransport assume a synthetic accepted contract.
+        # Production has no verified adapter; real-gate regressions do not use this patch.
+        contract = patch("services.actions.safety.ActionSafetyGate.require_verified_contract")
+        contract.start()
+        self.addCleanup(contract.stop)
 
     async def test_account_endpoints_keep_dates_extra_fields_and_read_key(self):
         requests = []

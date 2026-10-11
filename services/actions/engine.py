@@ -213,8 +213,11 @@ class ActionEngine:
             request_id = request.id
             try:
                 from .safety import ActionSafetyGate
-                if not ActionSafetyGate.allowed():
-                    raise ActionRejected("WRITE_DISABLED")
+                from services.providers.contracts import WriteDisabled
+                try:
+                    ActionSafetyGate.require_write()
+                except WriteDisabled as error:
+                    raise ActionRejected(error.code) from error
                 entity, state = self.validate(session, request.workspace_id, request.initiator_id, request.entity_id, request.action, request.value)
                 if request.provenance.get("source") in SOURCES:
                     guard(session, request.workspace_id, now, request.provenance.get("automation_generation", 0))

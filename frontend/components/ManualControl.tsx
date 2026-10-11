@@ -15,6 +15,7 @@ type Provider = {
   read_credentials: boolean;
   required_permission: string;
   operations: Record<string, string>;
+  reason_codes: string[];
   last_error: string | null;
   last_checked_at: string | null;
 };
@@ -287,6 +288,16 @@ export default function ManualControl({
               <p>
                 Pause / Enable: {manualLabel(p.operations.PAUSE_AD)} · бюджет и
                 ставка: будущая фаза.
+              </p>
+              <p>LIVE: BLOCKED / WRITE UNVERIFIED</p>
+              <ul aria-label="WRITE blockers">
+                {(p.reason_codes ?? []).map((code) => <li key={code}>{manualLabel(code)}</li>)}
+              </ul>
+              <p>
+                Для активации нужны подтверждённый контракт провайдера,
+                отдельный WRITE ключ и права на аккаунт,
+                проверенный AD ID, одноразовое разрешение и READ-проверка результата.
+                Локальное подтверждение не разрешает LIVE WRITE.
               </p>
               <p>
                 Последняя проверка READ: {time(p.last_checked_at)} · ошибка:{" "}

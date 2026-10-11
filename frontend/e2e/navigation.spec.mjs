@@ -138,6 +138,7 @@ test("existing rule, recommendations, manual control and connections remain reac
   await expect(page.getByRole("heading", { name: "Настройки управления рекламой", exact: true })).toBeVisible();
   await settings(page); await popup(page).getByRole("link", { name: "API и подключения", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/connections$/);
+  await expect(page.locator(".provider-details")).toContainText(["UNVERIFIED / BLOCKED", "NOT CONNECTED / BLOCKED"]);
   await expect(page.getByRole("heading", { name: "Настройки · API и подключения", exact: true })).toBeVisible();
   await settings(page); await popup(page).getByRole("link", { name: "Администрирование", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Администрирование", exact: true })).toBeVisible();

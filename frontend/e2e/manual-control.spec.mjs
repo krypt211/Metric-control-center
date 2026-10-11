@@ -305,6 +305,8 @@ test("columns, horizontal scrolling, sticky name, responsive layout and safety s
   await expect(
     page.getByRole("region", { name: "Безопасность управления" }),
   ).toContainText("Не проверено");
+  await expect(page.getByText("LIVE: BLOCKED / WRITE UNVERIFIED", { exact: true })).toHaveCount(2);
+  await expect(page.getByRole("list", { name: "WRITE blockers", exact: true })).toHaveCount(2);
 });
 
 test("real saved rule decisions permit only eligible WOULD_PAUSE drafts", async ({

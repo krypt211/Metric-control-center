@@ -48,6 +48,11 @@ class CopilotTests(RecommendationFixture, unittest.IsolatedAsyncioTestCase):
         allowed = patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"})
         allowed.start()
         self.addCleanup(allowed.stop)
+        # Isolated fake writers/MockTransport assume a synthetic accepted contract.
+        # Production has no verified adapter; real-gate regressions do not use this patch.
+        contract = patch("services.actions.safety.ActionSafetyGate.require_verified_contract")
+        contract.start()
+        self.addCleanup(contract.stop)
         self.now = NOW
         self.actions = ActionEngine(self.sessions, ActionPolicy(enabled=True, budget_contract={"verified": True,
             "field": "budget", "scale": "100", "encoding": "integer"}), clock=lambda: self.now)
