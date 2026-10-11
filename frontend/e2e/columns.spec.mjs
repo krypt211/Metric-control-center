@@ -32,7 +32,7 @@ const test=base.extend({
  accounts:[async({},use)=>{const nonce=randomUUID().replaceAll("-","");try{await use(fixture("create",nonce));}finally{fixture("cleanup",nonce);}}, {scope:"worker"}],
 });
 async function login(page,user){await page.goto("/login");await page.getByLabel("Логин или email").fill(user.login);await page.getByLabel("Пароль",{exact:true}).fill(user.password);await page.getByRole("button",{name:"Войти",exact:true}).click();await expect(page).toHaveURL(/\/$/);}
-async function open(page,section="Статистика"){await page.getByRole("navigation",{name:"Раздел"}).getByRole("button",{name:section,exact:true}).click();await expect(page.getByLabel("Набор колонок")).toBeEnabled();}
+async function open(page,section="Статистика"){await page.getByRole("navigation",{name:"Основные разделы"}).getByRole("link",{name:section,exact:true}).click();await expect(page.getByLabel("Набор колонок")).toBeEnabled();}
 async function saved(page){await expect(page.getByLabel("\u041d\u0430\u0431\u043e\u0440 \u043a\u043e\u043b\u043e\u043d\u043e\u043a")).toBeEnabled();await expect(page.locator(".column-save-status")).toContainText(/сохранён|загружены|Сохранено/);await expect(page.locator("main").getByRole("alert")).toHaveCount(0);}
 async function settings(page){await page.getByRole("button",{name:"Настроить колонки",exact:true}).click();await expect(page.getByRole("dialog")).toBeVisible();}
 async function close(page){await page.getByLabel("Закрыть настройку колонок").click();}

@@ -17,7 +17,7 @@ export default function AdminPage() {
     if(!response.ok){setError(response.status===409?"Нельзя отключить последнего администратора.":"Изменение не сохранено.");return;}
     setError("");await load();
   }
-  return <main><header className="topbar"><a href="/">К статистике</a><SessionBar/></header><h1>Администрирование</h1>
+  return <main><SessionBar /><h1>Администрирование</h1>
     {error&&<p role="alert" className="notice error">{error}</p>}
     <section className="group"><h2>Пользователи</h2><div className="tablewrap"><table><thead><tr><th>Логин</th><th>Роль</th><th>Доступ</th><th/></tr></thead>
     <tbody>{users.map(u=><tr key={u.id}><td>{u.login}</td><td><select value={u.role} onChange={e=>void mutate("users/"+u.id,"PATCH",{role:e.target.value}).catch(()=>setError("Сервис недоступен."))}>{["viewer","operator","admin"].map(r=><option key={r}>{r}</option>)}</select></td>

@@ -40,7 +40,8 @@ test("rule lifecycle: real local simulation, profile, accounts, ROI/CPL, AND/OR,
   test.setTimeout(120000);
   await login(page, accounts.users[0]);
   await page
-    .getByRole("link", { name: "Правила рекламы", exact: true })
+    .getByRole("navigation", { name: "Основные разделы", exact: true })
+    .getByRole("link", { name: "Правила", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Правила рекламы", exact: true }),

@@ -3,12 +3,7 @@ import SessionBar from "@/components/SessionBar";
 export default function EconomicsPage() {
   return (
     <main>
-      <header className="topbar">
-        <a className="brand" href="/">
-          ACC<span>Advertising Control Center</span>
-        </a>
-        <SessionBar />
-      </header>
+      <SessionBar />
       <section className="heading">
         <div>
           <p className="eyebrow">ФИНАНСОВЫЙ КОНТРОЛЬ</p>

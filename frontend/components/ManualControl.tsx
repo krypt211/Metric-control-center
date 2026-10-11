@@ -246,14 +246,12 @@ export default function ManualControl({
     );
   return (
     <main className="dashboard manual-surface">
-      <header className="topbar">
-        <h1>
+      <SessionBar />
+      <section className="heading"><div><h1>
           {settingsOnly
             ? "Настройки управления рекламой"
             : "Управление рекламой"}
-        </h1>
-        <SessionBar />
-      </header>
+        </h1></div></section>
       <p className="notice">
         WRITE выключен. Доступна только локальная подготовка и симуляция.
         Подтверждение не отправляет команду провайдеру.

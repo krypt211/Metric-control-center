@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import {navigationEvent} from "../lib/navigation";
 import {categories,labelFor,scopeMetrics,type TableScope} from "../lib/metric-registry";
 import {moveColumn,resizeColumn,resetWidths,setVisible} from "../lib/column-model";
 import type {ColumnController} from "../lib/use-column-preferences";
@@ -7,6 +8,16 @@ export default function ColumnManager({scope,controller:c,rows}:{scope:TableScop
  const [open,setOpen]=useState(false),[search,setSearch]=useState(""),[name,setName]=useState("");
  const dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{if(open)dialog.current?.showModal();},[open]);
+ useEffect(()=>{
+  const update=()=>{
+   const url=new URL(window.location.href);
+   if(url.searchParams.get("columns")!=="1")return;
+   setOpen(true);url.searchParams.delete("columns");
+   window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);
+  };
+  update();window.addEventListener(navigationEvent,update);
+  return()=>window.removeEventListener(navigationEvent,update);
+ },[]);
  const metrics=scopeMetrics(scope),disabled=!c.ready||c.busy;
  return <>
  <div className="column-toolbar">
@@ -15,7 +26,7 @@ export default function ColumnManager({scope,controller:c,rows}:{scope:TableScop
  <optgroup label="Мои наборы">{c.bundle.presets.filter(p=>!p.system).map(p=><option key={p.id} value={p.id}>{p.name}{p.id===c.bundle.preference.default_id?" ★":""}</option>)}</optgroup>
  <option value="command:create">Создать набор…</option><option value="command:manage">Управление наборами…</option>
  </select></label>
- <button onClick={()=>setOpen(true)}>Настроить колонки</button>
+ <button data-open-columns onClick={()=>setOpen(true)}>Настроить колонки</button>
  <button disabled={disabled||!c.modified} onClick={()=>c.save()}>{c.active.system?"Сохранить как мой набор":"Сохранить набор"}</button>
  <span role="status" className="column-save-status">{c.modified?"Набор изменён · ":""}{c.status}</span>
  </div>

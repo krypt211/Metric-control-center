@@ -18,7 +18,8 @@
     "components/ProviderCapabilities.tsx",
     "lib/economics.ts",
     "lib/smart-rules.ts",
-    "lib/rule-recommendations.ts"
+    "lib/rule-recommendations.ts",
+    "lib/navigation.ts"
   ],
   "exclude": ["node_modules", ".next", ".test-build"]
 }

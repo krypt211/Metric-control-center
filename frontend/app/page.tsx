@@ -9,6 +9,8 @@ import Audit from "@/components/Audit";
 import Recommendations from "@/components/Recommendations";
 import Copilot from "@/components/Copilot";
 import SourceSummary,{type Source} from "@/components/SourceSummary";
+import { usePageTab } from "@/lib/use-page-tab";
+import { dashboardTabs, legacyDashboardTabs } from "@/lib/navigation";
 import {metricRegistry} from "@/lib/metric-registry";
 
 type Group = {
@@ -33,7 +35,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
-  const [tab, setTab] = useState("overview");
+  const [requestedTab, setTab] = usePageTab(dashboardTabs, "overview");
+  const tab = data && (data.mode !== "LOCAL READ ONLY" || ["overview", "statistics", "creatives", "tracker"].includes(requestedTab)) ? requestedTab : "overview";
   const [refreshKey, setRefreshKey] = useState(0);
   const load = useCallback(async (signal?: AbortSignal) => {
     setBusy(true);
@@ -56,9 +59,9 @@ export default function DashboardPage() {
   }, [load]);
 
   return <main>
-    <header className="topbar"><a className="brand" href="/">ACC<span>Advertising Control Center</span></a><span className="version">{data?.mode === "LOCAL READ ONLY" ? "LOCAL READ ONLY · Actions disabled" : "Обзор рекламы"}</span><SessionBar/></header>
+    <SessionBar />
     <section className="heading"><div><p className="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</p><h1>{tab === "tracker" ? "\u0422\u0440\u0435\u043a\u0435\u0440" : tab === "copilot" ? "AI Copilot" : tab === "overview" ? "Сегодня" : tab === "creatives" ? "Креативы" : tab === "rules" ? "Правила" : tab === "audit" ? "Журнал действий" : tab === "recommendations" ? "Рекомендации" : "Статистика"}</h1><p className="subtitle">Расходы и результаты в одном месте</p></div><button onClick={() => {setRefreshKey(key => key + 1); void load();}} disabled={busy}>{busy ? "Обновление…" : "Обновить"}</button></section>
-    <nav className="tabs" aria-label="Раздел">{[["overview", "Обзор"], ["statistics", "Статистика"], ["creatives", "Креативы"], ["recommendations", "Рекомендации"], ["tracker", "\u0422\u0440\u0435\u043a\u0435\u0440"], ["copilot", "AI Copilot"], ["rules", "Правила"], ["audit", "Журнал"]].filter(([value]) => data?.mode !== "LOCAL READ ONLY" || ["overview", "statistics", "creatives", "tracker"].includes(value)).map(([value, name]) => <button key={value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>{name}</button>)}</nav>
+    {data && data.mode !== "LOCAL READ ONLY" && <nav className="tabs" aria-label="Дополнительные разделы">{legacyDashboardTabs.map(({id, label}) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>}
     {tab==="overview"&&data?.sources&&<SourceSummary sources={data.sources}/>}
     {tab === "tracker" ? <OptionalStatistics kind="tracker" refreshKey={refreshKey} /> : tab === "creatives" && data?.mode === "LOCAL READ ONLY" ? <OptionalStatistics kind="creative" refreshKey={refreshKey} /> : tab === "copilot" ? <Copilot refreshKey={refreshKey} /> : tab === "recommendations" ? <Recommendations refreshKey={refreshKey} /> : tab === "rules" ? <Rules refreshKey={refreshKey} /> : tab === "audit" ? <Audit refreshKey={refreshKey} /> : tab !== "overview" ? <Statistics key={tab} refreshKey={refreshKey} creativeOnly={tab === "creatives"} /> : <>
     <div className="statusline"><span className={`dot ${error ? "bad" : data?.last_success_sync ? "good" : "waiting"}`} /><span>{data?.last_success_sync ? `Загрузка статистики: ${new Date(data.last_success_sync).toLocaleString("ru-RU")}` : "Ожидается первая загрузка статистики"}</span></div>

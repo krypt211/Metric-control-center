@@ -59,7 +59,7 @@ export default function ConnectionsPage(){
    try{const r=await fetch("/api/admin/providers/diagnostics?"+new URLSearchParams({start,end}),{cache:"no-store"});if(!r.ok)throw new Error();setDiagnostics(await r.json());}
    catch{setError("Не удалось сравнить источники. Проверьте период.");}finally{setBusy(false);}
  }
- return <main><header className="topbar"><a href="/">К статистике</a><SessionBar/></header><h1>Настройки · API и подключения</h1>
+ return <main><SessionBar /><h1>Настройки · API и подключения</h1>
  <p className="subtitle">Подключения и источники статистики. Все рекламные действия отключены.</p>
  {error&&<p className="notice error" role="alert">{error}</p>}{message&&<p className="notice" role="status">{message}</p>}
  {!data?<p>Загрузка подключений…</p>:<>

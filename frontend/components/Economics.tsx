@@ -5,6 +5,8 @@ import { readEconomics } from "../lib/economics-api";
 import EconomicProfiles from "./EconomicProfiles";
 import EconomicSettings, { type Settings } from "./EconomicSettings";
 import EconomicsTable from "./EconomicsTable";
+import { usePageTab } from "../lib/use-page-tab";
+import { economicsTabs } from "../lib/navigation";
 export default function Economics() {
   const [settings, setSettings] = useState<Settings | null>(null),
     [error, setError] = useState(""),
@@ -20,8 +22,8 @@ export default function Economics() {
       ad: "",
       offer: "",
       geo: "",
-    }),
-    [tab, setTab] = useState("stats");
+    });
+  const [tab, setTab] = usePageTab(economicsTabs, "stats");
   const load = useCallback(async () => {
     setSettings(await readEconomics<Settings>("settings"));
   }, []);

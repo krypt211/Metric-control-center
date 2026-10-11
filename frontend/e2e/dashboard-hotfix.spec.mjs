@@ -16,7 +16,7 @@ test('real PostgreSQL hotfix: periods, catalog, hierarchy, proxy, provenance and
   await page.goto('/login');await page.getByLabel('Логин или email').fill(user.login);await page.getByLabel('Пароль',{exact:true}).fill(user.password);await page.getByRole('button',{name:'Войти',exact:true}).click();await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId('source-summary')).toHaveCount(1);
   browserTimezone=await page.evaluate(()=>Intl.DateTimeFormat().resolvedOptions().timeZone);
-  await page.getByRole('navigation',{name:'Раздел'}).getByRole('button',{name:'Статистика',exact:true}).click();
+  await page.getByRole('navigation',{name:'Основные разделы'}).getByRole('link',{name:'Статистика',exact:true}).click();
   await expect(page.getByLabel('Набор колонок')).toBeEnabled();
   const catalogResponse=await page.request.get('/api/stats/filters');expect(catalogResponse.ok()).toBeTruthy();
   const catalog=(await catalogResponse.json()).options.account;
