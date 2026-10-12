@@ -129,6 +129,33 @@ class WriteSettingsTests(AuthTests):
                 s.scalar(select(func.count()).select_from(ActionExecution)), 0
             )
 
+    async def test_other_reported_scope_verbs_do_not_hide_exact_write_scope(self):
+        await self.login("admin")
+        await self.action(
+            "save", {"revision": 0, "token": "mfk_fixture_scope_acceptance"}
+        )
+        for scopes, verified in (
+            (["campaigns:read", "entities:write", "ai:use"], False),
+            (["campaigns:write", "ai:use", "seeding:*"], True),
+        ):
+
+            def handler(request, scopes=scopes):
+                self.assertEqual(request.method, "GET")
+                self.assertEqual(request.url.path, "/api/v1/me")
+                return httpx.Response(
+                    200,
+                    json={"api_key": {"scopes": scopes}, "access_state": "active_paid"},
+                )
+
+            with patch(
+                "services.actions.credential_service.provider_transport",
+                return_value=httpx.MockTransport(handler),
+            ):
+                result = await self.action("check", {"revision": 1})
+            self.assertEqual(result.json()["scopes"], scopes)
+            self.assertEqual(result.json()["scope_verified"], verified)
+            self.assertEqual(result.json()["live_actions"], "LIVE_ACTIONS_BLOCKED")
+
     async def test_write_roles_csrf_workspace_and_no_validation_echo(self):
         for role in ("viewer", "operator"):
             await self.login(role)

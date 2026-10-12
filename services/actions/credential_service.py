@@ -219,7 +219,7 @@ async def mutate(operation: str, body: Command, request: Request):
         )
         if isinstance(values, list) and all(
             isinstance(v, str)
-            and (v == "*" or bool(re.fullmatch(r"[a-z_]{1,32}:(?:read|write)", v)))
+            and (v == "*" or bool(re.fullmatch(r"[a-z_]{1,32}:(?:[a-z_]{1,32}|\*)", v)))
             for v in values
         ):
             scopes = values
