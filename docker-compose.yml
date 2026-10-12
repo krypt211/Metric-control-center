@@ -135,9 +135,9 @@ services:
     tmpfs: *id002
     security_opt: *id003
     command:
-    - alembic
-    - upgrade
-    - head
+    - python
+    - -m
+    - services.storage.migrate
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_DB: ${POSTGRES_DB:-metric_control}
@@ -197,6 +197,8 @@ services:
       LOCAL_READ_ONLY: ${LOCAL_READ_ONLY:-false}
       CELERY_BROKER_URL: redis://redis:6379/0
       METRICFLOW_WRITE_KEY_FILE: /run/secrets/metricflow_write_key
+      METRICFLOW_WRITE_VAULT_FILE: /run/secrets/metricflow_write_vault
+      METRICFLOW_WRITE_ENCRYPTION_KEY_FILE: /run/secrets/metricflow_write_encryption_key
       ACTIONS_ENABLED: ${ACTIONS_ENABLED:-false}
       AI_AUTOPILOT_ALLOWED: ${AI_AUTOPILOT_ALLOWED:-false}
       ACTION_BUDGET_CONTRACT_FILE: /config/action-budget-contract.json
@@ -205,6 +207,8 @@ services:
       SYNC_DAILY_BUDGET: ${SYNC_DAILY_BUDGET:-800}
     secrets:
     - metricflow_write_key
+    - metricflow_write_vault
+    - metricflow_write_encryption_key
     - postgres_password
     volumes:
     - ./config:/config:ro
@@ -372,6 +376,10 @@ secrets:
     file: ./.secrets/metricflow_read_key
   metricflow_write_key:
     file: ./.secrets/metricflow_write_key
+  metricflow_write_vault:
+    file: ./.secrets/metricflow_write_credentials.enc
+  metricflow_write_encryption_key:
+    file: ./.secrets/metricflow_write_encryption_key
   postgres_password:
     file: ./.secrets/postgres_password
   action_api_token:

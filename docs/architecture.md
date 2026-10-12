@@ -96,3 +96,11 @@ versioned rules.payload. Workspace-scoped catalog resolution unions child Ads by
 provider and canonical account identity before the existing Economics DRY RUN.
 No separate rule engine or advertising WRITE path is introduced.
 Details: [Multi-select and search report](rules/MULTI_SELECT_AND_SEARCH_REPORT.md).
+
+## WRITE storage and deployment boundary
+
+The independent encrypted WRITE vault is not mounted into READ services and never
+grants execution permission. A typed provider wire contract and controlled one-action
+dispatch remain blocked pending provider evidence. Migration containers use a shared
+transaction lock and skip upgrade when the database is already current.
+Details: [Phase 4B readiness](phase4/BUSINESS_WRITE_READINESS_2026-10-12.md).

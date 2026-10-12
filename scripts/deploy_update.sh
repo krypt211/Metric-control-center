@@ -19,9 +19,9 @@ for service in backend frontend worker scheduler; do
     docker tag "$image" "mcc-rollback-${service}:$stamp"
 done
 git checkout --detach "$revision"
-"${dc[@]}" build backend frontend backup
+"${dc[@]}" build migrate backend frontend backup
 "${dc[@]}" stop caddy frontend backend worker scheduler
-"${dc[@]}" run --rm migrate
-"${dc[@]}" up -d
+"${dc[@]}" up --no-deps --no-build --force-recreate --exit-code-from migrate migrate
+"${dc[@]}" up -d --no-deps --no-build backend worker scheduler frontend caddy backup-job
 bash scripts/check_server.sh
 echo "Update verified. Previous images use timestamp: $stamp"

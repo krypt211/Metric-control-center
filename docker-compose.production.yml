@@ -61,9 +61,9 @@ services:
     security_opt:
     - no-new-privileges:true
     command:
-    - alembic
-    - upgrade
-    - head
+    - python
+    - -m
+    - services.storage.migrate
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_DB: ${POSTGRES_DB:-metric_control}

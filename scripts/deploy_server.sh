@@ -9,9 +9,9 @@ mkdir -p backups .deploy-state
 chmod 700 backups .deploy-state
 dc=(docker compose --env-file .env.production -f docker-compose.production.yml)
 "${dc[@]}" config --quiet
-"${dc[@]}" build backend frontend backup
-"${dc[@]}" up -d postgres redis
-"${dc[@]}" run --rm migrate
-"${dc[@]}" run --rm backend python -m services.auth.bootstrap
-"${dc[@]}" up -d
+"${dc[@]}" build migrate backend frontend backup
+"${dc[@]}" up -d --wait --wait-timeout 120 postgres redis
+"${dc[@]}" up --no-deps --no-build --force-recreate --exit-code-from migrate migrate
+"${dc[@]}" run --rm --no-deps backend python -m services.auth.bootstrap
+"${dc[@]}" up -d --no-deps --no-build backend worker scheduler frontend caddy backup-job
 bash scripts/check_server.sh
