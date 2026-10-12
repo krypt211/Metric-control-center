@@ -113,6 +113,7 @@ services:
       ACTIONS_ENABLED: 'false'
       SYNC_DAILY_BUDGET: '800'
       AUTH_ENABLED: 'true'
+      CREDENTIAL_MANAGEMENT_ENABLED: ${CREDENTIAL_MANAGEMENT_ENABLED:-false}
       APP_ENV: production
       APP_ORIGIN: https://${APP_DOMAIN:?Set APP_DOMAIN}
       SESSION_SECRET_FILE: /run/secrets/session_secret
@@ -218,6 +219,48 @@ services:
     networks:
     - data
     - egress
+  credential-manager:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: mcc-backend:${MCC_IMAGE_TAG:-local}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    profiles:
+    - credentials
+    command: [uvicorn, services.actions.credential_service:app, --host, 0.0.0.0, --port, '8002', --no-access-log]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-metric_control}
+      POSTGRES_USER: mcc_credential_manager
+      POSTGRES_PASSWORD_FILE: /run/secrets/credential_management_db_password
+      WORKSPACE_ID: ${WORKSPACE_ID:-default}
+      SESSION_SECRET_FILE: /run/secrets/session_secret
+      APP_ORIGIN: https://${APP_DOMAIN:?Set APP_DOMAIN}
+      APP_ENV: production
+      LOCAL_READ_ONLY: 'true'
+      ACTIONS_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      AI_AUTOPILOT_ALLOWED: 'false'
+      SYNC_DAILY_BUDGET: ${SYNC_DAILY_BUDGET:-800}
+      METRICFLOW_WRITE_VAULT_FILE: /vault-namespace/metricflow-write
+      METRICFLOW_WRITE_ENCRYPTION_KEY_FILE: /run/secrets/metricflow_write_encryption_key
+    secrets:
+    - credential_management_db_password
+    - session_secret
+    - metricflow_write_encryption_key
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8002/health/live', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data, egress]
   scheduler:
     build:
       context: .
@@ -368,6 +411,10 @@ secrets:
     file: ./.secrets/postgres_password
   metricflow_read_key:
     file: ./.secrets/metricflow_read_key
+  credential_management_db_password:
+    file: ./.secrets/credential_management_db_password
+  metricflow_write_encryption_key:
+    file: ./.secrets/metricflow_write_encryption_key
   session_secret:
     file: ./.secrets/session_secret
   provider_encryption_key:

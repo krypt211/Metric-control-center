@@ -7,11 +7,14 @@ test -f config/metricflow-schema.json || { echo "Copy the verified READ schema t
 python3 scripts/prepare_secrets.py
 mkdir -p backups .deploy-state
 chmod 700 backups .deploy-state
-dc=(docker compose --env-file .env.production -f docker-compose.production.yml)
+dc=(docker compose --profile credentials --env-file .env.production -f docker-compose.production.yml)
 "${dc[@]}" config --quiet
-"${dc[@]}" build migrate backend frontend backup
+python3 scripts/prepare_credential_secrets.py
+"${dc[@]}" build migrate backend frontend backup credential-manager
 "${dc[@]}" up -d --wait --wait-timeout 120 postgres redis
 "${dc[@]}" up --no-deps --no-build --force-recreate --exit-code-from migrate migrate
+"${dc[@]}" run --rm --no-deps -v "$PWD/scripts/provision_credential_role.py:/provision.py:ro" -v "$PWD/.secrets/credential_management_db_password:/run/secrets/credential_db_password:ro" migrate python /provision.py
+"${dc[@]}" up -d --no-deps --no-build --wait --wait-timeout 90 credential-manager
 "${dc[@]}" run --rm --no-deps backend python -m services.auth.bootstrap
 "${dc[@]}" up -d --no-deps --no-build backend worker scheduler frontend caddy backup-job
 bash scripts/check_server.sh

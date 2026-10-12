@@ -15,7 +15,7 @@ export async function backendProxy(request:NextRequest,path:string) {
     const url=new URL(path,process.env.BACKEND_INTERNAL_URL??"http://127.0.0.1:8000");
     url.search=request.nextUrl.search;
     const response=await fetch(url,{method:request.method,headers:await sessionHeaders(),cache:"no-store",
-      signal:AbortSignal.timeout(15_000),...(!["GET","HEAD"].includes(request.method)?{body:await request.text()}:{})});
+      signal:AbortSignal.timeout(path.includes("write-credentials")?45_000:15_000),...(!["GET","HEAD"].includes(request.method)?{body:await request.text()}:{})});
     const body=response.status>=500?{detail:"SERVICE_UNAVAILABLE"}:await response.json();
     const outgoing=NextResponse.json(body,{status:response.status,headers:{"Cache-Control":"no-store"}});
     for(const value of response.headers.getSetCookie()) outgoing.headers.append("Set-Cookie",value);

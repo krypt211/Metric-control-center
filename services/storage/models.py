@@ -470,3 +470,5 @@ from services.providers import models as provider_models  # noqa: E402,F401
 from services.economics import models as economics_models  # noqa: E402,F401
 from services.automation import smart_models  # noqa: E402,F401
 from services.actions import manual_models  # noqa: E402,F401
+
+from services.providers import integration_models  # noqa: E402,F401

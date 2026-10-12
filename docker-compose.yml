@@ -47,6 +47,7 @@ services:
       SYNC_DAILY_BUDGET: ${SYNC_DAILY_BUDGET:-800}
       AUTH_ENABLED: 'true'
       APP_ENV: development
+      CREDENTIAL_MANAGEMENT_ENABLED: ${CREDENTIAL_MANAGEMENT_ENABLED:-false}
       APP_ORIGIN: ${APP_ORIGIN:-http://127.0.0.1:3000}
       SESSION_SECRET_FILE: /run/secrets/session_secret
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
@@ -150,6 +151,44 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  credential-manager:
+    build: *id001
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: *id002
+    security_opt: *id003
+    profiles:
+    - credentials
+    command: [uvicorn, services.actions.credential_service:app, --host, 0.0.0.0, --port, '8002', --no-access-log]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-metric_control}
+      POSTGRES_USER: mcc_credential_manager
+      POSTGRES_PASSWORD_FILE: /run/secrets/credential_management_db_password
+      WORKSPACE_ID: ${WORKSPACE_ID:-default}
+      SESSION_SECRET_FILE: /run/secrets/session_secret
+      APP_ORIGIN: ${APP_ORIGIN:-http://127.0.0.1:3000}
+      APP_ENV: development
+      LOCAL_READ_ONLY: 'true'
+      ACTIONS_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      AI_AUTOPILOT_ALLOWED: 'false'
+      SYNC_DAILY_BUDGET: ${SYNC_DAILY_BUDGET:-800}
+      METRICFLOW_WRITE_VAULT_FILE: /vault-namespace/metricflow-write
+      METRICFLOW_WRITE_ENCRYPTION_KEY_FILE: /run/secrets/metricflow_write_encryption_key
+    secrets:
+    - credential_management_db_password
+    - session_secret
+    - metricflow_write_encryption_key
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8002/health/live', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
   scheduler:
     build: *id001
     init: true
@@ -380,6 +419,8 @@ secrets:
     file: ./.secrets/metricflow_write_credentials.enc
   metricflow_write_encryption_key:
     file: ./.secrets/metricflow_write_encryption_key
+  credential_management_db_password:
+    file: ./.secrets/credential_management_db_password
   postgres_password:
     file: ./.secrets/postgres_password
   action_api_token:

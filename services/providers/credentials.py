@@ -41,7 +41,8 @@ def decrypt(workspace,provider,encrypted):
     except (InvalidToken,ValueError,KeyError,UnicodeError):
         raise CredentialError("CREDENTIAL_UNAVAILABLE") from None
 
-def load(session,workspace,provider):
+def load(session,workspace,provider,purpose="READ"):
+    if purpose!="READ":raise CredentialError("USE_DEDICATED_WRITE_VAULT")
     credential=session.get(ProviderCredential,(workspace,provider))
     if credential:return decrypt(workspace,provider,credential.encrypted)
     if provider=="metricflow":

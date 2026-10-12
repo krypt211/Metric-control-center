@@ -5,7 +5,7 @@ revision=${1:?Usage: bash scripts/deploy_update.sh EXISTING_GIT_REVISION}
 git rev-parse --verify "${revision}^{commit}" >/dev/null
 test -z "$(git status --porcelain --untracked-files=no)" || { echo "Tracked changes; aborting"; exit 2; }
 mkdir -p .deploy-state
-dc=(docker compose --env-file .env.production -f docker-compose.production.yml)
+dc=(docker compose --profile credentials --env-file .env.production -f docker-compose.production.yml)
 "${dc[@]}" run --rm backup backup
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 state=".deploy-state/$stamp"
@@ -19,9 +19,12 @@ for service in backend frontend worker scheduler; do
     docker tag "$image" "mcc-rollback-${service}:$stamp"
 done
 git checkout --detach "$revision"
-"${dc[@]}" build migrate backend frontend backup
+python3 scripts/prepare_credential_secrets.py
+"${dc[@]}" build migrate backend frontend backup credential-manager
 "${dc[@]}" stop caddy frontend backend worker scheduler
 "${dc[@]}" up --no-deps --no-build --force-recreate --exit-code-from migrate migrate
+"${dc[@]}" run --rm --no-deps -v "$PWD/scripts/provision_credential_role.py:/provision.py:ro" -v "$PWD/.secrets/credential_management_db_password:/run/secrets/credential_db_password:ro" migrate python /provision.py
+"${dc[@]}" up -d --no-deps --no-build --wait --wait-timeout 90 credential-manager
 "${dc[@]}" up -d --no-deps --no-build backend worker scheduler frontend caddy backup-job
 bash scripts/check_server.sh
 echo "Update verified. Previous images use timestamp: $stamp"

@@ -72,7 +72,7 @@ class WriteCredentialVault:
         except (ConfigurationError, TypeError, AttributeError):
             raise WriteCredentialError("WRITE_VAULT_INVALID_TOKEN") from None
 
-    def save_new(self, workspace: str, token: str, revision: int) -> None:
+    def seal(self, workspace: str, token: str, revision: int) -> bytes:
         """Create a private envelope exclusively; never overwrite another secret."""
         if (
             not isinstance(workspace, str)
@@ -91,7 +91,11 @@ class WriteCredentialVault:
             "verification": "UNVERIFIED",
             "token": self._validate_token(token),
         }
-        encrypted = self._cipher.encrypt(json.dumps(payload).encode())
+        return self._cipher.encrypt(json.dumps(payload).encode())
+
+    def save_new(self, workspace: str, token: str, revision: int) -> None:
+        """Create a private envelope exclusively; never overwrite another secret."""
+        encrypted = self.seal(workspace, token, revision)
         try:
             fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(fd, "wb") as stream:
@@ -99,12 +103,14 @@ class WriteCredentialVault:
         except OSError:
             raise WriteCredentialError("WRITE_VAULT_CREATE_FAILED") from None
 
-    def load(self, workspace: str, revision: int) -> WriteCredential:
+    def unseal(
+        self, encrypted: bytes, workspace: str, revision: int
+    ) -> WriteCredential:
         """Reject tampering, wrong purpose/workspace/revision; never fall back READ."""
         if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
             raise WriteCredentialError("WRITE_VAULT_INVALID_BINDING")
         try:
-            value = json.loads(self._cipher.decrypt(self.path.read_bytes()))
+            value = json.loads(self._cipher.decrypt(encrypted))
             if (
                 value["version"] != 1
                 or value["workspace"] != workspace
@@ -118,4 +124,10 @@ class WriteCredentialVault:
                 workspace, revision, self._validate_token(value["token"])
             )
         except (OSError, InvalidToken, ValueError, KeyError, TypeError):
+            raise WriteCredentialError("WRITE_VAULT_UNAVAILABLE") from None
+
+    def load(self, workspace: str, revision: int) -> WriteCredential:
+        try:
+            return self.unseal(self.path.read_bytes(), workspace, revision)
+        except OSError:
             raise WriteCredentialError("WRITE_VAULT_UNAVAILABLE") from None

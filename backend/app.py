@@ -147,3 +147,6 @@ from backend.smart_rules_api import router as smart_rules_router
 app.include_router(smart_rules_router)
 from backend.manual_control_api import router as manual_control_router
 app.include_router(manual_control_router)
+
+from backend.integration_api import router as integration_router
+app.include_router(integration_router)

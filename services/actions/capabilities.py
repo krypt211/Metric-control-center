@@ -28,8 +28,12 @@ class ActionCapabilityRegistry:
         )
         write_credential = bool(path and Path(path).is_file())
         connected = bool(connection and connection.enabled)
+        from services.actions.write_settings import metadata
+        stored=metadata(session,workspace) if provider=="metricflow" else None
+        if stored:write_credential=stored["configured"] or write_credential
         return {
             "provider": provider,
+            "write_connection":stored,
             "connected": connected,
             "health": connection.status if connection else "disconnected",
             "credential_revision": connection.revision if connection else None,

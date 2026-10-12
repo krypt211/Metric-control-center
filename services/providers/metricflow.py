@@ -70,5 +70,5 @@ class MetricFlowProvider(DisabledWriteContract):
         confirmed=scope_check(me)
         self.quota={"summary":usage_summary(await self.connector.get_usage()),"checked_at":datetime.now(UTC).isoformat()}
         accounts=await self.get_accounts()
-        return {"status":"healthy","accounts":accounts,"permissions":{"read":confirmed,"write_permission":False,"write_enabled":False},
+        return {"status":"healthy","accounts":accounts,"permissions":{"read":confirmed,"write_permission":False,"write_enabled":False,"scopes":me.get("api_key",{}).get("scopes",[]) if isinstance(me,dict) and isinstance(me.get("api_key"),dict) else []},
             "capabilities":self.get_capabilities(),"quota":self.quota}

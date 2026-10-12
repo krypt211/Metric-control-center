@@ -1,10 +1,12 @@
 "use client";
+import MetricFlowWriteSettings from "../../../components/MetricFlowWriteSettings";
+import MetaApiUsage from "../../../components/MetaApiUsage";
 import SearchableSelect from "../../../components/SearchableSelect";
 import {useCallback,useEffect,useState} from "react";
 import SessionBar from "@/components/SessionBar";
 import ProviderCapabilities from "@/components/ProviderCapabilities";
 type Provider="meta"|"metricflow";
-type Connection={provider:Provider;enabled:boolean;status:string;routing_ready:boolean;last_check:string|null;last_success_sync:string|null;account_count:number;error_code:string|null;permissions:{read?:boolean;write_permission?:boolean;write_enabled?:boolean;expires_at?:number;data_access_expires_at?:number};capabilities:Record<string,unknown>;quota:Record<string,unknown>;local_quota:{used:number;limit?:number;blocked_until:string|null};provider_quota?:{used:number|null;limit:number|null;remaining:number|null;checked_at:string|null};app_id?:string;graph_version?:string};
+type Connection={provider:Provider;enabled:boolean;status:string;routing_ready:boolean;last_check:string|null;last_success_sync:string|null;account_count:number;error_code:string|null;permissions:{scopes?:string[];read?:boolean;write_permission?:boolean;write_enabled?:boolean;expires_at?:number;data_access_expires_at?:number};capabilities:Record<string,unknown>;quota:Record<string,unknown>;local_quota:{used:number;limit?:number;blocked_until:string|null};provider_quota?:{used:number|null;limit:number|null;remaining:number|null;checked_at:string|null};app_id?:string;graph_version?:string};
 type Route={scope:string;primary_provider:Provider;fallback_provider:Provider|null;action_provider:"disabled"};
 type Mapping={account_id:string;canonical_id:string;meta_account_id:string|null;proof:string;provider:Provider;name:string|null;provider_account_id:string};
 type Data={connections:Connection[];routing:Route[];mappings:Mapping[];credentials_ui_enabled:boolean;events:{at:string;canonical_id:string;from:string|null;to:string|null;reason:string}[];jobs:{id:string;provider:string;kind:string;status:string;start:string;end:string;error_code:string|null}[]};
@@ -67,8 +69,8 @@ export default function ConnectionsPage(){
  {!data.credentials_ui_enabled&&<p className="notice">Ввод токенов временно недоступен: на сервере не настроен отдельный ключ шифрования. Существующий MetricFlow READ key продолжает использовать server-side .secrets.</p>}
  <div className="provider-cards">{data.connections.map(c=>{
  const running=data.jobs.some(j=>j.provider===c.provider&&["queued","running"].includes(j.status));
- return <section className="group" key={c.provider}><h2>{names[c.provider]}</h2><p><strong>{statuses[c.status]??c.status}</strong> · {c.account_count} аккаунтов</p>
- <dl className="provider-details"><dt>Последняя проверка</dt><dd>{when(c.last_check)}</dd><dt>Успешная синхронизация</dt><dd>{when(c.last_success_sync)}</dd><dt>READ</dt><dd>{c.permissions.read?"Подтверждён":"Не подтверждён"}</dd><dt>WRITE</dt><dd>{c.provider==="metricflow"?"UNVERIFIED / BLOCKED - contract and permissions unverified":"NOT CONNECTED / BLOCKED"}</dd><dt>Локальная квота, запросов сегодня</dt><dd>{c.local_quota.used}{c.local_quota.blocked_until?" · пауза до "+when(c.local_quota.blocked_until):""}</dd>
+ return <section className="group" key={c.provider}><h2>{names[c.provider]}</h2>{c.provider==="metricflow"&&<h3>MetricFlow READ API</h3>}<p><strong>{statuses[c.status]??c.status}</strong> · {c.account_count} аккаунтов</p>
+ <dl className="provider-details">{c.provider==="metricflow"&&<><dt>READ scopes</dt><dd>{c.permissions.scopes?.join(", ")||"Не сообщены при последней проверке"}</dd></>}<dt>Последняя проверка</dt><dd>{when(c.last_check)}</dd><dt>Успешная синхронизация</dt><dd>{when(c.last_success_sync)}</dd><dt>READ</dt><dd>{c.permissions.read?"Подтверждён":"Не подтверждён"}</dd><dt>WRITE</dt><dd>{c.provider==="metricflow"?"UNVERIFIED / BLOCKED - contract and permissions unverified":"NOT CONNECTED / BLOCKED"}</dd><dt>Локальная квота, запросов сегодня</dt><dd>{c.local_quota.used} / {c.local_quota.limit??"—"}{c.local_quota.blocked_until?" · пауза до "+when(c.local_quota.blocked_until):""}</dd>
  {c.provider==="meta"&&<><dt>App ID / API version</dt><dd>{c.app_id??"—"} / {c.graph_version??"v26.0"}</dd><dt>Токен действителен до</dt><dd>{c.permissions.expires_at?when(new Date(c.permissions.expires_at*1000).toISOString()):"Срок не сообщён"}</dd><dt>Доступ к данным до</dt><dd>{c.permissions.data_access_expires_at?when(new Date(c.permissions.data_access_expires_at*1000).toISOString()):"Срок не сообщён"}</dd><dt>OAuth</dt><dd>Не настроен · первоначальное подключение токеном</dd></>}
  </dl>{c.error_code&&<p className="notice error">{errors[c.error_code]??"READ-проверка не прошла: "+c.error_code}</p>}
  <div className="filterbar"><button disabled={!c.enabled||busy||running} onClick={()=>void attempt("/"+c.provider+"/check","POST")}>Проверить соединение</button>
@@ -76,6 +78,7 @@ export default function ConnectionsPage(){
  <button disabled={!c.routing_ready||busy} onClick={()=>void attempt("/routing","PUT",{scope:"workspace",primary_provider:c.provider,fallback_provider:null,action_provider:"disabled"})}>Выбрать основным</button>
  <button disabled={!c.enabled||busy} onClick={()=>{const another=data.connections.some(x=>x.provider!==c.provider&&x.enabled&&x.status==="healthy");if(window.confirm(another?"Отключить "+names[c.provider]+"? Снимок статистики сохранится.":"Это последний рабочий источник. Новая статистика перестанет поступать, панель покажет STALE. Отключить?"))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:!another,forget_credentials:false});}}>Отключить</button>
  <button disabled={c.enabled||busy} onClick={()=>{if(window.confirm("Удалить сохранённые credentials этого отключённого подключения? Для полного отзыва токена используйте настройки Meta / MetricFlow."))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:true,forget_credentials:true});}}>Удалить сохранённые credentials</button></div>
+ {c.provider==="metricflow"?<MetricFlowWriteSettings/>:<MetaApiUsage/>}
  <details><summary>Подключить или обновить credentials</summary><CredentialForm provider={c.provider} enabled={data.credentials_ui_enabled&&!busy} onSave={body=>mutate("/"+c.provider+"/credentials","POST",body)}/></details>
 
  </section>;})}</div>

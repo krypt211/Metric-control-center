@@ -13,6 +13,7 @@ type Provider = {
   health: string;
   connected: boolean;
   write_credentials: boolean;
+  write_connection?: {status:string;revision:number;scope_verified:boolean}|null;
   read_credentials: boolean;
   required_permission: string;
   operations: Record<string, string>;
@@ -290,6 +291,7 @@ export default function ManualControl({
                 ставка: будущая фаза.
               </p>
               <p>LIVE: BLOCKED / WRITE UNVERIFIED</p>
+              {p.write_connection&&<p>WRITE: {p.write_connection.status} / revision {p.write_connection.revision} / LIVE BLOCKED</p>}
               <ul aria-label="WRITE blockers">
                 {(p.reason_codes ?? []).map((code) => <li key={code}>{manualLabel(code)}</li>)}
               </ul>

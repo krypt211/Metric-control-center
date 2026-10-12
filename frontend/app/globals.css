@@ -219,3 +219,5 @@ summary { cursor: pointer; }
 
 
 .economic-fields > .rule-target-picker {grid-column:1 / -1}
+
+.provider-cards>.group{min-width:0}.table-scroll{max-width:100%;overflow-x:auto}.provider-cards .table-scroll table{min-width:700px}

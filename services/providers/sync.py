@@ -6,6 +6,7 @@ from sqlalchemy import delete,select,update,or_
 from services.providers.manager import ProviderManager,ensure
 from services.providers.models import ProviderConnection,ProviderWindow
 from services.providers.contracts import ProviderError
+from services.meta.provider import account_id as meta_account_id
 from services.providers.credentials import load
 from services.providers.matching import confirm_accounts,hierarchy_hash
 from services.storage.models import AdAccount,DailyMetric,Entity,SyncRun,SyncLease,RawSnapshot
@@ -25,7 +26,7 @@ class MetaSync:
         with self.factory.begin() as s:
             ensure(s,self.workspace);c=s.get(ProviderConnection,(self.workspace,"meta"))
             if not c.enabled:return {"status":"disabled"}
-            revision=c.revision
+            revision=c.revision;selected=c.config.get("sync_account_ids")
         owner=str(uuid4());run_id=str(uuid4());lease_key=self.workspace+":meta:insights";now=utc_now()
         with self.factory.begin() as s:
             s.execute(insert_for(s,SyncLease.__table__).values(key=lease_key,owner=owner,expires_at=now+timedelta(seconds=180)).on_conflict_do_nothing(index_elements=["key"]))
@@ -45,9 +46,14 @@ class MetaSync:
             lease=s.scalar(select(SyncLease).where(SyncLease.key==lease_key).with_for_update())
             if not lease or lease.owner!=owner or aware(lease.expires_at)<=utc_now():raise ProviderError("SYNC_LEASE_LOST")
         try:
-            client=self.manager.create("meta",before_request=reserve)
+            client=self.manager.create("meta",before_request=reserve,run_id=run_id,operation=job,source="sync_worker")
             health=await client.health_check()
-            for account in health["accounts"]:
+            accounts=health["accounts"]
+            if selected is not None:
+                accounts=[a for a in accounts if identity(self.workspace,"meta",meta_account_id(a["id"])) in selected]
+                if not accounts:raise ProviderError("META_SYNC_ACCOUNT_SELECTION_REQUIRED")
+            if len(accounts)>3:raise ProviderError("META_SYNC_ACCOUNT_SELECTION_REQUIRED")
+            for account in accounts:
                 try:
                     catalog={}
                     for kind,method in (("campaign",client.get_campaigns),("adset",client.get_adsets),("ad",client.get_ads),("creative",client.get_creatives)):
@@ -81,7 +87,9 @@ class MetaSync:
         except Exception as error:
             errors.append(self.manager.failure("meta",error,revision));status="failed"
         finally:
-            if client:await client.close()
+            if client:
+                if errors:client.client.meter.failed=True
+                await client.close()
             with self.factory.begin() as s:
                 s.execute(update(SyncRun).where(SyncRun.id==run_id).values(status=locals().get("status","failed"),finished_at=utc_now(),rows=count,pages=client.client.successful_calls if client else 0,error_code=errors[0] if errors else None))
                 s.execute(delete(SyncLease).where(SyncLease.key==lease_key,SyncLease.owner==owner))

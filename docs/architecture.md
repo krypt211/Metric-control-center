@@ -104,3 +104,9 @@ grants execution permission. A typed provider wire contract and controlled one-a
 dispatch remain blocked pending provider evidence. Migration containers use a shared
 transaction lock and skip upgrade when the database is already current.
 Details: [Phase 4B readiness](phase4/BUSINESS_WRITE_READINESS_2026-10-12.md).
+
+## Private credential management and shared Meta meter
+
+WRITE credential provisioning runs in a private, unexposed credential-manager with an independent cipher and limited PostgreSQL role. Backend/READ workers do not mount the WRITE cipher. The existing vault is reused with workspace/purpose binding; metadata, CAS revisions and audit are persisted independently. Provider verification is GET-only and shares the existing quota. This is a secret-handling boundary, not an advertising dispatcher.
+
+Meta HTTP attempts use a shared PostgreSQL queue/lease/cooldown and sanitized telemetry. Provider utilization percentages are separate from local request counts. See [audit and validation](integrations/META_RATE_LIMIT_AND_METRICFLOW_WRITE_SETTINGS_REPORT.md).

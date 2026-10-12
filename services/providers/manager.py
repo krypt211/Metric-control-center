@@ -35,7 +35,8 @@ class ProviderManager:
             changed=s.execute(update(ApiQuota).where(ApiQuota.workspace_id==self.workspace,ApiQuota.provider==provider,ApiQuota.utc_day==now.date(),ApiQuota.requests<limit,or_(ApiQuota.blocked_until.is_(None),ApiQuota.blocked_until<=now)).values(requests=ApiQuota.requests+1))
             if changed.rowcount!=1:raise ProviderError("PROVIDER_QUOTA_EXHAUSTED")
             if run_id:s.execute(update(SyncRun).where(SyncRun.id==run_id).values(requests=SyncRun.requests+1))
-    def create(self,provider,*,before_request=None):
+    def create(self,provider,*,before_request=None,run_id=None,operation="read",source=None,purpose="READ"):
+        if purpose!="READ":raise ProviderError("WRITE_PROVIDER_UNAVAILABLE")
         if provider not in PROVIDERS:raise ProviderError("INVALID_PROVIDER")
         with self.factory() as s:
             c=s.get(ProviderConnection,(self.workspace,provider))
@@ -46,13 +47,17 @@ class ProviderManager:
         kwargs={"transport":self.transports.get(provider),"before_request":before_request or reserve}
         if provider=="meta":
             from services.meta.provider import MetaMarketingProvider
-            return MetaMarketingProvider(data,**kwargs)
+            from services.meta.telemetry import MetaRequestMeter
+            meter=MetaRequestMeter(self.factory,self.workspace,data["app_id"],run_id=run_id,
+                operation=operation,source=source,
+                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(1,float(c.config.get("request_interval_seconds",10))))
+            return MetaMarketingProvider(data,meter=meter,**kwargs)
         from services.providers.metricflow import MetricFlowProvider
         schema=InsightSchema.load(os.environ.get("METRICFLOW_SCHEMA_FILE","/config/metricflow-schema.json"))
         return MetricFlowProvider(data,schema=schema,**kwargs)
     def failure(self,provider,error,revision=None):
         code=getattr(error,"code",type(error).__name__)
-        if code not in {"META_TOKEN_INVALID","META_TOKEN_EXPIRED","META_ADS_READ_REQUIRED","META_PERMISSION_DENIED","META_RATE_LIMIT","META_TIMEOUT","META_UNAVAILABLE","PROVIDER_DISABLED","META_NOT_CONNECTED","CREDENTIAL_UNAVAILABLE","PROVIDER_QUOTA_BLOCKED","PROVIDER_QUOTA_EXHAUSTED","AuthenticationError","PermissionDenied","RateLimitExceeded","QuotaExhausted","SchemaError"}:code="PROVIDER_READ_FAILED"
+        if code not in {"META_TOKEN_INVALID","META_TOKEN_EXPIRED","META_ADS_READ_REQUIRED","META_PERMISSION_DENIED","META_SYNC_ACCOUNT_SELECTION_REQUIRED","META_REQUEST_QUEUE_TIMEOUT","META_RATE_LIMIT","META_TIMEOUT","META_UNAVAILABLE","PROVIDER_DISABLED","META_NOT_CONNECTED","CREDENTIAL_UNAVAILABLE","PROVIDER_QUOTA_BLOCKED","PROVIDER_QUOTA_EXHAUSTED","AuthenticationError","PermissionDenied","RateLimitExceeded","QuotaExhausted","SchemaError"}:code="PROVIDER_READ_FAILED"
         now=utc_now()
         with self.factory.begin() as s:
             c=s.get(ProviderConnection,(self.workspace,provider))
@@ -70,7 +75,7 @@ class ProviderManager:
             c=s.get(ProviderConnection,(self.workspace,provider));revision=c.revision
         client=None
         try:
-            client=self.create(provider);result=await client.health_check()
+            client=self.create(provider,operation="health_check",source="health_worker");result=await client.health_check()
             with self.factory.begin() as s:
                 c=s.get(ProviderConnection,(self.workspace,provider))
                 if not c.enabled or c.revision!=revision:raise ProviderError("CONNECTION_CHANGED")
@@ -92,6 +97,8 @@ class ProviderManager:
                 if provider=="metricflow" and result["permissions"].get("read"):
                     c.capabilities.setdefault("read",{}).update(verified)
             return {"status":"healthy"}
-        except Exception as error:return {"status":"error","error_code":self.failure(provider,error,revision)}
+        except Exception as error:
+            if provider=="meta" and client:client.client.meter.failed=True
+            return {"status":"error","error_code":self.failure(provider,error,revision)}
         finally:
             if client:await client.close()

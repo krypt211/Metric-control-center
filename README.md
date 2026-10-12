@@ -53,3 +53,8 @@ Frontend: Node.js 24, npm ci, npm run build, npm run typecheck. GitHub Actions Ð
 Phase 3.1: [Multi-select and searchable rule targets](docs/rules/MULTI_SELECT_AND_SEARCH_REPORT.md).
 
 Phase 4B: [Business WRITE readiness and migration repair](docs/phase4/BUSINESS_WRITE_READINESS_2026-10-12.md). LIVE WRITE remains blocked.
+
+## Integration readiness
+
+[Meta rate-limit audit and independent MetricFlow WRITE settings](docs/integrations/META_RATE_LIMIT_AND_METRICFLOW_WRITE_SETTINGS_REPORT.md).
+LIVE advertising writes remain blocked; the private credential service does not dispatch actions.
