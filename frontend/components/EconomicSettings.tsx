@@ -1,4 +1,5 @@
 "use client";
+import SearchableSelect from "./SearchableSelect";
 import { useState } from "react";
 import {
   type Profile,
@@ -84,19 +85,8 @@ export function ScopePicker({
       {scope !== "profile" && (
         <label>
           {prefix}: объект
-          <select
-            required
-            disabled={disabled}
-            value={id}
-            onChange={(e) => change(scope, e.target.value)}
-          >
-            <option value="">Выберите объект</option>
-            {(options.options[scope] ?? []).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <SearchableSelect label={prefix+": объект"} kind={scope} value={id} disabled={disabled}
+            options={options.options[scope]??[]} placeholder="Выберите объект" onChange={v=>change(scope,v as string)}/>
         </label>
       )}
     </>

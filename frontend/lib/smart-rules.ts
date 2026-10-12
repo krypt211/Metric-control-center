@@ -1,3 +1,4 @@
+import type {Target} from "./rule-targets";
 import { localized } from "./economics";
 import type { StatisticsRow } from "../components/StatisticsTable";
 import { serializeAuthenticatedWrite } from "./use-column-preferences";
@@ -47,6 +48,8 @@ export type Definition = {
   description: string;
   profile_id: string | null;
   selection: {
+    target_mode?: boolean;
+    targets?: Target[];
     account_ids: string[];
     provider: "metricflow" | "meta" | null;
     campaign: string | null;
@@ -138,6 +141,8 @@ export function newRule(): Definition {
     description: "",
     profile_id: null,
     selection: {
+      target_mode: false,
+      targets: [],
       account_ids: [],
       provider: null,
       campaign: null,

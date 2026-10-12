@@ -199,3 +199,23 @@ summary { cursor: pointer; }
  .nav-mobile-toggle { display: inline-flex; }
  .nav-mobile-panel { top: calc(100% + 6px); width: 330px; }
 }
+
+/* Searchable object selectors and local rule target selection. */
+.searchable-select {position:relative;min-width:0;max-width:100%}
+.searchable-select>button {width:100%;text-align:left;overflow:hidden;text-overflow:ellipsis}
+.searchable-popup {position:absolute;top:100%;left:0;z-index:35;background:var(--panel,#fff);border:1px solid #a5b4c5;border-radius:8px;padding:10px;box-shadow:0 10px 24px #0002;width:min(340px,calc(100vw - 40px));max-height:440px;overflow:auto}
+.searchable-popup input {width:100%;min-width:0;box-sizing:border-box}
+.searchable-popup [role=listbox] {display:flex;flex-direction:column;max-height:240px;overflow:auto}
+.searchable-popup [role=option] {text-align:left;white-space:normal;overflow-wrap:anywhere}
+.searchable-popup [role=option].active {outline:2px solid #2563eb;outline-offset:-2px}
+.searchable-popup small {display:block;font-size:11px}
+.rule-target-picker,.target-actions {min-width:0;max-width:100%;margin:12px 0;padding:12px;border:1px solid #a5b4c5;border-radius:8px}
+.target-table {width:100%;min-width:550px}
+.target-table td,.target-table th {text-align:left;padding:8px;border-bottom:1px solid #ddd}
+.selected-targets {max-height:240px;overflow:auto;overflow-wrap:anywhere;padding-left:20px}
+.target-actions [role=dialog] {max-width:100%;overflow-wrap:anywhere}
+.rule-target-picker .filterbar input,.rule-target-picker .filters label {min-width:0;max-width:100%}
+@media(max-width:768px){.rule-target-picker .filters,.target-actions .actionbuttons{display:flex;flex-wrap:wrap}.rule-target-picker .filters>label{width:100%}.searchable-popup{width:min(300px,calc(100vw - 68px))}.selected-targets button{max-width:100%;white-space:normal;overflow-wrap:anywhere}}
+
+
+.economic-fields > .rule-target-picker {grid-column:1 / -1}

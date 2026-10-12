@@ -94,7 +94,61 @@ class Thresholds(Contract):
     maturation_hours: int | None = Field(default=None, ge=0, le=8760, strict=True)
 
 
+class RuleTarget(Contract):
+    scope_type: Literal["ACCOUNT", "CAMPAIGN", "ADSET", "AD"]
+    scope_id: str = Field(min_length=1, max_length=36)
+    account_id: str = Field(min_length=1, max_length=36)
+    provider: Literal["metricflow", "meta"]
+    effective_start: date | None = None
+    effective_end: date | None = None
+    version_policy: Literal["LATEST"] = "LATEST"
+    name: str = Field(default="", max_length=1000)
+    external_id: str = Field(default="", max_length=128)
+    account_name: str = Field(default="", max_length=1000)
+    campaign_id: str | None = Field(default=None, max_length=36)
+    adset_id: str | None = Field(default=None, max_length=36)
+    actor_id: str | None = Field(default=None, max_length=36)
+    created_at: datetime | None = None
+    credential_revision: int | None = None
+
+    @model_validator(mode="after")
+    def dates(self) -> RuleTarget:
+        if (
+            self.effective_start
+            and self.effective_end
+            and self.effective_start > self.effective_end
+        ):
+            raise ValueError("Invalid assignment dates")
+        return self
+
+
+class CatalogSelection(Contract):
+    kind: Literal["account", "campaign", "adset", "ad"]
+    q: str = Field(default="", max_length=200)
+    accounts: list[str] = Field(default_factory=list, max_length=200)
+    campaigns: list[str] = Field(default_factory=list, max_length=200)
+    adsets: list[str] = Field(default_factory=list, max_length=200)
+
+
+class BulkTargetsPreview(Contract):
+    targets: list[RuleTarget] = Field(min_length=1, max_length=200)
+
+
+class BulkTargets(Contract):
+    revision: int = Field(ge=1, strict=True)
+    operation: Literal["add", "remove", "replace"] = "add"
+    targets: list[RuleTarget] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def nonempty(self) -> BulkTargets:
+        if self.operation != "replace" and not self.targets:
+            raise ValueError("Empty add/remove is not an assignment operation")
+        return self
+
+
 class Selection(Contract):
+    target_mode: bool = False
+    targets: list[RuleTarget] = Field(default_factory=list, max_length=200)
     account_ids: list[str] = Field(default_factory=list, max_length=20)
     provider: Literal["metricflow", "meta"] | None = None
     campaign: str | None = Field(default=None, max_length=36)
@@ -106,6 +160,12 @@ class Selection(Contract):
 
     @model_validator(mode="after")
     def unique(self) -> Selection:
+        from services.automation.smart_targets import target_key
+
+        if len({target_key(t) for t in self.targets}) != len(self.targets):
+            raise ValueError("Duplicate rule assignment")
+        if self.targets and not self.target_mode:
+            raise ValueError("Explicit targets require target_mode")
         if len(set(self.account_ids)) != len(self.account_ids) or any(
             not key or len(key) > 36 for key in self.account_ids
         ):

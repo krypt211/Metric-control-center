@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import select
 
@@ -14,7 +16,13 @@ from services.automation.smart_models import (
     RuleVersion,
 )
 from services.automation.smart_recommendations import recommendation_summary
-from services.automation.smart_schema import SmartRuleInput, SmartRuleUpdate
+from services.automation.smart_schema import (
+    BulkTargets,
+    BulkTargetsPreview,
+    CatalogSelection,
+    SmartRuleInput,
+    SmartRuleUpdate,
+)
 from services.automation.smart_simulation import simulate, simulation_json
 from services.automation.smart_store import (
     STATES,
@@ -153,6 +161,140 @@ def simulation(key: str, request: Request) -> dict:
         if not row or row.workspace_id != a["workspace"]:
             raise HTTPException(404, "SIMULATION_NOT_FOUND")
         return simulation_json(row)
+
+
+@router.get("/catalog/search")
+def catalog_search(
+    request: Request,
+    kind: str = Query(pattern="^(account|campaign|adset|ad)$"),
+    q: str = Query(default="", max_length=200),
+    accounts: Annotated[list[str] | None, Query()] = None,
+    campaigns: Annotated[list[str] | None, Query()] = None,
+    adsets: Annotated[list[str] | None, Query()] = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    from services.automation.smart_targets import search_catalog
+
+    a = actor(request)
+    if any(len(values or []) > 200 for values in (accounts, campaigns, adsets)):
+        raise HTTPException(422, "TOO_MANY_FILTERS")
+    with factory()() as s:
+        return search_catalog(
+            s,
+            a["workspace"],
+            kind,
+            q,
+            accounts=accounts,
+            campaigns=campaigns,
+            adsets=adsets,
+            offset=offset,
+            limit=limit,
+        )
+
+
+@router.post("/catalog/select-all")
+def select_all(body: CatalogSelection, request: Request) -> dict:
+    from services.automation.smart_targets import search_catalog
+
+    a = actor(request, True)
+    with factory()() as s:
+        result = search_catalog(
+            s,
+            a["workspace"],
+            body.kind,
+            body.q,
+            accounts=body.accounts,
+            campaigns=body.campaigns,
+            adsets=body.adsets,
+            limit=200,
+        )
+        if result["total"] > 200:
+            raise HTTPException(422, "TOO_MANY_RULE_TARGETS")
+        return result
+
+
+@router.post("/catalog/resolve")
+def preview_targets(body: BulkTargetsPreview, request: Request) -> dict:
+    from zoneinfo import ZoneInfo
+
+    from services.automation.smart_targets import resolve_targets, validated_targets
+    from services.economics.store import utcnow
+
+    a = actor(request, True)
+    with factory()() as s:
+        selected = validated_targets(s, a, body.targets)
+        result = resolve_targets(
+            s,
+            a["workspace"],
+            selected,
+            utcnow().astimezone(ZoneInfo("Europe/Moscow")).date(),
+        )
+        return {"total": result["total"], "issues": result["issues"]}
+
+
+@router.post("/{key}/simulate-selected")
+def simulate_selected(key: str, body: BulkTargets, request: Request) -> dict:
+    a = actor(request, True)
+    with factory().begin() as s:
+        return simulate(s, a, key, body.revision, targets=body.targets)
+
+
+@router.get("/{key}/targets")
+def targets(key: str, request: Request) -> dict:
+    a = actor(request)
+    with factory()() as s:
+        row = get_rule(s, a["workspace"], key)
+        selection = row.payload.get("selection", {})
+        return {
+            "revision": row.revision,
+            "targets": selection.get("targets", []),
+            "target_mode": selection.get("target_mode", False),
+            "version_policy": "LATEST",
+        }
+
+
+@router.post("/{key}/targets/resolve")
+def resolve(key: str, body: VersionInput, request: Request) -> dict:
+    from zoneinfo import ZoneInfo
+
+    from services.automation.smart_targets import resolve_targets
+    from services.economics.store import utcnow
+
+    a = actor(request, True)
+    with factory()() as s:
+        row = get_rule(s, a["workspace"], key)
+        if row.revision != body.version:
+            raise HTTPException(409, "RULE_VERSION_CONFLICT")
+        config = SmartRuleInput.model_validate(row.payload)
+        result = resolve_targets(
+            s,
+            a["workspace"],
+            config.selection.targets,
+            utcnow().astimezone(ZoneInfo("Europe/Moscow")).date(),
+        )
+        return {
+            "total": result["total"],
+            "issues": result["issues"],
+            "ads": [
+                {
+                    "provider": k[0],
+                    "account_id": k[1],
+                    "ad_id": k[2],
+                    "target_provenance": v,
+                }
+                for k, v in result["provenance"].items()
+            ],
+        }
+
+
+@router.post("/{key}/assignments/bulk")
+def bulk_assign(key: str, body: BulkTargets, request: Request) -> dict:
+    from services.automation.smart_store import change_targets
+
+    a = actor(request, True)
+    with factory().begin() as s:
+        return change_targets(s, a, key, body)
 
 
 @router.get("/{key}")

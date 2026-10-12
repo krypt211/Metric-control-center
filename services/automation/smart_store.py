@@ -136,6 +136,18 @@ def save(
         )
         s.add(row)
     validate_scope(s, actor, config)
+    if config.selection.target_mode:
+        from services.automation.smart_targets import validated_targets
+
+        config.selection.targets = validated_targets(
+            s,
+            actor,
+            config.selection.targets,
+            (before or {})
+            .get("definition", {})
+            .get("selection", {})
+            .get("targets", []),
+        )
     row.payload = config.model_dump(mode="json")
     row.owner_id = actor["id"]
     row.status = "SMART_ARCHIVED" if deleted else "SMART_DRY_RUN"
@@ -192,3 +204,90 @@ def grant(s: Session, actor: dict[str, Any], user_id: str, can_edit: bool) -> No
             )
         )
     audit(s, actor, user_id, "GRANT", {"before": before, "after": can_edit})
+
+
+def change_targets(s: Session, actor: dict, key: str, body) -> dict:
+    """CAS plus the existing PostgreSQL workspace lock; no duplicate rule copies."""
+    from services.automation.smart_schema import RuleTarget
+    from services.automation.smart_targets import catalog, target_key, validated_targets
+
+    lock(s, actor["workspace"])
+    require_editor(s, actor)
+    row = get_rule(s, actor["workspace"], key)
+    if row.revision != body.revision:
+        raise HTTPException(409, "RULE_VERSION_CONFLICT")
+    if row.status == "SMART_ARCHIVED":
+        raise HTTPException(409, "RULE_ARCHIVED")
+    config = SmartRuleInput.model_validate(row.payload)
+    existing = list(config.selection.targets)
+    if not config.selection.target_mode:
+        selection = config.selection
+        kind = next(
+            (k for k in ("ad", "adset", "campaign") if getattr(selection, k)), None
+        )
+        # Preserve legacy explicit scopes when moving to assignment mode.
+        legacy_count = 0
+        for item in catalog(s, actor["workspace"]):
+            if selection.provider and item["provider"] != selection.provider:
+                continue
+            if (
+                selection.account_ids
+                and item["account_id"] not in selection.account_ids
+            ):
+                continue
+            if any(
+                getattr(selection, k) and getattr(selection, k) != item.get(k + "_id")
+                for k in ("campaign", "adset")
+                if k != kind
+            ):
+                continue
+            if (
+                kind
+                and item["scope_type"] == kind.upper()
+                and item["id"] == getattr(selection, kind)
+            ) or (
+                not kind and selection.account_ids and item["scope_type"] == "ACCOUNT"
+            ):
+                legacy_count += 1
+                existing.append(
+                    RuleTarget.model_validate(
+                        {k: v for k, v in item.items() if k in RuleTarget.model_fields}
+                    )
+                )
+        if (kind or selection.account_ids) and not legacy_count:
+            raise HTTPException(422, "LEGACY_SCOPE_UNRESOLVED")
+    # Removal of a disappeared, previously saved target is allowed, foreign targets are not.
+    if body.operation == "remove":
+        known = {target_key(t) for t in existing}
+        if any(target_key(t) not in known for t in body.targets):
+            raise HTTPException(422, "ASSIGNMENT_NOT_FOUND")
+    else:
+        validated_targets(s, actor, body.targets)
+    merged = {target_key(t): t for t in existing}
+    if body.operation == "replace":
+        merged = {}
+    for target in body.targets:
+        if body.operation == "remove":
+            merged.pop(target_key(target), None)
+        else:
+            merged.setdefault(target_key(target), target)
+    if len(merged) > 200:
+        raise HTTPException(422, "TOO_MANY_RULE_TARGETS")
+    config.selection.target_mode = True
+    config.selection.targets = list(merged.values())
+    config.selection.provider = None
+    config.selection.account_ids = []
+    config.selection.campaign = config.selection.adset = config.selection.ad = None
+    result = save(s, actor, config, key, body.revision)
+    audit(
+        s,
+        actor,
+        key,
+        "TARGETS_" + body.operation.upper(),
+        {
+            "targets": [t.model_dump(mode="json") for t in body.targets],
+            "revision": result["revision"],
+            "version_policy": "LATEST",
+        },
+    )
+    return result

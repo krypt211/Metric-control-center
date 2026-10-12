@@ -88,3 +88,11 @@ Emergency Stop при постановке в очередь и непосред
 ingestion от этого состояния не зависит. Автоматические транзакции блокируют
 control до ActionRequest, чтобы stop и worker соблюдали один порядок блокировок.
 Подробности: [ai-agent.md](ai-agent.md).
+
+## Rule target assignments (Phase 3.1)
+
+Smart Rule Engine stores explicit ACCOUNT/CAMPAIGN/ADSET/AD targets in the existing
+versioned rules.payload. Workspace-scoped catalog resolution unions child Ads by
+provider and canonical account identity before the existing Economics DRY RUN.
+No separate rule engine or advertising WRITE path is introduced.
+Details: [Multi-select and search report](rules/MULTI_SELECT_AND_SEARCH_REPORT.md).

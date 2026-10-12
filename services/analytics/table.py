@@ -29,7 +29,7 @@ class Filters:
     geo: str | None = None
 
 
-def table_data(session, workspace: str, filters: Filters, *, level: str = "account", offset: int = 0, limit: int = 100, exact_ratios: bool = False, include_daily: bool = False, sort_key: str | None = None, sort_direction: str = "asc", provider_override: str | None = None):
+def table_data(session, workspace: str, filters: Filters, *, level: str = "account", offset: int = 0, limit: int = 100, exact_ratios: bool = False, include_daily: bool = False, sort_key: str | None = None, sort_direction: str = "asc", provider_override: str | None = None, q: str = ""):
     if level not in ("account", "campaign", "adset", "ad", "creative"):
         raise ValueError("Unsupported hierarchy level")
     if filters.start > filters.end:
@@ -179,6 +179,11 @@ def table_data(session, workspace: str, filters: Filters, *, level: str = "accou
                 **aggregate([], account.currency, account.timezone, exact_ratios=exact_ratios),
                 **({"daily": []} if include_daily else {}),
             })
+    if q:
+        words = q.casefold().split()
+        result = [r for r in result if all(
+            word in f'{r["name"]} {r["external_id"]} {r["id"]}'.casefold() for word in words
+        )]
     result.sort(key=lambda row: (row["name"], row["id"], row["currency"], row["timezone"]))
     if sort_key:
         from services.preferences.registry import sort_rows

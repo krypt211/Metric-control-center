@@ -60,10 +60,10 @@ test("rule lifecycle: real local simulation, profile, accounts, ROI/CPL, AND/OR,
     (a) => a.id === accounts.account_id,
   );
   expect(account).toBeTruthy();
-  await page
-    .getByRole("group", { name: /Рекламные аккаунты/ })
-    .getByRole("checkbox", { name: account.name, exact: true })
-    .click();
+  const picker=page.getByRole("region",{name:"Выбор объектов правила"}).last();
+  await picker.getByRole("button",{name:"кабинеты",exact:true}).click();
+  await picker.getByLabel("Поиск объектов",{exact:true}).fill(accounts.account_id);
+  await picker.locator("tbody tr").filter({hasText:"metricflow"}).getByRole("checkbox").check();
   await page.getByLabel("Период оценки").selectOption("last_7");
   await page
     .getByRole("button", { name: "Добавить условие", exact: true })

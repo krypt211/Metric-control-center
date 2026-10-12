@@ -122,10 +122,13 @@ def ads(
     request: Request,
     account_id: str | None = Query(None, max_length=36),
     offset: int = Query(0, ge=0),
+    q: str = Query("", max_length=200),
+    campaign: str | None = Query(None, max_length=36),
+    adset: str | None = Query(None, max_length=36),
 ) -> dict:
     a = actor(request)
     with factory()() as s:
-        return catalog(s, a["workspace"], utc_now(), account_id, offset)
+        return catalog(s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset)
 
 
 @router.get("/requests")

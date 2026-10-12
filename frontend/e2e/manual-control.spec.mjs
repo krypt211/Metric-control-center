@@ -22,24 +22,10 @@ async function apiWrite(page, path, body, key) {
   });
 }
 async function choose(page, ad) {
-  const account = page.getByRole("combobox", { name: "Кабинет", exact: true });
-  if ((await account.inputValue()) !== ad.account_id) {
-    const response = page.waitForResponse((r) =>
-      r.url().includes("/api/manual-control/ads?offset=0") &&
-      r.url().includes("account_id=" + ad.account_id) && r.ok(),
-    );
-    await account.selectOption(ad.account_id);
-    await response;
-  }
-  const offset = ad.catalog_offset ?? 0;
-  for (let current = 0; current < offset; current += 100) {
-    const response = page.waitForResponse((r) =>
-      r.url().includes("/api/manual-control/ads?offset=" + (current + 100)) &&
-      r.ok(),
-    );
-    await page.getByRole("button", { name: "Следующие", exact: true }).click();
-    await response;
-  }
+  await page.getByLabel("Кабинет",{exact:true}).click();
+  await page.getByRole("combobox",{name:"Поиск: Кабинет",exact:true}).fill(ad.account_id);
+  const option=page.getByRole("listbox",{name:"Кабинет результаты",exact:true}).getByRole("option").first();
+  await expect(option).toBeVisible();await option.click();
   await page
     .getByLabel("Поиск объявления", { exact: true })
     .fill(ad.meta_ad_id);
@@ -85,7 +71,8 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
   let releaseInitial, initialReady;
   const release = new Promise((resolve) => { releaseInitial = resolve; });
   const ready = new Promise((resolve) => { initialReady = resolve; });
-  await page.route("**/api/manual-control/ads?offset=0", async (route) => {
+  const initialCatalogUrl=url=>url.pathname==="/api/manual-control/ads"&&url.searchParams.get("offset")==="0"&&!url.searchParams.has("account_id")&&!url.searchParams.get("q");
+  await page.route(initialCatalogUrl, async (route) => {
     const response = await route.fetch();
     initialReady();
     await release;
@@ -123,7 +110,7 @@ test("manual catalog, status, pause and enable drafts, local confirmation, simul
     requestAnimationFrame(() => requestAnimationFrame(resolve)),
   ));
   await expect(page.locator("tbody tr").filter({ hasText: freshAd.meta_ad_id })).toHaveCount(1);
-  await page.unroute("**/api/manual-control/ads?offset=0");
+  await page.unroute(initialCatalogUrl);
   const action = freshAd.status === "ACTIVE" ? "отключение" : "включение";
   await page
     .getByLabel("Причина ручной команды")

@@ -108,6 +108,9 @@ export default function RuleDecisionDetails({
         {String(card.source_provider)} · синхронизация:{" "}
         {String(card.source_facts_timestamp ?? "неизвестно")}
       </p>
+      {!!(card.target_provenance as {scope_type:string;name:string;scope_id:string}[]|undefined)?.length&&<p>
+        Почему попало в область: {(card.target_provenance as {scope_type:string;name:string;scope_id:string}[]).map(t=>t.scope_type+" · "+(t.name||t.scope_id)).join("; ")}
+      </p>}
       <dl className="rule-facts">
         {[
           "spend",

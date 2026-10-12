@@ -2,6 +2,7 @@
 import json,os,re,secrets
 from sqlalchemy import delete,select,text
 from backend.app import database_sessions
+from mcc_ui_sessions import fixture_cookies
 from services.auth.sessions import new_user
 from services.storage.models import User,UserSession,UserColumnPreset,UserTablePreference
 nonce=os.environ["UI_FIXTURE_NONCE"]
@@ -15,7 +16,7 @@ with database_sessions().begin() as s:
  if os.environ["UI_FIXTURE_MODE"]=="create":
   password=secrets.token_urlsafe(24);users=[]
   for login,role in zip(logins,["viewer","operator"]):
-   u=new_user(s,workspace,login,password,role);s.flush();users.append({"id":u.id,"login":login,"password":password})
+   u=new_user(s,workspace,login,password,role);s.flush();users.append({"id":u.id,"login":login,"password":password,"cookies":fixture_cookies(s,u)})
   print(json.dumps(users))
  elif os.environ["UI_FIXTURE_MODE"]=="cleanup":
   ids=list(s.scalars(select(User.id).where(User.workspace_id==workspace,User.email.in_(logins))))

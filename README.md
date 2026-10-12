@@ -49,3 +49,5 @@ Frontend: Node.js 24, npm ci, npm run build, npm run typecheck. GitHub Actions �
 - [AI Agent](docs/ai-agent.md)
 
 Эти документы описывают также сохранённые будущие возможности управления; текущая production конфигурация остаётся READ ONLY.
+
+Phase 3.1: [Multi-select and searchable rule targets](docs/rules/MULTI_SELECT_AND_SEARCH_REPORT.md).

@@ -1,4 +1,5 @@
 "use client";
+import SearchableSelect from "./SearchableSelect";
 
 import { useEffect, useState } from "react";
 import SessionBar from "./SessionBar";
@@ -117,21 +118,23 @@ export default function ManualControl({
     if (settingsOnly) return;
     let ignore = false;
     setTable(null);
-    void manualRead<Catalog>(
+    const timer=setTimeout(()=>{void manualRead<Catalog>(
       "/ads?offset=" +
         offset +
-        (account ? "&account_id=" + encodeURIComponent(account) : ""),
+        (account ? "&account_id=" + encodeURIComponent(account) : "") + "&q=" + encodeURIComponent(search) + (campaign?"&campaign="+encodeURIComponent(campaign):"") + (adset?"&adset="+encodeURIComponent(adset):""),
     )
       .then((data) => {
         if (!ignore) setTable(data);
       })
       .catch((e) => {
         if (!ignore) setError(e.message);
-      });
+      });},250);
     return () => {
       ignore = true;
+      clearTimeout(timer);
     };
-  }, [account, offset, settingsOnly, catalogRevision]);
+  }, [account, offset, settingsOnly, catalogRevision, search, campaign, adset]);
+  useEffect(()=>{setOffset(0);},[search,campaign,adset]);
   async function run(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -197,10 +200,7 @@ export default function ManualControl({
         (!campaign || r.hierarchy[1] === campaign) &&
         (!adset || r.hierarchy[0] === adset) &&
         (!status || r.status === status) &&
-        (!search ||
-          [r.name, r.meta_ad_id, r.account_name].some((v) =>
-            String(v).toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-          )),
+        true,
     )
     .map((r) => {
       const {
@@ -363,61 +363,14 @@ export default function ManualControl({
             <div className="filters">
               <label>
                 Кабинет
-                <select
-                  value={account}
-                  onChange={(e) => {
-                    setAccount(e.target.value);
-                    setOffset(0);
-                    setCampaign("");
-                    setAdset("");
-                    setSelected(null);
-                  }}
-                >
-                  <option value="">Все кабинеты</option>
-                  {settings?.accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} · {a.provider}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect label="Кабинет" kind="account" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
+                  onChange={v=>{setAccount(v as string);setOffset(0);setSelected(null);}}/>
               </label>
-              <label>
-                Кампания
-                <select
-                  value={campaign}
-                  onChange={(e) => {
-                    setCampaign(e.target.value);
-                    setAdset("");
-                  }}
-                >
-                  <option value="">Все кампании на странице</option>
-                  {groups(1).map((id) => (
-                    <option key={id} value={id}>
-                      {String(
-                        table?.rows.find((r) => r.hierarchy[1] === id)
-                          ?.campaign_name ?? id,
-                      )}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Группа объявлений
-                <select
-                  value={adset}
-                  onChange={(e) => setAdset(e.target.value)}
-                >
-                  <option value="">Все группы на странице</option>
-                  {groups(0).map((id) => (
-                    <option key={id} value={id}>
-                      {String(
-                        table?.rows.find((r) => r.hierarchy[0] === id)
-                          ?.adset_name ?? id,
-                      )}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
+                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setOffset(0);}}/></label>
+              <label>Группа объявлений<SearchableSelect label="Группа объявлений" kind="adset" value={adset}
+                filters={new URLSearchParams([...(account?[["accounts",account]]:[]),...(campaign?[["campaigns",campaign]]:[])]).toString()}
+                onChange={v=>{setAdset(v as string);setOffset(0);}}/></label>
               <label>
                 Статус
                 <select

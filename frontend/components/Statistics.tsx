@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import BulkActions from "./BulkActions";
 import StatisticsGrid from "./StatisticsGrid";
 import DataSources from "./DataSources";
+import SearchableSelect from "./SearchableSelect";
+import RuleTargetActions from "./RuleTargetActions";
+import {catalogTarget,type Target} from "../lib/rule-targets";
 import {dateRange as reportingRange} from "../lib/reporting-period";
 const dateRange=(preset:string)=>reportingRange(preset,new Date(),process.env.NEXT_PUBLIC_REPORTING_TIMEZONE??"Europe/Moscow");
 
@@ -20,6 +23,8 @@ const statusNames: Record<string, string> = {queued: "В очереди", execut
 export default function Statistics({creativeOnly = false, refreshKey = 0}: {creativeOnly?: boolean; refreshKey?: number}) {
   const [level, setLevel] = useState<Level>(creativeOnly ? "creative" : "account");
   const [dates, setDates] = useState<[string, string]>(["", ""]);
+  const [search,setSearch]=useState(""),[querySearch,setQuerySearch]=useState("");
+  useEffect(()=>{const timer=setTimeout(()=>setQuerySearch(search),250);return()=>clearTimeout(timer);},[search]);
   const [preset, setPreset] = useState("1");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [options, setOptions] = useState<FilterData | null>(null);
@@ -63,7 +68,7 @@ export default function Statistics({creativeOnly = false, refreshKey = 0}: {crea
     void lookup(); const timer = setInterval(() => void lookup(), 3000);
     return () => {cancelled = true; clearInterval(timer);};
   }, [pendingKey, requestId]);
-  useEffect(() => {setChecked({});}, [level, filters, dates]);
+
   useEffect(() => {
     if (!requestId) return;
     let cancelled = false;
@@ -109,7 +114,7 @@ export default function Statistics({creativeOnly = false, refreshKey = 0}: {crea
       setFilters(previous => ({...previous, [item.level]: item.id})); setLevel(levels[index + 1]);
     }
   }
-  const query = new URLSearchParams({level, start:dates[0], end:dates[1]});
+  const query = new URLSearchParams({level, start:dates[0], end:dates[1],q:querySearch});
   for(const [key,value] of Object.entries(filters))if(value)query.set(key,value);
 
   return <section className="statistics">
@@ -120,16 +125,25 @@ export default function Statistics({creativeOnly = false, refreshKey = 0}: {crea
         <option value="1">Сегодня</option><option value="yesterday">Вчера</option>{[3, 7, 14, 30].map(n => <option key={n} value={n}>{n} дней</option>)}<option value="custom">Свой период</option>
       </select></label>
       <label>С<input type="date" value={dates[0]} onChange={e => {setPreset("custom"); setDates([e.target.value, dates[1]]); }} /></label><label>По<input type="date" value={dates[1]} onChange={e => {setPreset("custom"); setDates([dates[0], e.target.value]); }} /></label>
-      {Object.entries(filterNames).map(([key, name]) => <label key={key}>{name}<select value={filters[key] ?? ""} disabled={!options?.options[key]?.length} title={options?.unavailable[key]} onChange={e => {setFilters({...filters, [key]: e.target.value}); }}><option value="">Все</option>{options?.options[key]?.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}
+      {Object.entries(filterNames).map(([key,name])=><label key={key}>{name}
+       {["account","campaign","adset","ad"].includes(key)?<SearchableSelect label={name} kind={key} value={filters[key]??""}
+        filters={new URLSearchParams(Object.entries({accounts:filters.account??"",campaigns:key==="campaign"?"":filters.campaign??"",adsets:key==="ad"?(filters.adset??""):""}).filter(([,v])=>!!v)).toString()}
+        onChange={value=>setFilters({...filters,[key]:value as string})}/>:
+       <select value={filters[key]??""} onChange={e=>setFilters({...filters,[key]:e.target.value})}><option value="">Все</option>{options?.options[key]?.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select>}
+      </label>)}
       <label>Статус<select value={filters.status ?? ""} onChange={e => {setFilters({...filters, status: e.target.value}); }}><option value="">Все</option><option value="ACTIVE">ACTIVE</option><option value="PAUSED">PAUSED</option></select></label>
       <button onClick={() => {setFilters({}); setLevel(creativeOnly ? "creative" : "account"); setSelected(null); }}>Сбросить</button>
     </div>
+    <div className="filterbar"><label>Поиск списка<input aria-label="Поиск списка" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Название или ID"/></label><button onClick={()=>setSearch("")}>Очистить поиск списка</button></div>
     {!creativeOnly && <nav className="levelnav" aria-label="Уровень статистики">{levels.map(item => <button key={item} className={level === item ? "active" : ""} onClick={() => {setLevel(item); }}>{levelNames[item]}</button>)}</nav>}
     {error && <div className="notice error" role="alert">{error}</div>}
     <StatisticsGrid key={level} scope={level} endpoint="/api/stats/table" query={query.toString()} refreshKey={refreshKey} onName={row=>drill(row as Item)}
-      selection={capabilities.actions_enabled?{selected:row=>!!checked[String(row.id)],
-      disabled:row=>batchBusy||commandBusy||!["campaign","adset","ad"].includes(String(row.level))||(!checked[String(row.id)]&&Object.keys(checked).length>=200),
-      toggle:(row,value)=>setChecked(previous=>{const next={...previous};if(value)next[String(row.id)]=row as Item;else delete next[String(row.id)];return next;})}:undefined}/>
+      selection={!creativeOnly?{maxSelected:200,selectedCount:Object.keys(checked).length,selected:row=>!!checked[String(row.id)],
+      disabled:row=>batchBusy||commandBusy||!["account","campaign","adset","ad"].includes(String(row.level))||(!checked[String(row.id)]&&Object.keys(checked).length>=200),
+      toggle:(row,value)=>setChecked(previous=>{const next={...previous};if(value&&Object.keys(next).length<200)next[String(row.id)]=row as Item;else delete next[String(row.id)];return next;})}:undefined}/>
+    <RuleTargetActions targets={Object.values(checked).map(r=>catalogTarget({scope_type:r.level.toUpperCase() as Target["scope_type"],
+       scope_id:r.id,account_id:String(r.account_id??r.id),provider:r.source_provider as Target["provider"],name:r.name,external_id:r.external_id}))}
+      onChange={items=>setChecked(Object.fromEntries(items.map(t=>[t.scope_id,{id:t.scope_id,level:t.scope_type.toLowerCase(),account_id:t.account_id,source_provider:t.provider,name:t.name??t.scope_id,external_id:t.external_id??"",currency:"",timezone:"",status:null,budget:null,media_url:null} as Item])))} />
     <BulkActions subjects={Object.values(checked)} enabled={capabilities.actions_enabled} budgetEnabled={capabilities.budget_enabled} singleBusy={commandBusy} onBusy={setBatchBusy} />
     {selected && ["campaign", "adset", "ad"].includes(selected.level) && <aside className="actionpanel"><div><h2>{selected.name}</h2><p>Статус: {selected.status ?? "—"} · Бюджет: {selected.budget ?? "—"} {selected.currency}</p></div>
       {!capabilities.actions_enabled && <p className="subtitle">Ручное управление ещё не включено.</p>}

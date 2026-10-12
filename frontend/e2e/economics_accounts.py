@@ -10,6 +10,7 @@ import secrets
 from sqlalchemy import delete, select, text
 
 from backend.app import database_sessions
+from mcc_ui_sessions import fixture_cookies
 from services.auth.sessions import new_user
 from services.economics.models import (
     ApprovalObservation,
@@ -46,7 +47,7 @@ with database_sessions().begin() as s:
         for login, role in zip(logins, ["admin", "operator", "viewer"], strict=True):
             u = new_user(s, workspace, login, password, role)
             s.flush()
-            users.append({"id": u.id, "login": login, "password": password})
+            users.append({"id": u.id, "login": login, "password": password,"cookies":fixture_cookies(s,u)})
         print(json.dumps(users))
     elif os.environ["UI_FIXTURE_MODE"] == "cleanup":
         ids = list(

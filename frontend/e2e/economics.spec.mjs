@@ -1,3 +1,4 @@
+import {fixtureInput,fixtureSessionLogin} from "./session-fixture.mjs";
 import { test as base, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -29,6 +30,8 @@ function fixture(mode, nonce) {
         "-e",
         "UI_FIXTURE_MODE=" + mode,
         "-e",
+        "UI_SESSION_FIXTURES="+(process.env.UI_SESSION_FIXTURES??"false"),
+        "-e",
         "UI_FIXTURE_NONCE=" + nonce,
         "backend",
         "python",
@@ -36,10 +39,7 @@ function fixture(mode, nonce) {
         "import sys;exec(sys.stdin.read())",
       ],
       {
-        input: readFileSync(
-          new URL("./economics_accounts.py", import.meta.url),
-          "utf8",
-        ),
+        input: fixtureInput(new URL("./economics_accounts.py", import.meta.url)),
         encoding: "utf8",
         windowsHide: true,
       },
@@ -47,6 +47,7 @@ function fixture(mode, nonce) {
   );
 }
 async function login(page, user) {
+  if(await fixtureSessionLogin(page,user)){await expect(page).toHaveURL(/\/$/);return;}
   await page.goto("/login");
   await page.getByLabel("Логин или email").fill(user.login);
   await page.getByLabel("Пароль", { exact: true }).fill(user.password);
@@ -266,7 +267,9 @@ test("profiles: Decimal targets, validation, edit/copy/delete/restore, reload an
   await page.getByLabel("Профиль для назначения").selectOption(profileID);
   const options = (await settings(page)).options.options.account;
   expect(options.length).toBeGreaterThan(0);
-  await page.getByLabel("Назначение: объект").selectOption(options[0].id);
+  await page.getByRole("button",{name:"Назначение: объект",exact:true}).click();
+  await page.getByRole("combobox",{name:"Поиск: Назначение: объект",exact:true}).fill(options[0].id);
+  await page.getByRole("listbox",{name:"Назначение: объект результаты",exact:true}).getByRole("option").first().click();
   await page
     .getByRole("button", { name: "Назначить профиль", exact: true })
     .click();

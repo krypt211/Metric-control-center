@@ -17,7 +17,7 @@ from services.storage.models import AdAccount, Entity, Rule
 
 
 def catalog(
-    s, workspace: str, now, account_id: str | None = None, offset: int = 0
+    s, workspace: str, now, account_id: str | None = None, offset: int = 0, q: str = "", campaign: str | None = None, adset: str | None = None
 ) -> dict:
     today = now.astimezone(ZoneInfo("Europe/Moscow")).date()
     first, last = today - timedelta(days=7), today - timedelta(days=1)
@@ -67,10 +67,18 @@ def catalog(
                     "status": r["status"],
                     "reason_codes": r.get("reason_codes", []),
                 }
+    from services.automation.smart_targets import catalog as target_catalog
+    scope = {
+        r["source_id"] for r in target_catalog(s, workspace)
+        if r["scope_type"] == "AD"
+        and (not campaign or r["campaign_id"] == campaign)
+        and (not adset or r["adset_id"] == adset)
+        and all(word in f'{r["name"]} {r["external_id"]} {r["id"]}'.casefold() for word in q.casefold().split())
+    }
+    found = [(e, a) for e, a in s.execute(query.order_by(Entity.name, Entity.id)) if e.id in scope]
+    count = len(found)
     output = []
-    for entity, account in s.execute(
-        query.order_by(Entity.name, Entity.id).offset(offset).limit(100)
-    ):
+    for entity, account in found[offset:offset+100]:
         captured = snapshot(s, entity, account)
         identity = identities.get(entity.id, entity.id)
         row = facts.get((identity, account.provider), {})

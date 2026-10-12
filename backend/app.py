@@ -92,10 +92,10 @@ def filters(
 def table(
     level: Literal["account", "campaign", "adset", "ad", "creative"] = "account",
     selected: Filters = Depends(filters), offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=500), sort_key: str | None = None, sort_direction: Literal["asc","desc"] = "asc", session=Depends(database_session),
+    limit: int = Query(default=100, ge=1, le=500), q: str = Query(default="", max_length=200), sort_key: str | None = None, sort_direction: Literal["asc","desc"] = "asc", session=Depends(database_session),
 ):
     try:
-        result = table_data(session, os.environ.get("WORKSPACE_ID", "default"), selected, level=level, offset=offset, limit=limit, sort_key=sort_key, sort_direction=sort_direction)
+        result = table_data(session, os.environ.get("WORKSPACE_ID", "default"), selected, level=level, offset=offset, limit=limit, sort_key=sort_key, sort_direction=sort_direction, q=q)
         session.commit()
         return result
     except ValueError as error:

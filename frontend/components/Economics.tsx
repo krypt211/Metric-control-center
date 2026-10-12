@@ -1,4 +1,5 @@
 "use client";
+import SearchableSelect from "./SearchableSelect";
 import { useCallback, useEffect, useState } from "react";
 import { economicRange, levelNames, type Level } from "../lib/economics";
 import { readEconomics } from "../lib/economics-api";
@@ -172,15 +173,14 @@ export default function Economics() {
                 {(["account", "offer", "geo"] as const).map((key) => (
                   <label key={key}>
                     {{ account: "Кабинет", offer: "Оффер", geo: "GEO" }[key]}
-                    <select
+                    {key==="account"?<SearchableSelect label="Кабинет" kind="account" value={filters.account}
+                      options={settings.options.options.account} onChange={v=>setFilters(f=>({...f,account:v as string}))}/>:(                    <select
                       value={filters[key]}
                       onChange={(e) =>
                         setFilters((f) => ({
                           ...f,
                           [key]: e.target.value,
-                          ...(key === "account"
-                            ? { campaign: "", adset: "", ad: "" }
-                            : {}),
+
                         }))
                       }
                     >
@@ -190,7 +190,7 @@ export default function Economics() {
                           {o.name}
                         </option>
                       ))}
-                    </select>
+                    </select>)}
                   </label>
                 ))}
                 <button onClick={() => setRefresh((v) => v + 1)}>

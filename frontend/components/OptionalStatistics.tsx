@@ -1,4 +1,5 @@
 "use client";
+import SearchableSelect from "./SearchableSelect";
 import {useEffect,useState} from "react";
 import StatisticsGrid from "./StatisticsGrid";
 function period(preset:string):[string,string]{
@@ -26,7 +27,7 @@ export default function OptionalStatistics({kind,refreshKey=0}:{kind:"tracker"|"
  </select></label>
  <label>С<input type="date" value={dates[0]} onChange={e=>{setPreset("custom");setDates([e.target.value,dates[1]]);}}/></label>
  <label>По<input type="date" value={dates[1]} onChange={e=>{setPreset("custom");setDates([dates[0],e.target.value]);}}/></label>
- <label>Кабинет<select value={account} onChange={e=>setAccount(e.target.value)}><option value="">Все кабинеты</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+ <label>Кабинет<SearchableSelect label="Кабинет" kind="account" value={account} options={accounts} onChange={v=>setAccount(v as string)}/></label>
  </div>
  <p className="notice">{kind==="tracker"?"Счётчики трекера: кабинет / день или объявление / период. Конверсии и наблюдаемые конверсии отделены. Валюта трекера не подтверждена: выручка, прибыль и ROI пока недоступны.":"Креативы сгруппированы по ключу MetricFlow за точный выбранный период. Денежные результаты трекера пока недоступны."}</p>
  {error&&<div className="notice error" role="alert">{error}</div>}

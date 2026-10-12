@@ -48,6 +48,16 @@ def economics_adapter(
     if count > 2000:
         raise HTTPException(422, "SIMULATION_CATALOG_TOO_LARGE")
     selected = config.selection
+    resolution = None
+    if selected.target_mode:
+        from services.automation.smart_targets import resolve_targets
+
+        resolution = resolve_targets(
+            s,
+            workspace,
+            selected.targets,
+            now.astimezone(ZoneInfo("Europe/Moscow")).date(),
+        )
     table = evaluate(
         s,
         workspace,
@@ -178,6 +188,26 @@ def economics_adapter(
         )
         row["economics_inputs"] = snap.payload["inputs"] if snap else None
         rows.append(row)
+    if resolution is not None:
+        selected_rows = []
+        seen_targets = set()
+        for row in rows:
+            key = (row.get("source_provider"), row["account_id"], row["id"])
+            origins = resolution["provenance"].get(key)
+            if not origins or key in seen_targets:
+                continue
+            seen_targets.add(key)
+            row["target_provenance"] = origins
+            selected_rows.append(row)
+        for key, origins in resolution["provenance"].items():
+            if key not in seen_targets:
+                resolution["issues"].append(
+                    {"scope_id": key[2], "reason_code": "PROVIDER_UNAVAILABLE"}
+                )
+        rows = selected_rows
+        table["target_issues"] = resolution["issues"] or (
+            [] if rows else [{"reason_code": "NO_MATCHING_ADS"}]
+        )
     if len(rows) > MAX_ADS:
         raise HTTPException(422, "SIMULATION_TOO_MANY_ADS_SELECT_SCOPE")
     table["rows"] = rows
@@ -205,6 +235,7 @@ def simulate(
     revision: int,
     *,
     now: datetime | None = None,
+    targets: list | None = None,
 ) -> dict[str, Any]:
     started = monotonic()
     if s.bind is not None and s.bind.dialect.name == "postgresql":
@@ -219,6 +250,14 @@ def simulate(
         raise HTTPException(409, "RULE_ARCHIVED")
     now = now or utcnow()
     config = SmartRuleInput.model_validate(row.payload)
+    if targets is not None:
+        from services.automation.smart_targets import validated_targets
+
+        config.selection.target_mode = True
+        config.selection.targets = validated_targets(s, actor, targets)
+        config.selection.account_ids = []
+        config.selection.campaign = config.selection.adset = config.selection.ad = None
+        config.selection.provider = None
     today = now.astimezone(ZoneInfo("Europe/Moscow")).date()
     if (config.effective_start and today < config.effective_start) or (
         config.effective_end and today > config.effective_end
@@ -294,8 +333,9 @@ def simulate(
             "start": data["start"],
             "end": data["end"],
             "reporting_timezone": "Europe/Moscow",
-            "definition": row.payload,
+            "definition": config.model_dump(mode="json"),
             "sources": data["sources"],
+            "target_issues": data.get("target_issues", []),
             "rows": output,
             "counts": dict(Counter(r["status"] for r in output)),
             "total": len(output),

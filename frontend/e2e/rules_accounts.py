@@ -10,6 +10,7 @@ import secrets
 from sqlalchemy import delete, func, select, text
 
 from backend.app import database_sessions
+from mcc_ui_sessions import fixture_cookies
 from services.auth.sessions import new_user
 from services.actions.manual_models import ManualActionGrant, ManualGrantAudit
 from services.automation.smart_models import (
@@ -58,7 +59,7 @@ with database_sessions().begin() as s:
         for login, role in zip(logins, ["admin", "operator", "viewer"], strict=True):
             u = new_user(s, workspace, login, password, role)
             s.flush()
-            users.append({"id": u.id, "login": login, "password": password})
+            users.append({"id": u.id, "login": login, "password": password,"cookies":fixture_cookies(s,u)})
         profile = create_profile(
             s,
             {"id": users[0]["id"], "workspace": workspace, "role": "admin"},

@@ -1,3 +1,4 @@
+import {fixtureInput,fixtureSessionLogin} from "./session-fixture.mjs";
 import {test as base,expect} from "@playwright/test";
 import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
@@ -6,8 +7,8 @@ import {randomUUID} from "node:crypto";
 const root=path.resolve(import.meta.dirname,"../..");
 const docker=process.env.DOCKER_EXE??(process.platform==="win32"?path.join(process.env.LOCALAPPDATA,"Programs/DockerDesktop/resources/bin/docker.exe"):"docker");
 function fixture(mode,nonce){
- const source=readFileSync(new URL("./accounts.py",import.meta.url),"utf8");
- const args=["compose","--project-directory",root,"--env-file",path.join(root,".env"),"-f",path.join(root,"docker-compose.yml"),"-p","metric-control-center","exec","-T","-e","UI_FIXTURE_MODE="+mode,"-e","UI_FIXTURE_NONCE="+nonce,"backend","python","-c","import sys; exec(sys.stdin.read())"];
+ const source=fixtureInput(new URL("./accounts.py",import.meta.url));
+ const args=["compose","--project-directory",root,"--env-file",path.join(root,".env"),"-f",path.join(root,"docker-compose.yml"),"-p","metric-control-center","exec","-T","-e","UI_FIXTURE_MODE="+mode,"-e","UI_SESSION_FIXTURES="+(process.env.UI_SESSION_FIXTURES??"false"),"-e","UI_FIXTURE_NONCE="+nonce,"backend","python","-c","import sys; exec(sys.stdin.read())"];
  return JSON.parse(execFileSync(docker,args,{input:source,encoding:"utf8",windowsHide:true}));
 }
 function watchPage(page,audit){
@@ -31,7 +32,7 @@ const test=base.extend({
  },{auto:true}],
  accounts:[async({},use)=>{const nonce=randomUUID().replaceAll("-","");try{await use(fixture("create",nonce));}finally{fixture("cleanup",nonce);}}, {scope:"worker"}],
 });
-async function login(page,user){await page.goto("/login");await page.getByLabel("Логин или email").fill(user.login);await page.getByLabel("Пароль",{exact:true}).fill(user.password);await page.getByRole("button",{name:"Войти",exact:true}).click();await expect(page).toHaveURL(/\/$/);}
+async function login(page,user){if(await fixtureSessionLogin(page,user)){await expect(page).toHaveURL(/\/$/);return;}await page.goto("/login");await page.getByLabel("Логин или email").fill(user.login);await page.getByLabel("Пароль",{exact:true}).fill(user.password);await page.getByRole("button",{name:"Войти",exact:true}).click();await expect(page).toHaveURL(/\/$/);}
 async function open(page,section="Статистика"){await page.getByRole("navigation",{name:"Основные разделы"}).getByRole("link",{name:section,exact:true}).click();await expect(page.getByLabel("Набор колонок")).toBeEnabled();}
 async function saved(page){await expect(page.getByLabel("\u041d\u0430\u0431\u043e\u0440 \u043a\u043e\u043b\u043e\u043d\u043e\u043a")).toBeEnabled();await expect(page.locator(".column-save-status")).toContainText(/сохранён|загружены|Сохранено/);await expect(page.locator("main").getByRole("alert")).toHaveCount(0);}
 async function settings(page){await page.getByRole("button",{name:"Настроить колонки",exact:true}).click();await expect(page.getByRole("dialog")).toBeVisible();}
@@ -128,7 +129,8 @@ test("long Russian names, independent column widths and narrow viewport layout",
   const wrap=page.locator(".customizable-table-wrap");
   await wrap.evaluate(el=>{el.scrollLeft=1000;});
   const sticky=await page.locator("tbody td.identity-column").first().boundingBox(),wr=await wrap.boundingBox();
-  expect(Math.abs(sticky.x-wr.x)).toBeLessThanOrEqual(2);
+  const selectionOffset=await page.locator("thead th.selection-column").count()?52:0;
+  expect(Math.abs(sticky.x-wr.x-selectionOffset)).toBeLessThanOrEqual(2);
   await settings(page);
   const dialog=await page.getByRole("dialog").boundingBox();expect(dialog.x).toBeGreaterThanOrEqual(0);expect(dialog.x+dialog.width).toBeLessThanOrEqual(width);
   await close(page);

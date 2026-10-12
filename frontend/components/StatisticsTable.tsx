@@ -3,7 +3,7 @@ import {useEffect,useRef,useState,type ReactNode} from "react";
 import {labelFor,metricRegistry,type MetricKey,type TableScope} from "../lib/metric-registry";
 import {formatMetric,moveColumn,resizeColumn,type ColumnConfig} from "../lib/column-model";
 export type StatisticsRow=Record<string,string|number|boolean|null|undefined>;
-export default function StatisticsTable({scope,rows,config,change,commit,disabled=false,onName,selection,rowActions}:{scope:TableScope;rows:StatisticsRow[];config:ColumnConfig;change:(fn:(c:ColumnConfig)=>ColumnConfig,defer?:boolean)=>void;commit:()=>void;disabled?:boolean;onName?:(row:StatisticsRow)=>void;rowActions?:(row:StatisticsRow)=>ReactNode;selection?:{selected:(row:StatisticsRow)=>boolean;toggle:(row:StatisticsRow,checked:boolean)=>void;disabled:(row:StatisticsRow)=>boolean}}){
+export default function StatisticsTable({scope,rows,config,change,commit,disabled=false,onName,selection,rowActions}:{scope:TableScope;rows:StatisticsRow[];config:ColumnConfig;change:(fn:(c:ColumnConfig)=>ColumnConfig,defer?:boolean)=>void;commit:()=>void;disabled?:boolean;onName?:(row:StatisticsRow)=>void;rowActions?:(row:StatisticsRow)=>ReactNode;selection?:{maxSelected?:number;selectedCount?:number;selected:(row:StatisticsRow)=>boolean;toggle:(row:StatisticsRow,checked:boolean)=>void;disabled:(row:StatisticsRow)=>boolean}}){
  const wrap=useRef<HTMLDivElement>(null),dragging=useRef<MetricKey|null>(null),speed=useRef(0),frame=useRef(0);
  const resizing=useRef<{key:MetricKey;start:number;width:number}|null>(null);
  const [target,setTarget]=useState<MetricKey|null>(null),[isResizing,setResizing]=useState(false);
@@ -22,7 +22,10 @@ export default function StatisticsTable({scope,rows,config,change,commit,disable
  }}>
  <table className="customizable-table" style={{width:total,minWidth:total}} data-testid="statistics-table">
  <colgroup>{selection&&<col style={{width:52}}/>}{config.columns.map(c=><col key={c.key} style={{width:c.width}}/>)}{rowActions&&<col style={{width:200}}/>}</colgroup>
- <thead><tr>{selection&&<th className="selection-column">Выбор</th>}{config.columns.map(col=>{
+ <thead><tr>{selection&&<th className="selection-column"><input type="checkbox" aria-label="Выбрать текущую страницу"
+ checked={rows.length>0&&rows.every(selection.selected)} disabled={!rows.length||!!(selection.maxSelected&&(selection.selectedCount??0)+rows.filter(r=>!selection.selected(r)).length>selection.maxSelected)}
+ ref={el=>{if(el)el.indeterminate=rows.some(selection.selected)&&!rows.every(selection.selected);}}
+ onChange={e=>rows.forEach(row=>{if(!selection.disabled(row))selection.toggle(row,e.target.checked);})}/></th>}{config.columns.map(col=>{
  const spec=metricRegistry[col.key],sort=config.sorting;
  return <th key={col.key} data-column={col.key} data-testid={"column-"+col.key} className={(col.key==="name"?"identity-column ":"")+(target===col.key?"drag-target":"")} style={{left:col.key==="name"&&selection?52:undefined}} aria-sort={sort?.key===col.key?(sort.direction==="asc"?"ascending":"descending"):"none"}
  onDragOver={e=>{if(dragging.current){e.preventDefault();setTarget(col.key);}}}

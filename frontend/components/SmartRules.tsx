@@ -20,6 +20,10 @@ import ColumnManager from "./ColumnManager";
 import StatisticsTable from "./StatisticsTable";
 import RuleExpression from "./RuleExpression";
 import RuleDecisionDetails from "./RuleDecisionDetails";
+import RuleTargetPicker from "./RuleTargetPicker";
+import RuleTargetActions from "./RuleTargetActions";
+import SearchableSelect from "./SearchableSelect";
+import {targetSummary,type Target} from "../lib/rule-targets";
 
 type Option = { id: string; name: string };
 type Scopes = {
@@ -92,6 +96,21 @@ export default function SmartRules() {
     setCardId("");
     setMessage("");
   }
+  function chooseTargets(items: Target[]) {
+    setDraft(d=>({...d,selection:{...d.selection,target_mode:true,targets:items,
+      account_ids:[],campaign:null,adset:null,ad:null}}));
+  }
+  useEffect(()=>{
+    const saved=sessionStorage.getItem("mcc.rule-target-draft");
+    if(!saved)return;
+    sessionStorage.removeItem("mcc.rule-target-draft");
+    try {chooseTargets(JSON.parse(saved));} catch {setError("Не удалось восстановить выбор");}
+  },[]);
+  useEffect(()=>{
+    function warn(e:BeforeUnloadEvent){if(canEdit&&dirty){e.preventDefault();e.returnValue="";}}
+    window.addEventListener("beforeunload",warn);
+    return()=>window.removeEventListener("beforeunload",warn);
+  });
   async function operate(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -111,7 +130,7 @@ export default function SmartRules() {
   }
   const canEdit = scopes?.can_edit ?? false,
     dirty =
-      !active || JSON.stringify(active.definition) !== JSON.stringify(draft),
+      active?JSON.stringify(active.definition) !== JSON.stringify(draft):JSON.stringify(newRule())!==JSON.stringify(draft),
     profile = scopes?.profiles.find((p) => p.id === draft.profile_id),
     readyToRun = active && !active.deleted && !dirty;
   async function save() {
@@ -173,6 +192,8 @@ export default function SmartRules() {
           {error}
         </p>
       )}
+      {!!(simulation as Simulation & {target_issues?:{reason_code:string}[]}|null)?.target_issues?.length&&
+        <p role="alert">Область не разрешена полностью: {(simulation as Simulation & {target_issues:{reason_code:string}[]}).target_issues.map(i=>i.reason_code).join(" · ")}</p>}
       {message && (
         <p role="status" className="notice">
           {message}
@@ -195,7 +216,7 @@ export default function SmartRules() {
               <option value="">Новое правило</option>
               {rules.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.definition.name} · v{r.revision}
+                  {r.definition.name} · v{r.revision} · {targetSummary(r.definition.selection.targets??[])}
                   {r.deleted ? " · архив" : ""}
                 </option>
               ))}
@@ -239,6 +260,10 @@ export default function SmartRules() {
           изменяются.
         </p>
       </section>
+      {!!draft.selection.targets?.length&&<RuleTargetActions refreshKey={rules.map(r=>r.id+":"+r.revision).join(",")} targets={draft.selection.targets} onChange={chooseTargets}
+        onSaved={r=>{if(active?.id===r.id)choose(r);void load();}}
+        onCreate={items=>{choose(null);setDraft({...newRule(),selection:{...newRule().selection,target_mode:true,targets:items}});}}/>}
+      {active&&<p>Применяется к: {active.definition.selection.target_mode?targetSummary(active.definition.selection.targets??[]):"сохранённая область Phase 3"}</p>}
       <section aria-label="Конструктор">
         <h2>Конструктор</h2>
         <form
@@ -304,59 +329,16 @@ export default function SmartRules() {
                 </option>
               </select>
             </label>
-            <fieldset className="rule-accounts">
-              <legend>Рекламные аккаунты · пусто = все</legend>
-              {scopes?.options.account?.map((a) => (
-                <label key={a.id}>
-                  <input
-                    type="checkbox"
-                    checked={draft.selection.account_ids.includes(a.id)}
-                    onChange={(e) =>
-                      set("selection", {
-                        ...draft.selection,
-                        account_ids: e.target.checked
-                          ? [...draft.selection.account_ids, a.id]
-                          : draft.selection.account_ids.filter(
-                              (id) => id !== a.id,
-                            ),
-                      })
-                    }
-                  />
-                  {a.name}
-                </label>
-              ))}
-            </fieldset>
-            {(["campaign", "adset", "ad", "offer", "geo"] as const).map(
-              (key) => (
-                <label key={key}>
-                  {
-                    {
-                      campaign: "Кампания",
-                      adset: "Группа объявлений",
-                      ad: "Объявление",
-                      offer: "Оффер",
-                      geo: "GEO",
-                    }[key]
-                  }
-                  <select
-                    value={draft.selection[key] ?? ""}
-                    onChange={(e) =>
-                      set("selection", {
-                        ...draft.selection,
-                        [key]: e.target.value || null,
-                      })
-                    }
-                  >
-                    <option value="">Все доступные</option>
-                    {scopes?.options[key]?.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ),
-            )}
+            <RuleTargetPicker value={draft.selection.targets??[]} onChange={chooseTargets} disabled={!canEdit||busy}/>
+            {!draft.selection.target_mode&&<p>Ранее сохранённая область: {draft.selection.account_ids.length} кабинетов
+              {draft.selection.campaign?" · кампания "+draft.selection.campaign:""}
+              {draft.selection.adset?" · группа "+draft.selection.adset:""}
+              {draft.selection.ad?" · AD "+draft.selection.ad:""}.
+              Пустая прежняя область означает все доступные Ads. Явный выбор заменит эту область при сохранении.</p>}
+            {(["offer","geo"] as const).map(key=><label key={key}>{key==="offer"?"Оффер":"GEO"}
+              <select value={draft.selection[key]??""} onChange={e=>set("selection",{...draft.selection,[key]:e.target.value||null})}>
+               <option value="">Все доступные</option>{scopes?.options[key]?.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+              </select></label>)}
             <label>
               Статус объявления
               <select
