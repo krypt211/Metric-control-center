@@ -87,7 +87,8 @@ ACTIONS_ENABLED=false; LOCAL_READ_ONLY=true; AI_ENABLED=false;
 AI_AUTOPILOT_ALLOWED=false; META_CONTROLLED_READ_PILOT=true.
 META_PILOT_AUTHORIZED_SESSION_ID empty.
 META_PILOT_CONFIRMED_GRAPH_VERSION empty.
-No standard Meta beat entries; no active queued/running Meta jobs; no pilot sessions.
+No standard Meta beat entries; no active queued/running Meta jobs.
+After explicit user account selection, exactly one PREPARED pilot session was added.
 Meter records in working workspace:0. Advertising executions:0.
 Meta quota on UTC2026-10-13:0/5000; blocked_until absent; cooldown absent.
 Pacing minimum10 seconds, concurrency1 remain in the existing controller.
@@ -109,16 +110,23 @@ One account has catalogue only and no completed Meta statistics import.
 
 The complete user-requested names/IDs/import dates are displayed in the chat and
 retained in ignored .tools/meta-first-read-preflight-local.json. They are not
-committed to Git as real advertising-account data. No account has been selected.
-A user-input request is pending; no account is chosen by the agent.
+committed to Git as real advertising-account data. The user selected one account
+explicitly; the agent did not choose it. Exact scope and UUID are retained in
+ignored .tools/meta-first-read-prepared-session.json and the user-facing report.
 
-## Planned session (NOT CREATED)
+## Prepared session (LIVE NOT AUTHORIZED)
 
-Session ID: NONE / WAITING_FOR_USER_ACCOUNT_CHOICE.
+Session status: PREPARED; UUID/scope in ignored local session evidence and UI.
+Created2026-10-13T17:32:02Z through the existing pilot.prepared service.
+Credential fencing revision3; used_attempts0; no ProviderJob created.
+Deadline remainsNULL until an explicitly authorized start; timeout setting600s.
 One chosen account, one completed calendar day2026-10-12 in its stored timezone.
 Hard cap20 physical attempts, concurrency1, minimum interval10s, timeout600s.
 Only the existing controlled pilot mechanism will be used. No backfill.
-Preparation will keep Meta disabled and is not permission to start.
+Preparation keeps Meta disabled and is not permission to start.
+Persistence verified after commit; local quota0/5000, cooldown absent, Access Tier
+UNKNOWN, active Meta jobs0. Credential/connection fingerprints unchanged, Meta
+HTTP meter unchanged at0 and advertising execution delta0.
 
 Minimum future HTTP:8 GET, assuming single pages and no retries:
 1. /v26.0/debug_token (existing app-auth verifier)
@@ -141,21 +149,22 @@ No quota expansion, standard scheduler activation, auto backfill or WRITE.
 
 ## Missing conditions
 
-1. User selects exactly one local account before a session can be prepared.
+1. RESOLVED: user selected exactly one local account and its PREPARED session exists.
 2. Complete/review official Meta Developers v26.0 lifecycle and breaking-change
    evidence, including any limits on the requested field/attribution combinations.
    SDK evidence is useful but its scope is explicitly narrower.
 3. Review entitlement/token type/app review and ads_read/object-access evidence.
    Actual token/permissions verification is deferred to the separately authorized
    bounded pilot; no GET is made to establish them in this task.
-4. After account selection create a PREPARED session with the existing service,
-   report its immutable UUID/date/scope/revision/budget, and recheck queue/quota.
+4. RESOLVED: PREPARED session created using the existing service; immutable
+   UUID/date/scope/revision/budget reported, queue/quota rechecked locally.
 5. Obtain separate explicit LIVE permission for that exact session. Only then
    may a server operator configure its authorization UUID and reviewed version.
    This report is not authorization; neither gate has been populated.
 
-This phase is read-only audit: no application code, API version, database state
-or runtime configuration was changed. Backend/Playwright were not rerun because
+The initial audit used READ ONLY PostgreSQL transactions. After the explicit
+user selection, one authorized local PREPARED session was inserted. No application
+code, API version, credentials or runtime configuration was changed. Backend/Playwright were not rerun because
 no implementation was modified. Prior597/9 test results remain prior-phase evidence.
 Local evidence: ignored .tools/meta-first-read-preflight-local.json and
 .tools/meta-first-read-sdk-contract.json; public SDK source copies under
