@@ -25,10 +25,15 @@ def ensure(session,workspace):
 
 class ProviderManager:
     def __init__(self,factory,workspace="default",transports=None):
-        self.factory=factory;self.workspace=workspace;self.transports=transports or {};self.job_guard=None;self.job_source=None;self.job_fence=None
+        self.factory=factory;self.workspace=workspace;self.transports=transports or {};self.job_guard=None;self.job_source=None;self.job_fence=None;self.pilot_id=None
     def reserve(self,provider,run_id=None):
         from services.storage.models import SyncRun
-        if provider=="meta" and self.job_guard:self.job_guard()
+        if provider=="meta":
+            from services.meta.pilot import enabled as pilot_mode,guard
+            if pilot_mode():
+                if not self.pilot_id:raise ProviderError("META_PILOT_STANDARD_READ_HELD")
+                with self.factory() as s:guard(s,self.workspace,self.pilot_id)
+            if self.job_guard:self.job_guard()
         now=utc_now();limit=int(os.environ.get("SYNC_DAILY_BUDGET" if provider=="metricflow" else "META_DAILY_BUDGET","800" if provider=="metricflow" else "5000"))
         with self.factory.begin() as s:
             if s.scalar(select(ApiQuota).where(ApiQuota.workspace_id==self.workspace,ApiQuota.provider==provider,ApiQuota.blocked_until>now).limit(1)):raise ProviderError("PROVIDER_QUOTA_BLOCKED")
@@ -41,7 +46,14 @@ class ProviderManager:
         if provider not in PROVIDERS:raise ProviderError("INVALID_PROVIDER")
         with self.factory() as s:
             c=s.get(ProviderConnection,(self.workspace,provider))
-            if c and not c.enabled:raise ProviderError("PROVIDER_DISABLED")
+            pilot=False
+            if provider=="meta":
+                from services.meta.pilot import enabled as pilot_mode,guard
+                pilot=pilot_mode()
+                if pilot:
+                    if not self.pilot_id:raise ProviderError("META_PILOT_STANDARD_READ_HELD")
+                    guard(s,self.workspace,self.pilot_id)
+            if c and not c.enabled and not pilot:raise ProviderError("PROVIDER_DISABLED")
             data=load(s,self.workspace,provider)
         async def reserve():
             self.reserve(provider)
@@ -51,7 +63,7 @@ class ProviderManager:
             from services.meta.telemetry import MetaRequestMeter
             meter=MetaRequestMeter(self.factory,self.workspace,data["app_id"],run_id=run_id,
                 operation=operation,source=source,
-                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(10,float(c.config.get("request_interval_seconds",10))))
+                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(10,float(c.config.get("request_interval_seconds",10))),pilot_id=self.pilot_id)
             return MetaMarketingProvider(data,meter=meter,**kwargs)
         from services.providers.metricflow import MetricFlowProvider
         schema=InsightSchema.load(os.environ.get("METRICFLOW_SCHEMA_FILE","/config/metricflow-schema.json"))

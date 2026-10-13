@@ -18,6 +18,7 @@ assert (
 assert m.sql("SELECT version_num FROM alembic_version;", sys.argv[1]) in (
     "0013_integrations",
     "0014_meta_jobs",
+    "0015_meta_pilot",
 )
 state = {"restore_database": sys.argv[1]}
 db = state["restore_database"]
@@ -64,6 +65,7 @@ baseenv = {
     "AI_AUTOPILOT_ALLOWED": "false",
     "SYNC_ENABLED": "false",
     "APP_ENV": "development",
+    "META_CONTROLLED_READ_PILOT": "true",
     "APP_ORIGIN": "http://127.0.0.1:3001",
     "SESSION_SECRET_FILE": "/run/secrets/session_secret",
     "AUTH_ENABLED": "true",

@@ -68,3 +68,38 @@ for(const width of [1440,1024,768,390])test("responsive connections "+width,asyn
  await page.setViewportSize({width,height:900});await login(page);await expect(card(page)).toContainText("BLOCKED");
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();await page.screenshot({path:"test-results/integrations-"+width+".png",fullPage:true});
 });
+
+test("controlled READ pilot preparation stays offline, bounded and cancellable",async({page})=>{
+ await login(page);
+ const prior=inspect();
+ const panel=page.getByRole("region",{name:"Тестовое READ-подключение",exact:true});
+ await expect(panel).toContainText("Сохранённая конфигурация не разрешает тест");
+ await expect(panel).toContainText("периодическая Meta sync остановлена");
+ await panel.getByLabel("Кабинет пилота (act_ID)",{exact:true}).fill("act_100");
+ const day=new Date(Date.now()-86400000).toISOString().slice(0,10);
+ await panel.getByLabel("Пилот: начало периода",{exact:true}).fill(day);
+ await panel.getByLabel("Пилот: конец периода",{exact:true}).fill(day);
+ await panel.getByRole("button",{name:"Сохранить подготовку READ-теста",exact:true}).click();
+ await expect(panel).toContainText("PREPARED");
+ await expect(panel).toContainText("0 / 20");
+ const status=await (await page.request.get("/api/admin/providers/meta/pilot")).json();
+ const csrf=await (await page.request.get("/api/auth/csrf")).json();
+ const forbidden=await page.request.post("/api/admin/providers/meta/pilot/"+status.session.id+"/start",{
+  headers:{"Origin":"http://127.0.0.1:3001","X-CSRF-Token":csrf.csrf_token},data:{}});
+ expect(forbidden.status()).toBe(409);
+ expect((await forbidden.json()).detail).toBe("META_PILOT_APPROVAL_REQUIRED");
+ execFileSync(docker,["compose","-f",path.join(root,".tools/integrations-acceptance.yml"),"restart","backend"],{stdio:"pipe"});
+ await expect.poll(async()=> (await page.request.get("/api/admin/providers/meta/pilot")).status()).toBe(200);
+ await page.reload();
+ await expect(panel).toContainText("PREPARED");
+ for(const width of [1440,1024,768,390]){
+  await page.setViewportSize({width,height:900});
+  await panel.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBeTruthy();
+  await panel.screenshot({path:"test-results/meta-pilot-panel-"+width+".png"});
+ }
+ await panel.getByRole("button",{name:"Отменить READ-тест",exact:true}).click();
+ await expect(panel).toContainText("CANCELLED");
+ expect(inspect().meta_attempts).toBe(prior.meta_attempts);
+ expect(inspect().action_executions).toBe(prior.action_executions);
+});

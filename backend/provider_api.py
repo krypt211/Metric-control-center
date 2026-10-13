@@ -122,7 +122,9 @@ def credentials(provider:str,command:Credentials,request:Request):
             from services.meta.telemetry import lock as job_lock
             job_lock(s,"meta-jobs:"+a["workspace"])
         ensure(s,a["workspace"]);c=s.get(ProviderConnection,(a["workspace"],provider))
-        c.enabled=True;c.credential_source="encrypted";c.revision+=1;c.status="unverified";c.error_code=None;c.permissions={};c.capabilities={};c.checked_at=None;c.last_success_at=None;c.updated_at=utc_now()
+        from services.meta.pilot import enabled as pilot_mode
+        held=provider=="meta" and pilot_mode()
+        c.enabled=not held;c.credential_source="encrypted";c.revision+=1;c.status="unverified";c.error_code=None;c.permissions={};c.capabilities={};c.checked_at=None;c.last_success_at=None;c.updated_at=utc_now()
         c.config={"app_id":data["app_id"],"graph_version":data["graph_version"]} if provider=="meta" else {}
         upsert(s,ProviderCredential,{"workspace_id":a["workspace"],"provider":provider,"encrypted":encrypted,"updated_at":utc_now()})
         for j in s.scalars(select(ProviderJob).where(ProviderJob.workspace_id==a["workspace"],ProviderJob.provider==provider,ProviderJob.status.in_(("queued","running")))):
@@ -131,6 +133,7 @@ def credentials(provider:str,command:Credentials,request:Request):
                 cancel(s,a["workspace"],j.id,a["id"],reason="CREDENTIAL_REPLACED")
             else:j.status="cancelled";j.finished_at=utc_now();j.error_code="CREDENTIAL_REPLACED"
         s.flush();audit(s,a,"workspace",None,provider,"CREDENTIAL_REPLACED")
+        if held:return {"status":"stored_for_pilot","live_enabled":False,"job_ids":[]}
         return enqueue(s,a,provider,"health",utc_now().date(),utc_now().date())
 @router.post(BASE+"/{provider}/check")
 def check(provider:str,request:Request):

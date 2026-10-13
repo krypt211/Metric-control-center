@@ -113,7 +113,9 @@ class MetaRequestMeter:
         operation="read",
         source=None,
         interval=10.0,
+        pilot_id=None,
     ):
+        self.pilot_id = pilot_id
         self.factory = factory
         self.workspace = workspace
         self.app_id = app_id
@@ -243,6 +245,10 @@ class MetaRequestMeter:
         external = path.split("/")[0]
         canonical = None
         with self.factory.begin() as s:
+            if self.pilot_id:
+                from services.meta.pilot import reserve_attempt
+
+                reserve_attempt(s, self.workspace, self.pilot_id, path)
             if external.startswith("act_"):
                 aid = s.scalar(
                     select(AdAccount.id).where(

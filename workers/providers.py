@@ -6,6 +6,7 @@ from sqlalchemy import select,update
 from workers.ingestion import app,factory,window
 from services.providers.manager import ProviderManager,ensure
 from services.providers.contracts import ProviderError
+from services.meta.pilot import enabled as pilot_mode
 from services.providers.models import ProviderConnection,ProviderJob
 from services.providers.sync import MetaSync,metricflow_sync
 from services.sync.engine import utc_now
@@ -15,6 +16,7 @@ def enabled():
 @app.task(name="providers.meta",ignore_result=True,bind=True)
 def meta_sync(self,job="today"):
     if not enabled():return {"status":"disabled"}
+    if pilot_mode():return {"status":"pilot_scheduler_held"}
     m=manager()
     with m.factory.begin() as s:
         ensure(s,m.workspace)
@@ -63,17 +65,21 @@ def dispatch():
             if p=="meta":
                 from services.meta.jobs import in_cooldown
                 if in_cooldown(s,m.workspace):continue
-            if s.scalar(select(ProviderJob.id).where(ProviderJob.workspace_id==m.workspace,ProviderJob.provider==p,ProviderJob.status=="running").limit(1)):continue
-            j=s.scalar(select(ProviderJob.id).where(ProviderJob.workspace_id==m.workspace,ProviderJob.provider==p,ProviderJob.status=="queued",*([ProviderJob.expires_at.is_not(None)] if p=="meta" else [])).order_by(ProviderJob.created_at).limit(1))
+            if s.scalar(select(ProviderJob.id).where(ProviderJob.workspace_id==m.workspace,ProviderJob.provider==p,ProviderJob.status=="running",*([ProviderJob.purpose=="pilot"] if p=="meta" and pilot_mode() else [])).limit(1)):continue
+            j=s.scalar(select(ProviderJob.id).where(ProviderJob.workspace_id==m.workspace,ProviderJob.provider==p,ProviderJob.status=="queued",*([ProviderJob.expires_at.is_not(None)]+([ProviderJob.purpose=="pilot"] if pilot_mode() else []) if p=="meta" else [])).order_by(ProviderJob.created_at).limit(1))
             if j:jobs.append(j)
     for j in jobs:run_job.apply_async(args=[j],expires=55)
     return {"dispatched":len(jobs)}
 def run_meta_job(m,job_id):
+    with m.factory() as s:
+        candidate=s.get(ProviderJob,job_id)
+        if pilot_mode() and candidate and candidate.purpose!="pilot":return {"status":"pilot_existing_job_held"}
+        if candidate and candidate.purpose=="pilot" and not pilot_mode():return {"status":"pilot_mode_required"}
     from services.meta.jobs import claim,checkpoint,complete,fence
     with m.factory.begin() as s:
         owner=claim(s,m.workspace,job_id)
         if not owner:return {"status":"not_claimable"}
-        j=s.get(ProviderJob,job_id);purpose,start,end=j.purpose,j.start_day,j.end_day;accounts=j.account_scope
+        j=s.get(ProviderJob,job_id);purpose,start,end=j.purpose,j.start_day,j.end_day;accounts=j.account_scope;pilot_id=(j.request_params or {}).get("pilot_session_id")
     # A fresh manager avoids mutating shared READ managers/other tasks.
     runner=ProviderManager(m.factory,m.workspace,transports=m.transports)
     runner.job_guard=lambda:checkpoint(m.factory,m.workspace,job_id,owner)
@@ -82,7 +88,11 @@ def run_meta_job(m,job_id):
     runner.job_accounts=accounts or None
     try:
         runner.job_guard()
-        result=asyncio.run(runner.health_check("meta") if purpose=="health" else MetaSync(runner).run(purpose,start,end))
+        if purpose=="pilot":
+            from services.meta.pilot import run
+            runner.pilot_id=pilot_id
+            result=asyncio.run(run(runner,pilot_id))
+        else:result=asyncio.run(runner.health_check("meta") if purpose=="health" else MetaSync(runner).run(purpose,start,end))
         status="succeeded" if result["status"] in ("healthy","succeeded") else "queued" if result["status"]=="skipped_overlap" else "failed"
         reason=result.get("error_code") or (None if status=="succeeded" else "READ_INCOMPLETE")
     except ProviderError as error:status="failed";reason=error.code
@@ -90,4 +100,9 @@ def run_meta_job(m,job_id):
         with m.factory.begin() as s:
             complete(s,m.workspace,job_id,owner,locals().get("status","failed"),locals().get("reason","READ_WORKER_FAILED"))
             final=s.get(ProviderJob,job_id);result={"status":final.status,"error_code":final.error_code}
+            if purpose=="pilot":
+                from services.meta.pilot_models import MetaPilotSession
+                pilot=s.get(MetaPilotSession,pilot_id)
+                if pilot and pilot.status in ("QUEUED","RUNNING"):
+                    pilot.status="STOPPED";pilot.reason=final.error_code or "META_PILOT_STOPPED";pilot.finished_at=utc_now()
     return result

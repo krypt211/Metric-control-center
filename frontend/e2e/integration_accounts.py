@@ -13,7 +13,10 @@ from services.meta.client import MetaClient
 from services.meta.telemetry import MetaRequestMeter
 from services.providers.contracts import ProviderError
 from services.providers.credentials import encrypt
-from services.providers.integration_models import WriteCredentialState
+from services.providers.integration_models import (
+    MetaRequestAttempt,
+    WriteCredentialState,
+)
 from services.providers.models import (
     ProviderAccountMapping,
     ProviderConnection,
@@ -39,6 +42,11 @@ if len(sys.argv) > 1 and sys.argv[1] == "inspect":
                     "read_revision": s.get(
                         ProviderConnection, (workspace, "metricflow")
                     ).revision,
+                    "meta_attempts": s.scalar(
+                        select(func.count())
+                        .select_from(MetaRequestAttempt)
+                        .where(MetaRequestAttempt.workspace_id == workspace)
+                    ),
                     "action_executions": s.scalar(
                         select(func.count()).select_from(ActionExecution)
                     ),

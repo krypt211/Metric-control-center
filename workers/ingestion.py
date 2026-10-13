@@ -109,3 +109,9 @@ app.conf.beat_schedule.update({
     "meta-reconciliation":{"task":"providers.meta","schedule":crontab(hour=4,minute=9),"args":["last7"],"options":{"expires":82800}},
     "provider-jobs":{"task":"providers.dispatch","schedule":30.0,"options":{"expires":25}},
 })
+
+# Pilot completion never enables the standard Meta schedule.
+from services.meta.pilot import enabled as meta_pilot_mode
+if meta_pilot_mode():
+    for entry in ("meta-today", "meta-yesterday", "meta-reconciliation"):
+        app.conf.beat_schedule.pop(entry, None)

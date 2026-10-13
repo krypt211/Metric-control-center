@@ -68,6 +68,16 @@ def finish(session, job, status, reason, actor=None):
     job.owner = None
     job.lease_until = None
     audit(session, job, status.upper(), reason or "READ_COMPLETED", actor)
+    if job.purpose == "pilot":
+        from services.meta.pilot_models import MetaPilotSession
+
+        row = session.get(
+            MetaPilotSession, (job.request_params or {}).get("pilot_session_id")
+        )
+        if row and row.status in ("QUEUED", "RUNNING"):
+            row.status = "CANCELLED" if status == "cancelled" else "STOPPED"
+            row.reason = reason or "META_PILOT_STOPPED"
+            row.finished_at = utc_now()
 
 
 def scope(session, connection, accounts=None):
@@ -98,6 +108,10 @@ def enqueue(
     published_at=None,
     message_deadline=None,
 ):
+    from services.meta.pilot import enabled as pilot_mode
+
+    if pilot_mode():
+        raise ProviderError("META_PILOT_STANDARD_READ_HELD")
     if purpose not in TTL or start > end:
         raise ProviderError("INVALID_META_JOB")
     lock(session, "meta-jobs:" + workspace)
@@ -181,6 +195,7 @@ def enqueue(
             ProviderJob.provider == "meta",
             ProviderJob.status.in_(ACTIVE),
             ProviderJob.expires_at.is_not(None),
+            *([ProviderJob.purpose == "pilot"] if pilot_mode() else []),
         )
     ).all()
     for old in candidates:
@@ -243,7 +258,7 @@ def stop_reason(job, connection, now):
         return job.error_code or "JOB_CANCEL_REQUESTED"
     if aware(job.expires_at) <= now:
         return "JOB_TTL_EXPIRED"
-    if not connection or not connection.enabled:
+    if not connection or (not connection.enabled and job.purpose != "pilot"):
         return "PROVIDER_DISABLED"
     if (
         connection.revision != job.config_revision
@@ -260,6 +275,8 @@ def stopped(session, job, reason):
 
 
 def maintain(session, workspace):
+    from services.meta.pilot import enabled as pilot_mode
+
     lock(session, "meta-jobs:" + workspace)
     now = utc_now()
     c = session.get(ProviderConnection, (workspace, "meta"))
@@ -269,6 +286,7 @@ def maintain(session, workspace):
             ProviderJob.provider == "meta",
             ProviderJob.status.in_(ACTIVE),
             ProviderJob.expires_at.is_not(None),
+            *([ProviderJob.purpose == "pilot"] if pilot_mode() else []),
         )
     ).all()
     for j in rows:
@@ -280,6 +298,8 @@ def maintain(session, workspace):
             # Worker lease outlives renewable sync lease and HTTP timeout.
             if reason:
                 stopped(session, j, reason)
+            elif j.purpose == "pilot":
+                finish(session, j, "failed", "META_PILOT_OWNER_LOST")
             elif (j.recoveries or 0) >= 2:
                 finish(session, j, "failed", "JOB_RECOVERY_LIMIT")
             else:

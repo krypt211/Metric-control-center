@@ -1,4 +1,5 @@
 "use client";
+import MetaReadPilot from "../../../components/MetaReadPilot";
 import MetricFlowWriteSettings from "../../../components/MetricFlowWriteSettings";
 import MetaApiUsage from "../../../components/MetaApiUsage";
 import SearchableSelect from "../../../components/SearchableSelect";
@@ -78,7 +79,7 @@ export default function ConnectionsPage(){
  <button disabled={!c.routing_ready||busy} onClick={()=>void attempt("/routing","PUT",{scope:"workspace",primary_provider:c.provider,fallback_provider:null,action_provider:"disabled"})}>Выбрать основным</button>
  <button disabled={!c.enabled||busy} onClick={()=>{const another=data.connections.some(x=>x.provider!==c.provider&&x.enabled&&x.status==="healthy");if(window.confirm(another?"Отключить "+names[c.provider]+"? Снимок статистики сохранится.":"Это последний рабочий источник. Новая статистика перестанет поступать, панель покажет STALE. Отключить?"))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:!another,forget_credentials:false});}}>Отключить</button>
  <button disabled={c.enabled||busy} onClick={()=>{if(window.confirm("Удалить сохранённые credentials этого отключённого подключения? Для полного отзыва токена используйте настройки Meta / MetricFlow."))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:true,forget_credentials:true});}}>Удалить сохранённые credentials</button></div>
- {c.provider==="metricflow"?<MetricFlowWriteSettings/>:<MetaApiUsage/>}
+ {c.provider==="metricflow"?<MetricFlowWriteSettings/>:<><MetaReadPilot/><MetaApiUsage/></>}
  <details><summary>Подключить или обновить credentials</summary><CredentialForm provider={c.provider} enabled={data.credentials_ui_enabled&&!busy} onSave={body=>mutate("/"+c.provider+"/credentials","POST",body)}/></details>
 
  </section>;})}</div>

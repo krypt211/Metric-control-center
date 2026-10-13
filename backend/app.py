@@ -150,3 +150,6 @@ app.include_router(manual_control_router)
 
 from backend.integration_api import router as integration_router
 app.include_router(integration_router)
+
+from backend.meta_pilot_api import router as meta_pilot_router
+app.include_router(meta_pilot_router)

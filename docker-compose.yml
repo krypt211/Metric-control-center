@@ -63,6 +63,9 @@ services:
       SYNC_TIMEZONE: ${SYNC_TIMEZONE:-Europe/Moscow}
       PROVIDER_ENCRYPTION_KEY_FILE: /run/secrets/provider_encryption_key
       METRICFLOW_READ_KEY_FILE: /run/secrets/metricflow_read_key
+      META_CONTROLLED_READ_PILOT: ${META_CONTROLLED_READ_PILOT:-true}
+      META_PILOT_AUTHORIZED_SESSION_ID: ${META_PILOT_AUTHORIZED_SESSION_ID:-}
+      META_PILOT_CONFIRMED_GRAPH_VERSION: ${META_PILOT_CONFIRMED_GRAPH_VERSION:-}
       META_DAILY_BUDGET: ${META_DAILY_BUDGET:-5000}
     secrets:
     - postgres_password
@@ -132,6 +135,9 @@ services:
       META_JOB_QUEUE_LIMIT: ${META_JOB_QUEUE_LIMIT:-20}
       SYNC_TIMEZONE: ${SYNC_TIMEZONE:-Europe/Moscow}
       PROVIDER_ENCRYPTION_KEY_FILE: /run/secrets/provider_encryption_key
+      META_CONTROLLED_READ_PILOT: ${META_CONTROLLED_READ_PILOT:-true}
+      META_PILOT_AUTHORIZED_SESSION_ID: ${META_PILOT_AUTHORIZED_SESSION_ID:-}
+      META_PILOT_CONFIRMED_GRAPH_VERSION: ${META_PILOT_CONFIRMED_GRAPH_VERSION:-}
       META_DAILY_BUDGET: ${META_DAILY_BUDGET:-5000}
     secrets:
     - metricflow_read_key
@@ -218,6 +224,7 @@ services:
     - workers.runtime
     - scheduler
     environment:
+      META_CONTROLLED_READ_PILOT: ${META_CONTROLLED_READ_PILOT:-true}
       CELERY_BROKER_URL: redis://redis:6379/0
       LOCAL_READ_ONLY: 'true'
       SYNC_TIMEZONE: ${SYNC_TIMEZONE:-Europe/Moscow}

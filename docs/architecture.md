@@ -116,3 +116,14 @@ Meta HTTP attempts use a shared PostgreSQL queue/lease/cooldown and sanitized te
 Periodic Meta jobs and manual READ jobs share ProviderJob and the existing Celery ingestion dispatcher. PostgreSQL owns deadlines, semantic/config snapshots, refresh slots, owner leases and audited cancellation. A checkpoint precedes each HTTP attempt and a transactional fence protects publication. Redis is delivery infrastructure; recovery expires stale work before executing fresh jobs. Legacy rows require an explicit inventory-digest review. HTTP meter, app concurrency1 and minimum10s pacing remain separate controls.
 
 See [lifecycle acceptance](integrations/META_JOB_LIFECYCLE_REPORT.md). MetricFlow READ/WRITE credentials and advertising execution are unchanged.
+
+
+## Controlled Meta READ pilot
+Prepared Meta sessions keep immutable account/date scope, durable attempts and a
+deadline in PostgreSQL; approved work uses the existing ProviderJob/Celery queue.
+Controlled mode holds standard Meta scheduling/requests and credential save does
+not enable LIVE. Deployment-owned session/version gates cannot be set through UI.
+The Request Meter atomically reserves the session cap with each attempt record.
+A lost worker owner stops the pilot; neither restart nor completion enables the
+standard scheduler. Pilot validation stores counts, not replacement advertising
+facts. See [pilot acceptance](integrations/META_CONTROLLED_READ_PILOT_REPORT.md).
