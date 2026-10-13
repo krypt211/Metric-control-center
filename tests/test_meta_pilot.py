@@ -24,6 +24,7 @@ from services.providers.models import (
     ProviderCredential,
     ProviderJob,
 )
+from services.storage.models import AdAccount
 from services.sync.engine import utc_now
 from workers.providers import run_meta_job
 
@@ -372,3 +373,37 @@ class PilotTests(StorageFixture, unittest.TestCase):
 
         self.after = revoke
         self.assertEqual(self.execute(), ("STOPPED", "META_PILOT_APPROVAL_REQUIRED", 1))
+
+    def test_24_partial_diagnostics_survive_catalog_failure(self):
+        def denied(request):
+            if request.url.path.endswith("/adsets"):
+                return httpx.Response(403, json={"error": {"code": 200}})
+
+        self.behavior = denied
+        self.assertEqual(self.execute(), ("STOPPED", "META_PERMISSION_DENIED", 5))
+        with self.sessions() as s:
+            result = s.scalar(select(MetaPilotSession)).result
+            self.assertTrue(result["token_verified"])
+            self.assertTrue(result["permissions_read"])
+            self.assertTrue(result["account_verified"])
+            self.assertEqual(result["catalog_rows"], {"campaign": 1})
+            self.assertEqual(result["stage"], "CATALOG_ADSET")
+            self.assertFalse(result["facts_published"])
+
+    def test_25_account_timezone_change_stops_before_catalog(self):
+        with self.sessions.begin() as s:
+            s.add(
+                AdAccount(
+                    id="selected-account",
+                    workspace_id="default",
+                    provider="meta",
+                    external_id="act_100",
+                    name="Synthetic",
+                    currency="USD",
+                    timezone="America/Los_Angeles",
+                    observed_at=utc_now(),
+                )
+            )
+        self.assertEqual(
+            self.execute(), ("STOPPED", "META_PILOT_ACCOUNT_TIMEZONE_CHANGED", 3)
+        )

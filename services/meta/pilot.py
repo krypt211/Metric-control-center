@@ -18,6 +18,7 @@ from services.providers.models import (
     ProviderCredential,
     ProviderJob,
 )
+from services.storage.models import AdAccount
 from services.sync.engine import aware, utc_now
 
 ACTIVE = ("QUEUED", "RUNNING")
@@ -261,6 +262,24 @@ async def run(manager, identifier: str) -> dict:
         row = guard(s, manager.workspace, identifier)
         row.status = "RUNNING"
         account, start_day, end_day = row.account_id, row.start_day, row.end_day
+        selected = s.scalar(
+            select(AdAccount).where(
+                AdAccount.workspace_id == manager.workspace,
+                AdAccount.provider == "meta",
+                AdAccount.external_id == account,
+            )
+        )
+        expected_timezone = selected.timezone if selected else None
+
+    def progress(stage: str) -> None:
+        # Safe booleans/counts only; never raw token, account payload or URLs.
+        result["stage"] = stage
+        result["facts_published"] = False
+        with manager.factory.begin() as session:
+            current = session.get(MetaPilotSession, identifier)
+            if current and current.status in ACTIVE:
+                current.result = dict(result)
+
     try:
         manager.pilot_id = identifier
         client = manager.create(
@@ -269,7 +288,13 @@ async def run(manager, identifier: str) -> dict:
         # Bounded edge materialization; session-wide 20-attempt budget is stronger.
         client.client.max_pages = 20
         client.client.max_rows = 2000
+        progress("TOKEN_AND_PERMISSIONS")
         permissions = await client.client.verify_token()
+        result.update(
+            token_verified=permissions["token_verified"],
+            permissions_read=permissions["read"],
+        )
+        progress("ACCOUNT")
         raw = await client.client.get(
             account,
             {"fields": "id,account_id,name,account_status,currency,timezone_name"},
@@ -281,10 +306,20 @@ async def run(manager, identifier: str) -> dict:
             raise ProviderError("META_PILOT_ACCOUNT_BINDING")
         if raw.get("account_status") != 1:
             raise ProviderError("META_PILOT_ACCOUNT_NOT_ACTIVE")
+        if expected_timezone and raw.get("timezone_name") != expected_timezone:
+            raise ProviderError("META_PILOT_ACCOUNT_TIMEZONE_CHANGED")
+        result["account_verified"] = True
         catalogs = {}
+        result["catalog_rows"] = {}
         for kind in ("campaign", "adset", "ad", "creative"):
+            progress("CATALOG_" + kind.upper())
             catalogs[kind] = await client._catalog(account, kind)
+            result["catalog_rows"] = {k: len(v) for k, v in catalogs.items()}
+            progress("CATALOG_" + kind.upper() + "_COMPLETE")
+        progress("INSIGHTS")
         insights = await client.get_insights(account, start_day, end_day)
+        result["insights_response_rows"] = len(insights["data"])
+        progress("VALIDATE_INSIGHTS")
         # Validate fully; pilot is evidence-only, never replaces production facts.
         from services.meta.mapper import map_rows
 
@@ -292,6 +327,8 @@ async def run(manager, identifier: str) -> dict:
             insights["data"], raw, catalogs, start_day, end_day, insights["attribution"]
         )
         result = {
+            "token_verified": permissions["token_verified"],
+            "stage": "COMPLETE",
             "permissions_read": permissions["read"],
             "account_verified": True,
             "catalog_rows": {k: len(v) for k, v in catalogs.items()},
