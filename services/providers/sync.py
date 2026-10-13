@@ -26,7 +26,7 @@ class MetaSync:
         with self.factory.begin() as s:
             ensure(s,self.workspace);c=s.get(ProviderConnection,(self.workspace,"meta"))
             if not c.enabled:return {"status":"disabled"}
-            revision=c.revision;selected=c.config.get("sync_account_ids")
+            revision=c.revision;selected=getattr(self.manager,"job_accounts",None) if getattr(self.manager,"job_accounts",None) is not None else c.config.get("sync_account_ids")
         owner=str(uuid4());run_id=str(uuid4());lease_key=self.workspace+":meta:insights";now=utc_now()
         with self.factory.begin() as s:
             s.execute(insert_for(s,SyncLease.__table__).values(key=lease_key,owner=owner,expires_at=now+timedelta(seconds=180)).on_conflict_do_nothing(index_elements=["key"]))
@@ -42,11 +42,12 @@ class MetaSync:
                 if changed.rowcount!=1:raise ProviderError("SYNC_LEASE_LOST")
             self.manager.reserve("meta",run_id)
         def fence(s):
+            if self.manager.job_fence:self.manager.job_fence(s)
             assert_revision(s,self.workspace,"meta",revision)
             lease=s.scalar(select(SyncLease).where(SyncLease.key==lease_key).with_for_update())
             if not lease or lease.owner!=owner or aware(lease.expires_at)<=utc_now():raise ProviderError("SYNC_LEASE_LOST")
         try:
-            client=self.manager.create("meta",before_request=reserve,run_id=run_id,operation=job,source="sync_worker")
+            client=self.manager.create("meta",before_request=reserve,run_id=run_id,operation=job,source=self.manager.job_source or "sync_worker")
             health=await client.health_check()
             accounts=health["accounts"]
             if selected is not None:
@@ -76,7 +77,9 @@ class MetaSync:
                             "source_timestamp":None,"attribution":insights["attribution"],"hierarchy_hash":hierarchy_hash(s,aid,start,end),
                             "complete":True,"run_id":run_id,"credential_revision":revision})
                         count+=len(rows)
-                except Exception as error:errors.append(self.manager.failure("meta",error,revision))
+                except Exception as error:
+                    if isinstance(error,ProviderError) and error.code.startswith("JOB_"):raise
+                    errors.append(self.manager.failure("meta",error,revision))
             with self.factory.begin() as s:
                 assert_revision(s,self.workspace,"meta",revision)
                 c=s.get(ProviderConnection,(self.workspace,"meta"))
@@ -85,7 +88,7 @@ class MetaSync:
                 if not errors:c.last_success_at=utc_now()
             status="partial" if errors else "succeeded"
         except Exception as error:
-            errors.append(self.manager.failure("meta",error,revision));status="failed"
+            errors.append(error.code if isinstance(error,ProviderError) and error.code.startswith("JOB_") else self.manager.failure("meta",error,revision));status="failed"
         finally:
             if client:
                 if errors:client.client.meter.failed=True

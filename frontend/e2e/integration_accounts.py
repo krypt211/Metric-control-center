@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import timedelta
 from uuid import uuid4
 
 import httpx
@@ -171,5 +172,52 @@ async def meter():
     assert len(calls) == 2
 
 
+from services.providers.job_models import ProviderJobAudit
+from services.providers.models import ProviderJob
+
+with factory.begin() as s:
+    for status in ("queued", "expired", "cancelled", "failed"):
+        jid = str(uuid4())
+        now = utcnow()
+        reason = {
+            "expired": "JOB_TTL_EXPIRED",
+            "cancelled": "JOB_USER_CANCELLED",
+            "failed": "META_RATE_LIMIT",
+        }.get(status)
+        s.add(
+            ProviderJob(
+                id=jid,
+                workspace_id=workspace,
+                provider="meta",
+                kind="sync",
+                purpose="manual",
+                start_day=now.date(),
+                end_day=now.date(),
+                status=status,
+                created_at=now - timedelta(minutes=1),
+                expires_at=now + timedelta(minutes=15)
+                if status == "queued"
+                else now - timedelta(seconds=1),
+                finished_at=None if status == "queued" else now,
+                error_code=reason,
+                account_scope=[aid],
+                request_params={},
+                config_revision=1,
+                config_hash="fixture",
+                timezone="UTC",
+                slot="fixture",
+            )
+        )
+        s.flush()
+        s.add(
+            ProviderJobAudit(
+                id=str(uuid4()),
+                job_id=jid,
+                workspace_id=workspace,
+                at=now,
+                event=status.upper(),
+                reason=reason or "FIXTURE_ONLY",
+            )
+        )
 asyncio.run(meter())
 print(json.dumps({"users": users, "workspace": workspace}))

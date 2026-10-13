@@ -3,7 +3,7 @@ import {backendProxy} from "@/lib/proxy";
 type Context={params:Promise<{path:string[]}>};
 async function proxy(request:NextRequest,context:Context) {
   const path=(await context.params).path.join("/");
-  if(!/^(?:status|users(?:\/[a-f0-9-]{36})?|providers(?:\/(?:meta\/(?:usage|requests|estimate|pacing)|metricflow\/write-credentials(?:\/(?:save|replace|check|delete))?|diagnostics|mapping|routing(?:\/[a-f0-9-]{36})?|(?:meta|metricflow)\/(?:credentials|check|sync|disconnect)))?)$/.test(path))return NextResponse.json({detail:"NOT_FOUND"},{status:404});
+  if(!/^(?:status|users(?:\/[a-f0-9-]{36})?|providers(?:\/(?:meta\/(?:usage|requests|estimate|pacing|jobs\/[a-f0-9-]{36}\/cancel)|metricflow\/write-credentials(?:\/(?:save|replace|check|delete))?|diagnostics|mapping|routing(?:\/[a-f0-9-]{36})?|(?:meta|metricflow)\/(?:credentials|check|sync|disconnect)))?)$/.test(path))return NextResponse.json({detail:"NOT_FOUND"},{status:404});
   return backendProxy(request,"/api/admin/"+path);
 }
 export const GET=proxy;

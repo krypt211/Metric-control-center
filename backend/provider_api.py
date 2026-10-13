@@ -8,6 +8,7 @@ from typing import Literal
 from sqlalchemy import select,delete,text
 from backend.auth import admin,identity,factory,csrf_check
 from services.providers.manager import ensure,PROVIDERS
+from services.providers.contracts import ProviderError
 from services.providers.credentials import encrypt,cipher,CredentialError
 from services.providers.models import ProviderConnection,ProviderCredential,ProviderRoutingSetting,ProviderAccountMapping,ProviderSwitchEvent,ProviderJob,ProviderWindow
 from services.storage.models import AdAccount,SyncRun,EntityCurrentState,Entity,ApiQuota
@@ -54,6 +55,16 @@ def audit(s,a,canonical,previous,active,reason):
     s.add(ProviderSwitchEvent(id=str(uuid4()),workspace_id=a["workspace"],canonical_id=canonical,
         previous_provider=previous,active_provider=active,reason=reason,created_at=utc_now(),actor_id=a["id"]))
 def enqueue(s,a,provider,kind,start,end):
+    if provider=="meta":
+        from services.meta.jobs import enqueue as queue_meta
+        jobs=[]
+        try:
+            for offset in range(0,(end-start).days+1,3 if kind=="sync" else (end-start).days+1):
+                first=start+timedelta(days=offset);last=min(end,first+timedelta(days=2)) if kind=="sync" else end
+                job,created=queue_meta(s,a["workspace"],"health" if kind=="health" else "manual",first,last,actor=a.get("id"))
+                jobs.append(job.id)
+        except ProviderError as error:raise HTTPException(429 if error.code=="META_JOB_QUEUE_FULL" else 409,error.code) from None
+        return {"status":"queued","job_ids":jobs}
     if s.scalar(select(ProviderJob).where(ProviderJob.workspace_id==a["workspace"],ProviderJob.provider==provider,ProviderJob.status.in_(("queued","running"))).limit(1)):
         raise HTTPException(409,"PROVIDER_JOB_IN_PROGRESS")
     jobs=[]
@@ -106,12 +117,19 @@ def credentials(provider:str,command:Credentials,request:Request):
     try:encrypted=encrypt(a["workspace"],provider,data)
     except Exception:raise HTTPException(422,"CREDENTIALS_INVALID_OR_ENCRYPTION_UNAVAILABLE") from None
     with factory().begin() as s:
-        lock(s,a["workspace"]);ensure(s,a["workspace"]);c=s.get(ProviderConnection,(a["workspace"],provider))
+        lock(s,a["workspace"])
+        if provider=="meta":
+            from services.meta.telemetry import lock as job_lock
+            job_lock(s,"meta-jobs:"+a["workspace"])
+        ensure(s,a["workspace"]);c=s.get(ProviderConnection,(a["workspace"],provider))
         c.enabled=True;c.credential_source="encrypted";c.revision+=1;c.status="unverified";c.error_code=None;c.permissions={};c.capabilities={};c.checked_at=None;c.last_success_at=None;c.updated_at=utc_now()
         c.config={"app_id":data["app_id"],"graph_version":data["graph_version"]} if provider=="meta" else {}
         upsert(s,ProviderCredential,{"workspace_id":a["workspace"],"provider":provider,"encrypted":encrypted,"updated_at":utc_now()})
         for j in s.scalars(select(ProviderJob).where(ProviderJob.workspace_id==a["workspace"],ProviderJob.provider==provider,ProviderJob.status.in_(("queued","running")))):
-            j.status="cancelled";j.finished_at=utc_now();j.error_code="CREDENTIAL_REPLACED"
+            if provider=="meta":
+                from services.meta.jobs import cancel
+                cancel(s,a["workspace"],j.id,a["id"],reason="CREDENTIAL_REPLACED")
+            else:j.status="cancelled";j.finished_at=utc_now();j.error_code="CREDENTIAL_REPLACED"
         s.flush();audit(s,a,"workspace",None,provider,"CREDENTIAL_REPLACED")
         return enqueue(s,a,provider,"health",utc_now().date(),utc_now().date())
 @router.post(BASE+"/{provider}/check")
@@ -133,13 +151,20 @@ def synchronize(provider:str,command:Period,request:Request):
 def disconnect(provider:str,command:Disconnect,request:Request):
     a=actor(request,True);provider_name(provider)
     with factory().begin() as s:
-        lock(s,a["workspace"]);ensure(s,a["workspace"]);c=s.get(ProviderConnection,(a["workspace"],provider))
+        lock(s,a["workspace"])
+        if provider=="meta":
+            from services.meta.telemetry import lock as job_lock
+            job_lock(s,"meta-jobs:"+a["workspace"])
+        ensure(s,a["workspace"]);c=s.get(ProviderConnection,(a["workspace"],provider))
         other=s.scalar(select(ProviderConnection).where(ProviderConnection.workspace_id==a["workspace"],ProviderConnection.provider!=provider,ProviderConnection.enabled.is_(True),ProviderConnection.status=="healthy").limit(1))
         if c.enabled and not other and not command.acknowledge_last_source:raise HTTPException(409,"LAST_WORKING_SOURCE_WARNING")
         c.enabled=False;c.revision+=1;c.status="disconnected";c.permissions={};c.capabilities={};c.updated_at=utc_now()
         if command.forget_credentials:s.execute(delete(ProviderCredential).where(ProviderCredential.workspace_id==a["workspace"],ProviderCredential.provider==provider))
         for j in s.scalars(select(ProviderJob).where(ProviderJob.workspace_id==a["workspace"],ProviderJob.provider==provider,ProviderJob.status.in_(("queued","running")))):
-            j.status="cancelled";j.finished_at=utc_now()
+            if provider=="meta":
+                from services.meta.jobs import cancel
+                cancel(s,a["workspace"],j.id,a["id"],reason="PROVIDER_DISABLED")
+            else:j.status="cancelled";j.finished_at=utc_now()
         audit(s,a,"workspace",provider,None,"DISCONNECTED")
         return {"status":"disconnected","remote_revocation":"not_performed","snapshot_retained":True}
 @router.put(BASE+"/routing")

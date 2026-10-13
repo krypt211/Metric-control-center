@@ -25,9 +25,10 @@ def ensure(session,workspace):
 
 class ProviderManager:
     def __init__(self,factory,workspace="default",transports=None):
-        self.factory=factory;self.workspace=workspace;self.transports=transports or {}
+        self.factory=factory;self.workspace=workspace;self.transports=transports or {};self.job_guard=None;self.job_source=None;self.job_fence=None
     def reserve(self,provider,run_id=None):
         from services.storage.models import SyncRun
+        if provider=="meta" and self.job_guard:self.job_guard()
         now=utc_now();limit=int(os.environ.get("SYNC_DAILY_BUDGET" if provider=="metricflow" else "META_DAILY_BUDGET","800" if provider=="metricflow" else "5000"))
         with self.factory.begin() as s:
             if s.scalar(select(ApiQuota).where(ApiQuota.workspace_id==self.workspace,ApiQuota.provider==provider,ApiQuota.blocked_until>now).limit(1)):raise ProviderError("PROVIDER_QUOTA_BLOCKED")
@@ -50,7 +51,7 @@ class ProviderManager:
             from services.meta.telemetry import MetaRequestMeter
             meter=MetaRequestMeter(self.factory,self.workspace,data["app_id"],run_id=run_id,
                 operation=operation,source=source,
-                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(1,float(c.config.get("request_interval_seconds",10))))
+                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(10,float(c.config.get("request_interval_seconds",10))))
             return MetaMarketingProvider(data,meter=meter,**kwargs)
         from services.providers.metricflow import MetricFlowProvider
         schema=InsightSchema.load(os.environ.get("METRICFLOW_SCHEMA_FILE","/config/metricflow-schema.json"))
@@ -75,8 +76,9 @@ class ProviderManager:
             c=s.get(ProviderConnection,(self.workspace,provider));revision=c.revision
         client=None
         try:
-            client=self.create(provider,operation="health_check",source="health_worker");result=await client.health_check()
+            client=self.create(provider,operation="health_check",source=self.job_source or "health_worker");result=await client.health_check()
             with self.factory.begin() as s:
+                if provider=="meta" and self.job_fence:self.job_fence(s)
                 c=s.get(ProviderConnection,(self.workspace,provider))
                 if not c.enabled or c.revision!=revision:raise ProviderError("CONNECTION_CHANGED")
                 for raw in result["accounts"]:
@@ -99,6 +101,7 @@ class ProviderManager:
             return {"status":"healthy"}
         except Exception as error:
             if provider=="meta" and client:client.client.meter.failed=True
+            if provider=="meta" and isinstance(error,ProviderError) and error.code.startswith("JOB_"):return {"status":"cancelled","error_code":error.code}
             return {"status":"error","error_code":self.failure(provider,error,revision)}
         finally:
             if client:await client.close()

@@ -78,6 +78,9 @@ def meta_usage(request: Request):
     a = identity(request)
     with factory()() as s:
         result = report(s, a["workspace"])
+        from services.meta.jobs import monitoring
+
+        result["queue"] = monitoring(s, a["workspace"])
     from redis.exceptions import RedisError
 
     from backend.auth import limiter
@@ -188,7 +191,7 @@ def meta_estimate(body: EstimateInput, request: Request):
 
 
 class PacingInput(BaseModel):
-    request_interval_seconds: int = Field(ge=1, le=600)
+    request_interval_seconds: int = Field(ge=10, le=600)
     account_ids: list[str] | None = Field(default=None, max_length=3)
 
 
@@ -221,3 +224,22 @@ def meta_pacing(body: PacingInput, request: Request):
         "app_concurrency": 1,
         "account_concurrency": 1,
     }
+
+
+@router.post(BASE + "/meta/jobs/{job_id}/cancel")
+def cancel_meta_job(job_id: str, request: Request):
+    a = admin(request)
+    csrf_check(request, a)
+    from services.meta.jobs import cancel
+    from services.providers.contracts import ProviderError
+
+    with factory().begin() as s:
+        try:
+            j = cancel(s, a["workspace"], job_id, a["id"])
+        except ProviderError:
+            raise HTTPException(404, "META_JOB_NOT_FOUND") from None
+        return {
+            "id": j.id,
+            "status": j.status.upper(),
+            "cancel_requested": bool(j.cancel_requested),
+        }

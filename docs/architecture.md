@@ -110,3 +110,9 @@ Details: [Phase 4B readiness](phase4/BUSINESS_WRITE_READINESS_2026-10-12.md).
 WRITE credential provisioning runs in a private, unexposed credential-manager with an independent cipher and limited PostgreSQL role. Backend/READ workers do not mount the WRITE cipher. The existing vault is reused with workspace/purpose binding; metadata, CAS revisions and audit are persisted independently. Provider verification is GET-only and shares the existing quota. This is a secret-handling boundary, not an advertising dispatcher.
 
 Meta HTTP attempts use a shared PostgreSQL queue/lease/cooldown and sanitized telemetry. Provider utilization percentages are separate from local request counts. See [audit and validation](integrations/META_RATE_LIMIT_AND_METRICFLOW_WRITE_SETTINGS_REPORT.md).
+
+## Durable Meta READ lifecycle
+
+Periodic Meta jobs and manual READ jobs share ProviderJob and the existing Celery ingestion dispatcher. PostgreSQL owns deadlines, semantic/config snapshots, refresh slots, owner leases and audited cancellation. A checkpoint precedes each HTTP attempt and a transactional fence protects publication. Redis is delivery infrastructure; recovery expires stale work before executing fresh jobs. Legacy rows require an explicit inventory-digest review. HTTP meter, app concurrency1 and minimum10s pacing remain separate controls.
+
+See [lifecycle acceptance](integrations/META_JOB_LIFECYCLE_REPORT.md). MetricFlow READ/WRITE credentials and advertising execution are unchanged.

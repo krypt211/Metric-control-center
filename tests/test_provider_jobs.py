@@ -31,12 +31,12 @@ class ProviderJobTests(StorageFixture,unittest.TestCase):
         async def health(provider):
             return {'status':'failed','error_code':'META_TOKEN_INVALID'} if provider=='meta' else {'status':'healthy'}
         with patch.object(self.manager,'health_check',side_effect=health) as call:
-            self.assertEqual(run_job.run('m')['status'],'failed')
+            self.assertEqual(run_job.run('m')['status'],'not_claimable')
             self.assertEqual(run_job.run('f')['status'],'succeeded')
             self.assertEqual(run_job.run('f')['status'],'already_claimed')
-            self.assertEqual(call.call_count,2)
+            self.assertEqual(call.call_count,1)
         with self.sessions() as s:
-            self.assertEqual(s.get(ProviderJob,'m').error_code,'META_TOKEN_INVALID')
+            self.assertEqual(s.get(ProviderJob,'m').status,'queued')
             self.assertIsNotNone(s.get(ProviderJob,'f').finished_at)
     def test_dispatch_skips_running_provider_but_recovers_expired_claim_after_restart(self):
         self.job('active','meta','running',NOW);self.job('waiting','meta');self.job('other','metricflow')
@@ -44,6 +44,6 @@ class ProviderJobTests(StorageFixture,unittest.TestCase):
             self.assertEqual(dispatch.run()['dispatched'],1)
             self.assertEqual(send.call_args.kwargs['args'],['other'])
         with patch('workers.providers.utc_now',return_value=NOW+timedelta(minutes=31)),patch('workers.providers.run_job.apply_async') as send:
-            self.assertEqual(dispatch.run()['dispatched'],2)
-            self.assertEqual({c.kwargs['args'][0] for c in send.call_args_list},{'active','other'})
-        with self.sessions() as s:self.assertEqual(s.get(ProviderJob,'active').status,'queued')
+            self.assertEqual(dispatch.run()['dispatched'],1)
+            self.assertEqual({c.kwargs['args'][0] for c in send.call_args_list},{'other'})
+        with self.sessions() as s:self.assertEqual(s.get(ProviderJob,'active').status,'running')

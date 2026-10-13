@@ -56,6 +56,14 @@ test("VIEWER and OPERATOR cannot provision or reveal the credential",async({page
   const csrf=await(await page.request.get("/api/auth/csrf")).json();const denied=await page.request.post("/api/admin/providers/metricflow/write-credentials/save",{headers:{Origin:"http://127.0.0.1:3001","X-CSRF-Token":csrf.csrf_token},data:{revision:state.revision,token:"mfk_fixture-not-permitted"}});expect(denied.status()).toBe(403);
  }
 });
+
+test("Meta queue monitoring and confirmed pending cancellation send no HTTP",async({page})=>{
+ await login(page);const q=page.getByRole("region",{name:"Очередь Meta READ",exact:true});
+ await expect(q).toContainText("JOB_TTL_EXPIRED");await expect(q).toContainText("META_RATE_LIMIT");
+ const before=await(await page.request.get("/api/admin/providers/meta/usage")).json();expect(before.queue.pending).toBe(1);
+ await q.getByRole("button",{name:"Отменить READ-задачу",exact:true}).click();await expect(q.getByRole("button",{name:"Отменить READ-задачу",exact:true})).toHaveCount(0);
+ const after=await(await page.request.get("/api/admin/providers/meta/usage")).json();expect(after.queue.pending).toBe(0);expect(after.queue.cancelled).toBe(2);expect(after.day).toBe(before.day);
+});
 for(const width of [1440,1024,768,390])test("responsive connections "+width,async({page})=>{
  await page.setViewportSize({width,height:900});await login(page);await expect(card(page)).toContainText("BLOCKED");
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();await page.screenshot({path:"test-results/integrations-"+width+".png",fullPage:true});

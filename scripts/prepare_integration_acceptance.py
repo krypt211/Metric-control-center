@@ -15,9 +15,9 @@ assert (
     sys.argv[1].startswith("mcc_integrations_")
     and sys.argv[1].replace("_", "").isalnum()
 )
-assert (
-    m.sql("SELECT version_num FROM alembic_version;", sys.argv[1])
-    == "0013_integrations"
+assert m.sql("SELECT version_num FROM alembic_version;", sys.argv[1]) in (
+    "0013_integrations",
+    "0014_meta_jobs",
 )
 state = {"restore_database": sys.argv[1]}
 db = state["restore_database"]

@@ -129,6 +129,10 @@ class ProviderApiTests(StorageFixture,unittest.IsolatedAsyncioTestCase):
         with self.sessions.begin() as s:
             cancelled=s.scalars(select(ProviderJob).where(ProviderJob.status=="cancelled")).all();self.assertEqual(len(cancelled),1)
             for j in s.scalars(select(ProviderJob).where(ProviderJob.status=="queued")):j.status="succeeded"
+            from services.storage.repository import identity
+            aid=identity("default","meta","act_100")
+            s.add(AdAccount(id=aid,workspace_id="default",provider="meta",external_id="act_100",name="Fixture",currency="USD",timezone="UTC",observed_at=utc_now()))
+            c=s.get(ProviderConnection,("default","meta"));c.config={**c.config,"sync_account_ids":[aid]}
         r=await self.client.post("/api/admin/providers/meta/sync",headers=await self.csrf(),json={"start":"2026-10-01","end":"2026-10-07"})
         self.assertEqual(r.status_code,200,r.text);self.assertEqual(len(r.json()["job_ids"]),3)
         r=await self.client.post("/api/admin/providers/meta/sync",headers=await self.csrf(),json={"start":"2025-01-01","end":"2026-10-07"})
@@ -146,3 +150,16 @@ class ProviderApiTests(StorageFixture,unittest.IsolatedAsyncioTestCase):
         await self.login("viewer")
         r=await self.client.get("/api/stats/sources",params=params);self.assertEqual(r.status_code,200)
         self.assertEqual((await self.client.get("/api/admin/providers/diagnostics",params=params)).status_code,403)
+    async def test_meta_queue_monitor_cancel_acl_csrf_and_workspace(self):
+        await self.login();await self.connect()
+        usage=(await self.client.get("/api/admin/providers/meta/usage")).json()
+        self.assertEqual(usage["queue"]["pending"],1)
+        jid=usage["queue"]["jobs"][0]["id"]
+        for role in ("viewer","operator"):
+            await self.login(role)
+            self.assertEqual((await self.client.post("/api/admin/providers/meta/jobs/"+jid+"/cancel",headers=await self.csrf(),json={})).status_code,403)
+        await self.login()
+        self.assertEqual((await self.client.post("/api/admin/providers/meta/jobs/"+jid+"/cancel",json={})).status_code,403)
+        self.assertEqual((await self.client.post("/api/admin/providers/meta/jobs/foreign/cancel",headers=await self.csrf(),json={})).status_code,404)
+        r=await self.client.post("/api/admin/providers/meta/jobs/"+jid+"/cancel",headers=await self.csrf(),json={})
+        self.assertEqual(r.status_code,200);self.assertEqual(r.json()["status"],"CANCELLED")

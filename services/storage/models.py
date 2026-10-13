@@ -472,3 +472,5 @@ from services.automation import smart_models  # noqa: E402,F401
 from services.actions import manual_models  # noqa: E402,F401
 
 from services.providers import integration_models  # noqa: E402,F401
+
+from services.providers.job_models import ProviderJobAudit  # noqa: E402,F401

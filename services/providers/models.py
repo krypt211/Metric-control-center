@@ -1,7 +1,7 @@
 """Additive provider configuration; existing advertising facts are preserved."""
 from datetime import date,datetime
 from typing import Any
-from sqlalchemy import String,Integer,Boolean,Text,DateTime,Date,ForeignKey,UniqueConstraint,CheckConstraint,Index
+from sqlalchemy import String,Integer,Boolean,Text,DateTime,Date,ForeignKey,UniqueConstraint,CheckConstraint,Index,text
 from sqlalchemy.orm import Mapped,mapped_column
 from services.storage.models import Base,JSON_TYPE
 
@@ -97,3 +97,19 @@ class ProviderJob(Base):
     created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True))
     finished_at:Mapped[datetime|None]=mapped_column(DateTime(timezone=True))
     error_code:Mapped[str|None]=mapped_column(String(64))
+
+    purpose:Mapped[str|None]=mapped_column(String(16))
+    expires_at:Mapped[datetime|None]=mapped_column(DateTime(timezone=True))
+    dedup_key:Mapped[str|None]=mapped_column(String(64))
+    active_key:Mapped[str|None]=mapped_column(String(64))
+    account_scope:Mapped[list|None]=mapped_column(JSON_TYPE)
+    request_params:Mapped[dict|None]=mapped_column(JSON_TYPE)
+    config_revision:Mapped[int|None]=mapped_column(Integer)
+    config_hash:Mapped[str|None]=mapped_column(String(64))
+    timezone:Mapped[str|None]=mapped_column(String(64))
+    slot:Mapped[str|None]=mapped_column(String(64))
+    owner:Mapped[str|None]=mapped_column(String(36))
+    lease_until:Mapped[datetime|None]=mapped_column(DateTime(timezone=True))
+    cancel_requested:Mapped[bool|None]=mapped_column(Boolean)
+    recoveries:Mapped[int|None]=mapped_column(Integer)
+    __table_args__=(Index('uq_provider_job_dedup','dedup_key',unique=True),Index('uq_meta_job_active','active_key',unique=True,postgresql_where=text("provider = 'meta' AND active_key IS NOT NULL AND status IN ('queued','running')"),sqlite_where=text("provider = 'meta' AND active_key IS NOT NULL AND status IN ('queued','running')")))
