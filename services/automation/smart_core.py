@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal as D
 from decimal import localcontext
 from typing import Any, Literal
@@ -17,6 +17,7 @@ STALE = {
     "INCOMPLETE_WINDOW",
     "PROVIDER_UNAVAILABLE",
     "WINDOW_INCOMPLETE",
+    "PROFILE_SOURCE_TIMEZONE_MISMATCH",
 }
 
 
@@ -60,11 +61,21 @@ def applied_thresholds(rule: SmartRuleInput, profile: dict[str, Any]) -> dict[st
 
 def condition(c: Condition, row: dict[str, Any]) -> dict[str, Any]:
     """Compare ready financial values; derived CPS uses the shared safe ratio."""
+    original_type = c.type
+    positive = {
+        "ROI_AT_OR_ABOVE_TARGET": "ROI_BELOW_TARGET",
+        "CPL_AT_OR_BELOW_LIMIT": "CPL_ABOVE_LIMIT",
+        "CPS_AT_OR_BELOW_LIMIT": "CPS_ABOVE_LIMIT",
+    }
+    if original_type in positive:
+        c = c.model_copy(update={"type": positive[original_type]})
     reasons = []
     estimated = c.source == "estimated" and c.type in (
         "ROI_BELOW_MINIMUM",
         "ROI_BELOW_TARGET",
+        "ROI_AT_OR_ABOVE_TARGET",
         "CPS_ABOVE_LIMIT",
+        "CPS_AT_OR_BELOW_LIMIT",
         "MINIMUM_SALES_GATE",
     )
     count_only = c.type in ("MINIMUM_LEADS_GATE", "MINIMUM_SALES_GATE")
@@ -182,6 +193,8 @@ def condition(c: Condition, row: dict[str, Any]) -> dict[str, Any]:
                 hit
                 and row.get("leads" if t == "NO_LEADS_SPEND" else "approved_sales") == 0
             )
+        if original_type in positive:
+            hit = not hit
         truth = "TRUE" if hit else "FALSE"
     delta = (
         serial(actual - limit)
@@ -190,7 +203,7 @@ def condition(c: Condition, row: dict[str, Any]) -> dict[str, Any]:
     )
     return {
         "kind": "condition",
-        "type": t,
+        "type": original_type,
         "source": c.source,
         "metric": key,
         "truth": truth,
@@ -243,7 +256,16 @@ def decision(
     checks = leaves(tree)
     applicable = witnesses(tree) if tree["truth"] == "TRUE" else checks
     reasons = sorted({r for c in checks for r in c["reason_codes"]})
+    reasons.extend(
+        code
+        for code in row.get("reason_codes", [])
+        if code == "PROFILE_PERIOD_AMBIGUOUS"
+    )
     blockers = ["DRY_RUN_ONLY"]
+    if row.get("evaluation_timezone", row.get("timezone")) != profile.get(
+        "timezone", "Europe/Moscow"
+    ):
+        reasons.append("PROFILE_SOURCE_TIMEZONE_MISMATCH")
     zero_only = all(
         c["type"] in ("NO_LEADS_SPEND", "SPEND_THRESHOLD") for c in applicable
     )
@@ -255,7 +277,9 @@ def decision(
             in (
                 "ROI_BELOW_MINIMUM",
                 "ROI_BELOW_TARGET",
+                "ROI_AT_OR_ABOVE_TARGET",
                 "CPS_ABOVE_LIMIT",
+                "CPS_AT_OR_BELOW_LIMIT",
                 "MINIMUM_SALES_GATE",
             )
         )
@@ -263,7 +287,8 @@ def decision(
     )
     observed_required = any(
         c["source"] == "observed"
-        and c["type"] in ("CPS_ABOVE_LIMIT", "MINIMUM_SALES_GATE")
+        and c["type"]
+        in ("CPS_ABOVE_LIMIT", "CPS_AT_OR_BELOW_LIMIT", "MINIMUM_SALES_GATE")
         for c in applicable
     )
     gates = [("minimum_spend", "spend")]
@@ -284,8 +309,11 @@ def decision(
     if row.get("period_end") and row.get("timezone"):
         end = datetime.fromisoformat(row["period_end"]).date()
         boundary = datetime.combine(
-            end + timedelta(days=1), time.min, tzinfo=ZoneInfo(row["timezone"])
+            end + timedelta(days=1),
+            time.min,
+            tzinfo=ZoneInfo(row.get("evaluation_timezone", row["timezone"])),
         )
+        boundary = boundary.astimezone(UTC)
         mature_at = boundary + timedelta(hours=int(values["maturation_hours"]))
         if now < boundary + timedelta(hours=int(values["minimum_data_age_hours"])):
             reasons.append("DATA_TOO_YOUNG")
@@ -331,6 +359,60 @@ def decision(
         status = "WOULD_PAUSE"
     if estimated:
         reasons.append("ESTIMATED_MODEL")
+    if status == "WOULD_PAUSE" and rule.action == "NOTIFY_ONLY":
+        status = "NOTIFY"
+    elif status == "WOULD_PAUSE" and rule.action == "ENABLE_AD":
+        # Cost ratios must not turn missing/zero post-pause spend into recovery.
+        # For cost-only ENABLE, require a completed cohort ending before the
+        # verified pause. Mature factual approval may supply new positive evidence.
+        cohort_before_pause = False
+        if (
+            row.get("verified_pause_at")
+            and row.get("period_end")
+            and row.get("timezone")
+        ):
+            cohort_end = datetime.combine(
+                datetime.fromisoformat(row["period_end"]).date() + timedelta(days=1),
+                time.min,
+                tzinfo=ZoneInfo(row.get("evaluation_timezone", row["timezone"])),
+            ).astimezone(UTC)
+            paused_at = datetime.fromisoformat(row["verified_pause_at"])
+            cohort_before_pause = (
+                paused_at.tzinfo is not None and cohort_end <= paused_at
+            )
+        mature_factual_recovery = bool(
+            row.get("eligible_for_rule_evaluation")
+            and any(
+                c["truth"] == "TRUE"
+                and c["source"] in ("actual", "approved")
+                and c["type"] in ("ROI_AT_OR_ABOVE_TARGET", "CPS_AT_OR_BELOW_LIMIT")
+                for c in applicable
+            )
+        )
+        required = {
+            "ENABLE_SPEND_EVIDENCE_REQUIRED": number(row, "spend") is not None
+            and number(row, "spend") > 0,
+            "ENABLE_RECOVERY_EVIDENCE_REQUIRED": cohort_before_pause
+            or mature_factual_recovery,
+            "ENABLE_PERMISSION_REQUIRED": rule.allow_reenable
+            and row.get("reenable_allowed") is True,
+            "PAUSE_OWNERSHIP_UNVERIFIED": row.get("paused_by_system") is True,
+            "PARENT_STATE_UNVERIFIED": row.get("parents_active") is True,
+            "AD_NOT_PAUSED": row.get("ad_status") == "PAUSED",
+            "POSITIVE_ENABLE_EVIDENCE_REQUIRED": any(
+                c["type"]
+                in (
+                    "ROI_AT_OR_ABOVE_TARGET",
+                    "CPL_AT_OR_BELOW_LIMIT",
+                    "CPS_AT_OR_BELOW_LIMIT",
+                )
+                and c["truth"] == "TRUE"
+                and not c["estimated"]
+                for c in applicable
+            ),
+        }
+        reasons.extend(k for k, v in required.items() if not v)
+        status = "WOULD_ENABLE" if all(required.values()) else "REVIEW"
     strict = bool(
         row.get("eligible_for_rule_evaluation")
         and not reasons
@@ -341,6 +423,9 @@ def decision(
     blockers += reasons
     return {
         "status": status,
+        "requested_action": rule.action,
+        "priority": rule.priority,
+        "cooldown_seconds": rule.cooldown_seconds,
         "condition_matched": tree["truth"],
         "analytical_signal": any(c["truth"] == "TRUE" for c in checks),
         "simulated_decision": status,
@@ -354,3 +439,42 @@ def decision(
         "estimated": estimated,
         "mature_at": mature_at.isoformat() if mature_at else None,
     }
+
+
+def arbitrate(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Manual hold, unknown evidence, PAUSE, ENABLE, KEEP; numeric priority breaks ties."""
+    actions = {"WOULD_PAUSE", "WOULD_ENABLE"}
+    blocked = any(
+        c.get("manual_blocked")
+        or c["status"] in ("DATA_STALE", "INSUFFICIENT_DATA", "REVIEW")
+        for c in candidates
+    )
+    eligible = [c for c in candidates if c["status"] in actions]
+    winner = None
+    if any(c.get("pause_condition_active") for c in candidates) and not any(
+        c["status"] == "WOULD_PAUSE" for c in candidates
+    ):
+        blocked = True
+    if eligible and not blocked:
+        winner = min(
+            eligible,
+            key=lambda c: (
+                0 if c["status"] == "WOULD_PAUSE" else 1,
+                -c.get("priority", 0),
+                c["rule_id"],
+            ),
+        )
+    for candidate in candidates:
+        if candidate["status"] in actions and (blocked or candidate is not winner):
+            candidate["status"] = "REVIEW"
+            reason = (
+                "MANUAL_OVERRIDE"
+                if any(c.get("manual_blocked") for c in candidates)
+                else ("CONFLICT_UNVERIFIED" if blocked else "CONFLICT_HIGHER_PRIORITY")
+            )
+            candidate["reason_codes"] = sorted(
+                set(candidate.get("reason_codes", []) + [reason])
+            )
+            candidate["safe_to_consider_for_future_action"] = False
+        candidate["simulated_decision"] = candidate["status"]
+    return candidates

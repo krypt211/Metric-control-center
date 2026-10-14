@@ -180,6 +180,7 @@ export default function EconomicProfiles({
               onChange={(e) => set("payout", e.target.value)}
             />
           </label>
+          <label>Timezone профиля<input required value={draft.timezone ?? "Europe/Moscow"} onChange={e=>set("timezone", e.target.value)} placeholder="America/Los_Angeles"/></label>
           <label>
             Валюта профиля
             <input

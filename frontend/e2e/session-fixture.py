@@ -25,7 +25,10 @@ def fixture_cookies(session, user):
     now = utcnow()
     ttl = max(300, min(int(os.environ.get("SESSION_TTL_SECONDS", "28800")), 604800))
     cookies = []
-    for _ in range(8):
+    count = (
+        32 if os.environ.get("POSTGRES_DB", "").startswith("mcc_integrations_") else 8
+    )
+    for _ in range(count):
         token = secrets.token_urlsafe(32)
         csrf = digest(token, "csrf-value")
         session.add(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import Field, StrictBool
 from sqlalchemy import select
 
 from backend.auth import csrf_check, factory, identity
@@ -34,7 +35,7 @@ from services.automation.smart_store import (
 )
 from services.automation.smart_templates import templates
 from services.economics.models import EconomicsProfile
-from services.economics.schema import GrantInput, RestoreInput, VersionInput
+from services.economics.schema import Contract, GrantInput, RestoreInput, VersionInput
 from services.economics.store import profile_json
 from services.storage.models import Rule, User
 
@@ -61,7 +62,7 @@ def listing(request: Request) -> dict:
         output = []
         for rule in rules:
             latest = s.scalar(
-                select(RuleSimulation.created_at)
+                select(RuleSimulation)
                 .where(
                     RuleSimulation.workspace_id == a["workspace"],
                     RuleSimulation.rule_id == rule.id,
@@ -79,7 +80,10 @@ def listing(request: Request) -> dict:
                 {
                     **rule_json(rule),
                     "updated_at": version.created_at.isoformat() if version else None,
-                    "last_simulation_at": latest.isoformat() if latest else None,
+                    "last_simulation_at": latest.created_at.isoformat()
+                    if latest
+                    else None,
+                    "last_decision": latest.payload.get("counts", {}) if latest else {},
                 }
             )
         return {"rules": output, "can_edit": editor(s, a), "mode": "DRY_RUN"}
@@ -390,6 +394,7 @@ def history(
                     "event": v.event,
                     "actor_id": v.actor_id,
                     "at": v.created_at.isoformat(),
+                    "notification": v.payload if v.event == "NOTIFY" else None,
                 }
                 for v in s.scalars(
                     select(RuleAuditLog)
@@ -402,3 +407,30 @@ def history(
                 )
             ],
         }
+
+
+class AdControlInput(Contract):
+    revision: int = Field(ge=1, strict=True)
+    control_revision: int = Field(ge=0, strict=True)
+    manual_blocked: StrictBool
+    reenable_allowed: StrictBool
+
+
+@router.put("/{key}/ad-controls/{entity_id}")
+def change_ad_control(
+    key: str, entity_id: str, body: AdControlInput, request: Request
+) -> dict:
+    from services.automation.smart_store import ad_control
+
+    a = actor(request, True)
+    with factory().begin() as s:
+        return ad_control(
+            s,
+            a,
+            key,
+            entity_id,
+            body.revision,
+            body.control_revision,
+            body.manual_blocked,
+            body.reenable_allowed,
+        )

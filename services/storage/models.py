@@ -323,6 +323,7 @@ class RuleCooldown(Base):
     rule_id: Mapped[str] = mapped_column(ForeignKey("rules.id"), primary_key=True)
     entity_id: Mapped[str] = mapped_column(ForeignKey("entities.id"), primary_key=True)
     last_queued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    smart_state: Mapped[dict[str, Any]] = mapped_column(JSON_TYPE, default=dict, server_default="{}")
 
 
 class BatchAction(Base):

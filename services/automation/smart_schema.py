@@ -7,11 +7,14 @@ from decimal import Decimal
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from pydantic import Field, model_validator
+from pydantic import Field, StrictBool, model_validator
 
 from services.economics.schema import Contract
 
 ConditionType = Literal[
+    "ROI_AT_OR_ABOVE_TARGET",
+    "CPL_AT_OR_BELOW_LIMIT",
+    "CPS_AT_OR_BELOW_LIMIT",
     "ROI_BELOW_MINIMUM",
     "ROI_BELOW_TARGET",
     "CPL_ABOVE_LIMIT",
@@ -36,6 +39,19 @@ class Condition(Contract):
 
     @model_validator(mode="after")
     def meaningful(self) -> Condition:
+        if self.type == "CPL_AT_OR_BELOW_LIMIT" and self.source != "actual":
+            raise ValueError("CPL requires actual facts")
+        if self.type == "CPS_AT_OR_BELOW_LIMIT" and self.source not in (
+            "approved",
+            "observed",
+            "estimated",
+        ):
+            raise ValueError("CPS requires sales facts")
+        if (
+            self.type in ("CPL_AT_OR_BELOW_LIMIT", "CPS_AT_OR_BELOW_LIMIT")
+            and self.limit == "payout"
+        ):
+            raise ValueError("Cost limits cannot use payout multiples")
         if (
             self.type
             in (
@@ -178,6 +194,11 @@ class SmartRuleInput(Contract):
     mode: Literal["DRY_RUN"] = "DRY_RUN"
     level: Literal["ad"] = "ad"
     name: str = Field(min_length=1, max_length=120)
+    action: Literal["PAUSE_AD", "ENABLE_AD", "NOTIFY_ONLY"] = "PAUSE_AD"
+    enabled: StrictBool = False
+    priority: int = Field(default=0, ge=0, le=100, strict=True)
+    cooldown_seconds: int = Field(default=3600, ge=1800, le=604800, strict=True)
+    allow_reenable: StrictBool = False
     description: str = Field(default="", max_length=1000)
     profile_id: str | None = Field(default=None, min_length=1, max_length=36)
     selection: Selection = Field(default_factory=Selection)
@@ -228,9 +249,11 @@ class SmartRuleUpdate(SmartRuleInput):
     revision: int = Field(ge=1, strict=True)
 
 
-def period(rule: SmartRuleInput, now: datetime) -> tuple[date, date]:
-    """Completed days in Moscow; today's window remains explicitly incomplete."""
-    today = now.astimezone(ZoneInfo("Europe/Moscow")).date()
+def period(
+    rule: SmartRuleInput, now: datetime, timezone: str = "Europe/Moscow"
+) -> tuple[date, date]:
+    """Calendar days in the profile zone, including DST; today is incomplete."""
+    today = now.astimezone(ZoneInfo(timezone)).date()
     if rule.period == "custom":
         assert rule.start is not None and rule.end is not None
         first, last = rule.start, rule.end

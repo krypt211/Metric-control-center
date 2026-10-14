@@ -299,7 +299,7 @@ def test_cross_workspace_and_not_ad(store):
             engine(store).prepare_manual(actor, body, "one")
 
 
-def test_rule_recommendation_is_explicit_draft_not_execution(store):
+def test_stale_rule_recommendation_cannot_prepare_draft(store):
     from services.storage.models import Rule
 
     with store.begin() as s:
@@ -337,12 +337,14 @@ def test_rule_recommendation_is_explicit_draft_not_execution(store):
                 },
             )
         )
-    r = engine(store).prepare_manual(ACTOR, command(simulation_id="sim"), "one")
-    assert r["rule_source"]["rule_revision"] == 2
-    assert r["status"] == "DRAFT"
+    with pytest.raises(HTTPException) as error:
+        engine(store).prepare_manual(ACTOR, command(simulation_id="sim"), "one")
+    assert error.value.detail == "RULE_VERSION_CONFLICT"
+    with store() as s:
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
 
 
-def test_rule_api_resolves_provider_identity_and_creates_only_draft(store, monkeypatch):
+def test_rule_api_resolves_identity_but_rejects_stale_rule(store, monkeypatch):
     from backend import manual_control_api as api
     from services.actions.manual_schema import RuleDraftInput
     from services.storage.models import ActionRequest, Rule
@@ -385,15 +387,15 @@ def test_rule_api_resolves_provider_identity_and_creates_only_draft(store, monke
     # checks its real mapping query and ActionEngine, with no provider client.
     monkeypatch.setattr(api, "actor", lambda request, write=False: ACTOR)
     monkeypatch.setattr(api, "factory", lambda: store)
-    result = api.from_rule(
-        RuleDraftInput(simulation_id="sim-api", entity_id="ad"), None, "rule-api-one"
-    )
-    assert result["status"] == "DRAFT"
-    assert result["meta_ad_id"] == "1003"
-    assert result["rule_source"]["rule_revision"] == 2
-    assert result["rule_source"]["reasons"] == ["THRESHOLD_EXCEEDED"]
+    with pytest.raises(HTTPException) as error:
+        api.from_rule(
+            RuleDraftInput(simulation_id="sim-api", entity_id="ad"),
+            None,
+            "rule-api-one",
+        )
+    assert error.value.detail == "RULE_VERSION_CONFLICT"
     with store() as s:
-        assert s.scalar(select(func.count()).select_from(ActionRequest)) == 1
+        assert s.scalar(select(func.count()).select_from(ActionRequest)) == 0
         assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
         assert s.get(EntityCurrentState, "ad").status == "ACTIVE"
 

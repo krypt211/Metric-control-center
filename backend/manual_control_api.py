@@ -128,7 +128,9 @@ def ads(
 ) -> dict:
     a = actor(request)
     with factory()() as s:
-        return catalog(s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset)
+        return catalog(
+            s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset
+        )
 
 
 @router.get("/requests")
@@ -187,7 +189,8 @@ def from_rule(
         cards = [
             r
             for r in sim.payload["rows"]
-            if r["id"] == body.entity_id and r["status"] == "WOULD_PAUSE"
+            if r["id"] == body.entity_id
+            and r["status"] in ("WOULD_PAUSE", "WOULD_ENABLE")
         ]
         if len(cards) != 1:
             raise HTTPException(422, "RULE_RECOMMENDATION_MISMATCH")
@@ -217,7 +220,7 @@ def from_rule(
             account_id=entity.account_id,
             meta_ad_id=entity.external_id,
             provider=card["source_provider"],
-            operation="PAUSE_AD",
+            operation="ENABLE_AD" if card["status"] == "WOULD_ENABLE" else "PAUSE_AD",
             expected_status=card["ad_status"],
             simulation_id=sim.id,
             reason=f"Рекомендация DRY RUN, версия правила {sim.revision}: "

@@ -19,6 +19,7 @@ assert m.sql("SELECT version_num FROM alembic_version;", sys.argv[1]) in (
     "0013_integrations",
     "0014_meta_jobs",
     "0015_meta_pilot",
+    "0016_smart_control",
 )
 state = {"restore_database": sys.argv[1]}
 db = state["restore_database"]

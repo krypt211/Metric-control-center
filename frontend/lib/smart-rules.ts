@@ -4,6 +4,9 @@ import type { StatisticsRow } from "../components/StatisticsTable";
 import { serializeAuthenticatedWrite } from "./use-column-preferences";
 
 export const conditionNames = {
+  ROI_AT_OR_ABOVE_TARGET: "ROI достиг целевого",
+  CPL_AT_OR_BELOW_LIMIT: "Цена лида не выше лимита",
+  CPS_AT_OR_BELOW_LIMIT: "Стоимость продажи не выше лимита",
   ROI_BELOW_MINIMUM: "ROI ниже минимального",
   ROI_BELOW_TARGET: "ROI ниже целевого",
   CPL_ABOVE_LIMIT: "Цена лида выше лимита",
@@ -45,6 +48,11 @@ export type Definition = {
   mode: "DRY_RUN";
   level: "ad";
   name: string;
+  action?: "PAUSE_AD" | "ENABLE_AD" | "NOTIFY_ONLY";
+  enabled?: boolean;
+  priority?: number;
+  cooldown_seconds?: number;
+  allow_reenable?: boolean;
   description: string;
   profile_id: string | null;
   selection: {
@@ -109,7 +117,7 @@ export type History = {
     snapshot: Rule;
   }[];
   simulations: Simulation[];
-  audit: { event: string; actor_id: string; at: string }[];
+  audit: { event: string; actor_id: string; at: string; notification?: Record<string,unknown> }[];
 };
 export function newCondition(
   type: ConditionType = "CPL_ABOVE_LIMIT",
@@ -120,7 +128,7 @@ export function newCondition(
     kind: "condition",
     type,
     source:
-      type === "CPS_ABOVE_LIMIT" || type === "MINIMUM_SALES_GATE"
+      type.startsWith("CPS_") || type === "MINIMUM_SALES_GATE"
         ? "approved"
         : type.startsWith("ROI_")
           ? "estimated"
@@ -138,6 +146,7 @@ export function newRule(): Definition {
     mode: "DRY_RUN",
     level: "ad",
     name: "",
+    action: "PAUSE_AD", enabled: false, priority: 0, cooldown_seconds: 3600, allow_reenable: false,
     description: "",
     profile_id: null,
     selection: {
@@ -173,6 +182,23 @@ export function newRule(): Definition {
 const messages: Record<string, string> = {
   KEEP: "Оставить",
   REVIEW: "Требует проверки",
+  WOULD_ENABLE: "Кандидат на включение · симуляция",
+  NOTIFY: "Уведомление в MCC",
+  NOTIFY_ONLY: "Только уведомление",
+  MANUAL_OVERRIDE: "Явная ручная блокировка",
+  ANTI_LOOP_COOLDOWN: "Удержание противоположного действия: cooldown",
+  CONFLICT_UNVERIFIED: "Конфликт или неподтверждённое состояние другого правила",
+  CONFLICT_HIGHER_PRIORITY: "Приоритет другого правила",
+  PAUSE_OWNERSHIP_UNVERIFIED: "Отключение нашей системой не подтверждено",
+  PARENT_STATE_UNVERIFIED: "Родительские объекты не подтверждены как активные",
+  ENABLE_SPEND_EVIDENCE_REQUIRED: "Нужен положительный подтверждённый расход",
+  ENABLE_RECOVERY_EVIDENCE_REQUIRED: "Нужны факты завершённого периода до отключения либо подтверждённое созревание апрува",
+  ACTION_OUTCOME_UNRESOLVED: "Исход предыдущей рекламной команды неизвестен",
+  ENABLE_PERMISSION_REQUIRED: "Нужно явное разрешение повторного включения",
+  POSITIVE_ENABLE_EVIDENCE_REQUIRED: "Недостаточно положительных фактических условий включения",
+  PROFILE_PERIOD_AMBIGUOUS: "Назначение профиля неоднозначно на границе календарных периодов",
+  SELECT_EXPLICIT_PROFILE_FOR_TIMEZONE_SCOPE: "Для более чем 8 timezone выберите явный профиль в правиле",
+  PROFILE_SOURCE_TIMEZONE_MISMATCH: "Timezone профиля и дневных фактов не совпадает",
   WOULD_PAUSE: "Кандидат на отключение · симуляция",
   INSUFFICIENT_DATA: "Недостаточно данных",
   DATA_STALE: "Устаревшее или неполное окно",

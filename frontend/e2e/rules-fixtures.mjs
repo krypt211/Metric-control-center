@@ -54,7 +54,18 @@ export async function login(page, user) {
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+let nextLocalApiAt = 0;
 export function watch(page, audit) {
+  if (process.env.UI_SESSION_FIXTURES === "true" && process.env.UI_COMPOSE_PROJECT === "mcc-integration-acceptance") {
+    // Pace browser traffic below the unchanged local auth API limit; no server
+    // quota bypass. Synthetic credentials exist only in the restored test DB.
+    void page.route("**/api/**", async route => {
+      const delay = Math.max(0, nextLocalApiAt - Date.now());
+      nextLocalApiAt = Math.max(Date.now(), nextLocalApiAt) + 500;
+      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+      await route.continue();
+    });
+  }
   page.on("console", (m) => {
     if (m.type() === "error") audit.errors.push(m.text());
   });

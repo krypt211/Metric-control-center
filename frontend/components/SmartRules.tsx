@@ -4,6 +4,7 @@ import { type Profile } from "../lib/economics";
 import { useColumnPreferences } from "../lib/use-column-preferences";
 import {
   newRule,
+  conditionNames,
   readRules,
   ruleLabel,
   ruleRow,
@@ -36,6 +37,8 @@ type Scopes = {
 };
 const statuses = [
   "WOULD_PAUSE",
+  "WOULD_ENABLE",
+  "NOTIFY",
   "REVIEW",
   "KEEP",
   "INSUFFICIENT_DATA",
@@ -277,6 +280,15 @@ export default function SmartRules() {
             className="economic-fields"
           >
             <legend>Настройки набора</legend>
+            <label>Действие правила<select value={draft.action ?? "PAUSE_AD"} onChange={e=>set("action", e.target.value as Definition["action"])}>
+              <option value="PAUSE_AD">PAUSE — отключение</option><option value="ENABLE_AD">ENABLE — включение</option><option value="NOTIFY_ONLY">NOTIFY — уведомление</option>
+            </select></label>
+            <label><input type="checkbox" checked={draft.enabled ?? false} onChange={e=>set("enabled", e.target.checked)}/>Проверять правило каждые 30 минут · только DRY RUN</label>
+            <label>Приоритет правила<input type="number" min={0} max={100} value={draft.priority ?? 0} onChange={e=>set("priority",Number(e.target.value))}/></label>
+            <label>Cooldown, секунд<input type="number" min={1800} max={604800} value={draft.cooldown_seconds ?? 3600} onChange={e=>set("cooldown_seconds",Number(e.target.value))}/></label>
+            {draft.action === "ENABLE_AD" && <label><input type="checkbox" checked={draft.allow_reenable ?? false} onChange={e=>set("allow_reenable",e.target.checked)}/>Разрешить проверку повторного включения · дополнительно нужны разрешение на AD, подтверждённое отключение нашей системой и активные родители</label>}
+            <p>Timezone: {scopes?.profiles.find(p=>p.id===draft.profile_id)?.timezone ?? "Europe/Moscow"}. Включение проверок не разрешает рекламные WRITE.</p>
+
             <label>
               Название правила
               <input
@@ -679,6 +691,7 @@ export default function SmartRules() {
               {history.audit.map((v, i) => (
                 <p key={i}>
                   {formatTime(v.at)} · {ruleLabel(v.event)} · {v.actor_id}
+                  {v.notification && <span> · {String(v.notification.object)} · {String(v.notification.rule)} · {String(v.notification.decision)} · {Array.isArray(v.notification.metrics) ? (v.notification.metrics as Row[]).map(m=>(conditionNames[m.type as keyof typeof conditionNames] ?? String(m.type))+": "+String(m.value ?? "неизвестно")+"; порог "+String(m.threshold ?? "неизвестно")).join(" · ") : ""} · <a href={String(v.notification.history_url)}>История уведомления</a></span>}
                 </p>
               ))}
             </details>

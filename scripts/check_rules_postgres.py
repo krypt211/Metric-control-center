@@ -39,9 +39,10 @@ def run() -> dict:
     )
     try:
         with factory.begin() as s:
-            assert (
-                s.scalar(text("SELECT version_num FROM alembic_version"))
-                in ("0011_smart_rules", "0015_meta_pilot")
+            assert s.scalar(text("SELECT version_num FROM alembic_version")) in (
+                "0011_smart_rules",
+                "0015_meta_pilot",
+                "0016_smart_control",
             )
             user = new_user(
                 s,

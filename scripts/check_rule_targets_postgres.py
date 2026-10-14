@@ -33,9 +33,10 @@ def run() -> dict:
     actor = {"workspace": workspace, "role": "admin"}
     try:
         with factory.begin() as s:
-            assert (
-                s.scalar(text("SELECT version_num FROM alembic_version"))
-                in ("0012_manual_actions", "0015_meta_pilot")
+            assert s.scalar(text("SELECT version_num FROM alembic_version")) in (
+                "0012_manual_actions",
+                "0015_meta_pilot",
+                "0016_smart_control",
             )
             user = new_user(
                 s,

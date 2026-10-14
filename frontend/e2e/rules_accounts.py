@@ -7,12 +7,12 @@ import os
 import re
 import secrets
 
+from mcc_ui_sessions import fixture_cookies
 from sqlalchemy import delete, func, select, text
 
 from backend.app import database_sessions
-from mcc_ui_sessions import fixture_cookies
-from services.auth.sessions import new_user
 from services.actions.manual_models import ManualActionGrant, ManualGrantAudit
+from services.auth.sessions import new_user
 from services.automation.smart_models import (
     RuleAuditLog,
     RuleGrant,
@@ -28,12 +28,13 @@ from services.economics.schema import ProfileInput
 from services.economics.store import create_profile
 from services.providers.matching import identity_maps
 from services.storage.models import (
-    AdAccount,
-    ActionRequest,
-    ActionLog,
     ActionExecution,
+    ActionLog,
+    ActionRequest,
+    AdAccount,
     Entity,
     Rule,
+    RuleCooldown,
     User,
     UserColumnPreset,
     UserSession,
@@ -51,7 +52,13 @@ if (
 workspace = os.environ.get("WORKSPACE_ID", "default")
 logins = [f"rules-ui-{nonce}-{i}@local.test" for i in range(3)]
 with database_sessions().begin() as s:
-    if s.scalar(text("SELECT version_num FROM alembic_version")) not in ("0012_manual_actions", "0013_integrations", "0014_meta_jobs", "0015_meta_pilot"):
+    if s.scalar(text("SELECT version_num FROM alembic_version")) not in (
+        "0012_manual_actions",
+        "0013_integrations",
+        "0014_meta_jobs",
+        "0015_meta_pilot",
+        "0016_smart_control",
+    ):
         raise RuntimeError("RULES_MIGRATION_REQUIRED")
     if os.environ["UI_FIXTURE_MODE"] == "create":
         password = secrets.token_urlsafe(24)
@@ -59,7 +66,14 @@ with database_sessions().begin() as s:
         for login, role in zip(logins, ["admin", "operator", "viewer"], strict=True):
             u = new_user(s, workspace, login, password, role)
             s.flush()
-            users.append({"id": u.id, "login": login, "password": password,"cookies":fixture_cookies(s,u)})
+            users.append(
+                {
+                    "id": u.id,
+                    "login": login,
+                    "password": password,
+                    "cookies": fixture_cookies(s, u),
+                }
+            )
         profile = create_profile(
             s,
             {"id": users[0]["id"], "workspace": workspace, "role": "admin"},
@@ -128,6 +142,8 @@ with database_sessions().begin() as s:
             if ids
             else []
         )
+        if rules:
+            s.execute(delete(RuleCooldown).where(RuleCooldown.rule_id.in_(rules)))
         for model in (RuleSimulation, RuleVersion):
             if rules:
                 s.execute(
@@ -136,13 +152,30 @@ with database_sessions().begin() as s:
                     )
                 )
         if ids:
-            requests = list(s.scalars(select(ActionRequest.id).where(ActionRequest.workspace_id == workspace, ActionRequest.initiator_id.in_(ids))))
+            requests = list(
+                s.scalars(
+                    select(ActionRequest.id).where(
+                        ActionRequest.workspace_id == workspace,
+                        ActionRequest.initiator_id.in_(ids),
+                    )
+                )
+            )
             if requests:
                 for model in (ActionLog, ActionExecution):
                     s.execute(delete(model).where(model.request_id.in_(requests)))
                 s.execute(delete(ActionRequest).where(ActionRequest.id.in_(requests)))
-            s.execute(delete(ManualActionGrant).where(ManualActionGrant.workspace_id == workspace, ManualActionGrant.user_id.in_(ids)))
-            s.execute(delete(ManualGrantAudit).where(ManualGrantAudit.workspace_id == workspace, ManualGrantAudit.actor_id.in_(ids)))
+            s.execute(
+                delete(ManualActionGrant).where(
+                    ManualActionGrant.workspace_id == workspace,
+                    ManualActionGrant.user_id.in_(ids),
+                )
+            )
+            s.execute(
+                delete(ManualGrantAudit).where(
+                    ManualGrantAudit.workspace_id == workspace,
+                    ManualGrantAudit.actor_id.in_(ids),
+                )
+            )
             for model in (RuleAuditLog, EconomicsAuditLog):
                 s.execute(
                     delete(model).where(

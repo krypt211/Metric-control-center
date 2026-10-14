@@ -64,7 +64,7 @@ export default function RuleExpression({
                 </select>
               </label>
               {(c.type.startsWith("ROI_") ||
-                c.type === "CPS_ABOVE_LIMIT" ||
+                c.type.startsWith("CPS_") ||
                 c.type === "MINIMUM_SALES_GATE") && (
                 <label>
                   Источник метрики

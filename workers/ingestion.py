@@ -26,7 +26,7 @@ app.conf.update(
         "last-seven-days": {"task": "sync.insights", "schedule": crontab(hour=4, minute=7), "args": ["last7"], "options": {"expires": 82800}},
         "actions": {"task": "actions.process", "schedule": 15.0, "options": {"queue": "actions", "expires": 14}},
         "breakdowns": {"task": "sync.insights", "schedule": crontab(hour=4, minute=17), "args": ["breakdowns"], "options": {"expires": 82800}},
-        "rules": {"task": "rules.evaluate", "schedule": 1800.0, "options": {"expires": 1700}},
+        "smart-rules": {"task": "smart_rules.evaluate", "schedule": 1800.0, "options": {"expires": 1700}},
         "frequency": {"task": "sync.insights", "schedule": crontab(hour=4, minute=27), "args": ["frequency"], "options": {"expires": 82800}},
         "ai": {"task": "ai.process", "schedule": 15.0, "options": {"queue": "ai", "expires": 14}},
     },

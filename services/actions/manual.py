@@ -283,6 +283,20 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
         failures.append("REQUEST_EXPIRED")
     if m.get("rule_source"):
         source = m["rule_source"]
+        from services.automation.smart_simulation import check_preparation
+
+        sim = s.get(RuleSimulation, source.get("simulation_id"))
+        if not sim:
+            failures.append("RULE_SOURCE_CHANGED")
+        else:
+            try:
+                checked = check_preparation(
+                    s, row.workspace_id, sim, row.entity_id, row.action, now
+                )
+                if checked["decision_key"] != source.get("decision_key"):
+                    failures.append("RULE_DECISION_CHANGED_REEVALUATE")
+            except HTTPException as error:
+                failures.append(str(error.detail))
         if (
             source.get("ad_status") != m["expected_status"]
             or source.get("provider") != m["provider"]
@@ -314,6 +328,9 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
     now = engine.clock()
     try:
         with engine.sessions.begin() as s:
+            from services.economics.store import lock
+
+            lock(s, actor["workspace"])
             require_permission(s, actor)
             # One lock order for create/check/confirm: entity, then request.
             entity = s.scalar(
@@ -378,15 +395,45 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
                     for r in candidates
                     if r.get("account_id") == captured["canonical_account_id"]
                 ]
-                if (
-                    len(candidates) != 1
-                    or candidates[0]["status"] != "WOULD_PAUSE"
-                    or command.operation != "PAUSE_AD"
+                if len(candidates) != 1 or candidates[0]["status"] != (
+                    "WOULD_ENABLE"
+                    if command.operation == "ENABLE_AD"
+                    else "WOULD_PAUSE"
                 ):
                     raise HTTPException(422, "RULE_RECOMMENDATION_MISMATCH")
                 card = candidates[0]
+                from services.automation.smart_simulation import check_preparation
+
+                checked = check_preparation(
+                    s, actor["workspace"], sim, entity.id, command.operation, now
+                )
+                if (
+                    not card.get("decision_key")
+                    or checked["decision_key"] != card["decision_key"]
+                ):
+                    raise HTTPException(409, "RULE_DECISION_CHANGED_REEVALUATE")
+                existing = s.scalars(
+                    select(ActionRequest).where(
+                        ActionRequest.workspace_id == actor["workspace"],
+                        ActionRequest.entity_id == entity.id,
+                    )
+                ).all()
+                repeated = next(
+                    (
+                        r
+                        for r in existing
+                        if (r.provenance.get("rule_source") or {}).get("decision_key")
+                        == card["decision_key"]
+                    ),
+                    None,
+                )
+                if repeated:
+                    return action_json(s, repeated, now)
                 rule_source = {
                     "simulation_id": sim.id,
+                    "decision_key": card["decision_key"],
+                    "operation": command.operation,
+                    "cooldown_seconds": card.get("cooldown_seconds", 3600),
                     "rule_id": sim.rule_id,
                     "rule_revision": sim.revision,
                     "reasons": card.get("reason_codes", []),
@@ -442,6 +489,9 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
 def transition(engine, actor: dict, key: str, event: str, revision: int) -> dict:
     now = engine.clock()
     with engine.sessions.begin() as s:
+        from services.economics.store import lock
+
+        lock(s, actor["workspace"])
         require_permission(s, actor)
         found = s.scalar(
             select(ActionRequest.entity_id).where(

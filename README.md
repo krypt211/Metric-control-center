@@ -68,3 +68,5 @@ Meta controlled READ pilot preparation and the separate LIVE approval procedure:
 ## Core workflow audit
 
 [Full audit](docs/audit/PROJECT_FULL_AUDIT.md), [simplification](docs/audit/PROJECT_SIMPLIFICATION_REPORT.md), [Meta cleanup](docs/audit/META_DATABASE_CLEANUP.md), [Rule Engine acceptance](docs/audit/RULE_ENGINE_END_TO_END.md), and [remaining roadmap](docs/roadmap/FINAL_MCC_ROADMAP.md). Direct Meta is disconnected; the optional physical-request limiter is global at 1800 seconds. LIVE advertising WRITE remains blocked.
+
+Smart Rules core: [local acceptance](docs/audit/SMART_RULES_FINAL_ACCEPTANCE.md). PAUSE/ENABLE preparation, MCC notifications, profile timezone, conflict/cooldown guards and the PostgreSQL-only DRY RUN scheduler are locally tested. LIVE WRITE remains blocked.

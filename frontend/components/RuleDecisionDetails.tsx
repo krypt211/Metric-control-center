@@ -4,6 +4,7 @@ import { manualRead, manualWrite } from "../lib/manual-control";
 import { localized } from "../lib/economics";
 import {
   conditionNames,
+  writeRules,
   ruleLabel,
   thresholdNames,
   type Row,
@@ -57,7 +58,19 @@ export default function RuleDecisionDetails({
 }) {
   const [allowed, setAllowed] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [controlRevision, setControlRevision] = useState(Number(card.control_revision ?? 0));
+  useEffect(()=>{setControlRevision(Number(card.control_revision ?? 0));},[card]);
+  async function control(blocked: boolean, reenable: boolean) {
+    setBusy(true);setError("");
+    try {
+      const r=await writeRules<{control_revision:number}>(`/${card.rule_id}/ad-controls/${card.source_entity_id}`,"PUT",{
+        revision:card.rule_revision, control_revision:controlRevision, manual_blocked:blocked, reenable_allowed:reenable});
+      setControlRevision(r.control_revision);
+      setError("Настройка сохранена. Повторите DRY RUN для актуального решения.");
+    } catch(e){setError(e instanceof Error ? e.message : "Ошибка управления");}
+    finally {setBusy(false);}
+  }
   useEffect(() => {
     void manualRead<{ can_control: boolean }>("/settings")
       .then((s) => setAllowed(s.can_control))
@@ -83,11 +96,17 @@ export default function RuleDecisionDetails({
   }
   return (
     <article className="rule-details" aria-label="Объяснение решения">
-      {card.status === "WOULD_PAUSE" && simulationId && allowed && (
+      {["WOULD_PAUSE", "WOULD_ENABLE"].includes(String(card.status)) && simulationId && allowed && (
         <button disabled={busy} onClick={() => void prepare()}>
-          Подготовить отключение
+          {card.status === "WOULD_ENABLE" ? "Подготовить включение" : "Подготовить отключение"}
         </button>
       )}
+      {allowed && Boolean(card.source_entity_id) && <div>
+        <button disabled={busy} onClick={()=>void control(true, Boolean(card.reenable_allowed))}>Заблокировать действия на AD</button>
+        <button disabled={busy} onClick={()=>void control(false, Boolean(card.reenable_allowed))}>Снять ручную блокировку AD</button>
+        <button disabled={busy} onClick={()=>void control(Boolean(card.manual_blocked),true)}>Разрешить проверку повторного включения AD</button>
+        <button disabled={busy} onClick={()=>void control(Boolean(card.manual_blocked),false)}>Отозвать разрешение включения AD</button>
+      </div>}
       {error && <p role="alert">{error}</p>}
       <h3>
         {String(card.name)} ·{" "}

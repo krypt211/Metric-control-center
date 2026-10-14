@@ -12,4 +12,18 @@ def evaluate_rules():
         return {"status": "disabled_read_only"}
     # No HTTP connector or MetricFlow key is passed to this engine.
     return RuleEngine(ActionEngine(factory(), policy_from_environment())).evaluate_due(
-        os.environ.get("WORKSPACE_ID", "default"))
+        os.environ.get("WORKSPACE_ID", "default")
+    )
+
+
+@app.task(name="smart_rules.evaluate", ignore_result=True, expires=1700)
+def evaluate_smart_rules():
+    if (
+        os.environ.get("ACTIONS_ENABLED", "false") != "false"
+        or os.environ.get("LOCAL_READ_ONLY", "false") != "true"
+    ):
+        return {"status": "safety_held"}
+    from services.automation.smart_store import evaluate_due
+
+    with factory().begin() as session:
+        return evaluate_due(session, os.environ.get("WORKSPACE_ID", "default"))

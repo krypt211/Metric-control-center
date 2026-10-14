@@ -32,6 +32,7 @@ class Contract(BaseModel):
 
 class ProfileInput(Contract):
     name: str = Field(min_length=1, max_length=120)
+    timezone: str = Field(default="Europe/Moscow", min_length=1, max_length=64)
     offer: str = Field(default="", max_length=128)
     geo: str = Field(default="", pattern=r"^([A-Z]{2})?$")
     payout: Decimal = Field(ge=0, max_digits=24, decimal_places=8)
@@ -54,6 +55,12 @@ class ProfileInput(Contract):
 
     @model_validator(mode="after")
     def ordered_roi(self) -> ProfileInput:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(self.timezone)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Unknown profile timezone") from None
         if self.target_roi < self.minimum_roi:
             raise ValueError("Target ROI must be at least Minimum ROI")
         if not self.name.strip():

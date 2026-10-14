@@ -67,6 +67,7 @@ def profile_json(row: EconomicsProfile) -> dict[str, Any]:
         "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
         **row.payload,
+        "timezone": row.payload.get("timezone", "Europe/Moscow"),
     }
 
 

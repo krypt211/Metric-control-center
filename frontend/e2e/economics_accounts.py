@@ -39,7 +39,7 @@ if (
 workspace = os.environ.get("WORKSPACE_ID", "default")
 logins = [f"economics-ui-{nonce}-{i}@local.test" for i in range(3)]
 with database_sessions().begin() as s:
-    if s.scalar(text("SELECT version_num FROM alembic_version")) not in ("0010_economics", "0012_manual_actions", "0013_integrations", "0014_meta_jobs", "0015_meta_pilot"):
+    if s.scalar(text("SELECT version_num FROM alembic_version")) not in ("0010_economics", "0012_manual_actions", "0013_integrations", "0014_meta_jobs", "0015_meta_pilot", "0016_smart_control"):
         raise RuntimeError("ECONOMICS_MIGRATION_REQUIRED")
     if os.environ["UI_FIXTURE_MODE"] == "create":
         password = secrets.token_urlsafe(24)

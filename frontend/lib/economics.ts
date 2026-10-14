@@ -9,6 +9,7 @@ export type Profile = {
   offer: string;
   geo: string;
   payout: string;
+  timezone?: string;
   currency: string;
   target_roi: string;
   minimum_roi: string;
@@ -29,6 +30,7 @@ export const emptyProfile: Profile = {
   offer: "",
   geo: "",
   payout: "30",
+  timezone: "Europe/Moscow",
   currency: "USD",
   target_roi: "100",
   minimum_roi: "0",

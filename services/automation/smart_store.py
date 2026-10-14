@@ -44,7 +44,12 @@ def rule_json(row: Rule) -> dict[str, Any]:
         "deleted": row.status == "SMART_ARCHIVED",
         "created_at": row.created_at.isoformat(),
         "updated_by": row.owner_id,
-        "definition": row.payload,
+        "definition": SmartRuleInput.model_validate(row.payload).model_dump(
+            mode="json"
+        ),
+        "next_evaluation_at": row.next_evaluation_at.isoformat()
+        if row.next_evaluation_at
+        else None,
     }
 
 
@@ -151,7 +156,7 @@ def save(
     row.payload = config.model_dump(mode="json")
     row.owner_id = actor["id"]
     row.status = "SMART_ARCHIVED" if deleted else "SMART_DRY_RUN"
-    row.next_evaluation_at = None
+    row.next_evaluation_at = utcnow() if config.enabled and not deleted else None
     s.flush()
     result = {**rule_json(row), "updated_at": utcnow().isoformat()}
     s.add(
@@ -291,3 +296,160 @@ def change_targets(s: Session, actor: dict, key: str, body) -> dict:
         },
     )
     return result
+
+
+def ad_control(
+    s: Session,
+    actor: dict,
+    key: str,
+    entity_id: str,
+    revision: int,
+    control_revision: int,
+    manual_blocked: bool,
+    reenable_allowed: bool,
+) -> dict:
+    """Explicit user controls reuse manual-action RBAC and the workspace lock."""
+    from services.actions.manual import require_permission
+    from services.storage.models import RuleCooldown
+
+    lock(s, actor["workspace"])
+    require_editor(s, actor)
+    require_permission(s, actor)
+    rule = get_rule(s, actor["workspace"], key)
+    if rule.revision != revision:
+        raise HTTPException(409, "RULE_VERSION_CONFLICT")
+    entity = s.scalar(
+        select(Entity)
+        .join(AdAccount)
+        .where(
+            Entity.id == entity_id,
+            Entity.kind == "ad",
+            AdAccount.workspace_id == actor["workspace"],
+        )
+    )
+    if not entity:
+        raise HTTPException(404, "AD_NOT_FOUND")
+    row = s.get(RuleCooldown, (key, entity_id))
+    old = dict(row.smart_state or {}) if row else {}
+    if old.get("control_revision", 0) != control_revision:
+        raise HTTPException(409, "AD_CONTROL_VERSION_CONFLICT")
+    if not row:
+        row = RuleCooldown(
+            rule_id=key, entity_id=entity_id, last_queued_at=utcnow(), smart_state={}
+        )
+        s.add(row)
+    if not manual_blocked:
+        for state in s.scalars(
+            select(RuleCooldown)
+            .join(Rule, Rule.id == RuleCooldown.rule_id)
+            .where(
+                Rule.workspace_id == actor["workspace"],
+                RuleCooldown.entity_id == entity_id,
+            )
+        ):
+            if state.rule_id != key and (state.smart_state or {}).get("manual_blocked"):
+                payload = dict(state.smart_state)
+                payload.update(
+                    manual_blocked=False,
+                    control_revision=payload.get("control_revision", 0) + 1,
+                    control_actor=actor["id"],
+                    control_at=utcnow().isoformat(),
+                )
+                state.smart_state = payload
+                audit(
+                    s,
+                    actor,
+                    state.rule_id,
+                    "AD_CONTROL",
+                    {"entity_id": entity_id, "after": payload},
+                )
+    row.smart_state = {
+        **old,
+        "control_revision": control_revision + 1,
+        "manual_blocked": manual_blocked,
+        "reenable_allowed": reenable_allowed,
+        "control_actor": actor["id"],
+        "control_at": utcnow().isoformat(),
+    }
+    audit(
+        s,
+        actor,
+        key,
+        "AD_CONTROL",
+        {"entity_id": entity_id, "before": old, "after": row.smart_state},
+    )
+    return row.smart_state
+
+
+def evaluate_due(s: Session, workspace: str, *, now=None) -> dict:
+    """Bounded DB-only Smart Rules evaluation, one durable due state and workspace lock."""
+    import hashlib
+    from datetime import timedelta
+    from time import monotonic
+
+    from sqlalchemy import text
+
+    from services.automation.smart_simulation import simulate
+    from services.sync.engine import aware
+
+    now = now or utcnow()
+    if s.bind.dialect.name == "postgresql":
+        key = int.from_bytes(
+            hashlib.sha256(("economics:" + workspace).encode()).digest()[:8],
+            "big",
+            signed=True,
+        )
+        if not s.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key}):
+            return {"status": "overlap_held", "evaluated": 0}
+    else:
+        lock(s, workspace)
+    rules = s.scalars(
+        select(Rule)
+        .where(Rule.workspace_id == workspace, Rule.status == "SMART_DRY_RUN")
+        .order_by(Rule.id)
+        .limit(200)
+    ).all()
+    evaluated = 0
+    started = monotonic()
+    for rule in rules:
+        config = SmartRuleInput.model_validate(rule.payload)
+        if not config.enabled or (
+            rule.next_evaluation_at and aware(rule.next_evaluation_at) > now
+        ):
+            continue
+        if monotonic() - started > 60:
+            break
+        user = s.get(User, rule.owner_id)
+        actor = {
+            "id": rule.owner_id or "scheduler",
+            "workspace": workspace,
+            "role": user.role if user else "viewer",
+        }
+        rule.next_evaluation_at = now + timedelta(minutes=30)
+        if (
+            not user
+            or not user.is_active
+            or user.workspace_id != workspace
+            or not editor(s, actor)
+        ):
+            audit(
+                s,
+                actor,
+                rule.id,
+                "SCHEDULE_HELD",
+                {"reason": "RULE_OWNER_PERMISSION_REQUIRED"},
+            )
+            continue
+        try:
+            with s.begin_nested():
+                simulate(s, actor, rule.id, rule.revision, now=now)
+            evaluated += 1
+        except HTTPException as error:
+            audit(
+                s,
+                actor,
+                rule.id,
+                "SCHEDULE_HELD",
+                {"reason": str(error.detail)[:120], "mode": "DRY_RUN"},
+            )
+    return {"status": "dry_run", "evaluated": evaluated, "advertising_write": 0}
