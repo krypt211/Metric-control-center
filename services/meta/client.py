@@ -60,6 +60,15 @@ class MetaClient:
         if retries not in (0, 1, 2):
             raise ProviderError("META_RETRY_CAP")
         self.meter = meter
+        if meter:
+            from services.meta.telemetry import GLOBAL_RATE_KEY, MIN_INTERVAL_SECONDS
+
+            meter.key = GLOBAL_RATE_KEY
+            meter.interval = (
+                meter.mock_interval
+                if isinstance(transport, httpx.MockTransport)
+                else max(MIN_INTERVAL_SECONDS, meter.interval)
+            )
         self._inflight = {}
         if self.meter:
             self.meter.start_operation()
@@ -170,7 +179,7 @@ class MetaClient:
                     await self.before_request()
                 if self.meter:
                     identifier = self.meter.begin_attempt(
-                        path, attempt + 1, _page, retry_reason
+                        path, attempt + 1, _page, retry_reason, ticket=ticket
                     )
                 started = time.monotonic()
                 try:

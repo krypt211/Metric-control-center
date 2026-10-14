@@ -191,7 +191,7 @@ def meta_estimate(body: EstimateInput, request: Request):
 
 
 class PacingInput(BaseModel):
-    request_interval_seconds: int = Field(ge=10, le=600)
+    request_interval_seconds: Literal[1800] = 1800
     account_ids: list[str] | None = Field(default=None, max_length=3)
 
 
@@ -204,8 +204,7 @@ def meta_pacing(body: PacingInput, request: Request):
         if not row:
             raise HTTPException(404, "PROVIDER_NOT_FOUND")
         settings = {
-            **row.config,
-            "request_interval_seconds": body.request_interval_seconds,
+            k: v for k, v in row.config.items() if k != "request_interval_seconds"
         }
         if body.account_ids is not None:
             for key in body.account_ids:

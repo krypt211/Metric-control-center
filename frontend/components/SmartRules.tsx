@@ -615,7 +615,7 @@ export default function SmartRules() {
           </>
         )}
       </section>
-      <section aria-label="История проверок">
+      <section id="history" aria-label="История проверок">
         <h2>История проверок</h2>
         {history && (
           <>

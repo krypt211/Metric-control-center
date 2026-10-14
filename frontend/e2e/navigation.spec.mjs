@@ -28,23 +28,23 @@ test("desktop navigation, settings keyboard order, Escape, Tab and outside click
   await page.setViewportSize({ width: 1440, height: 1000 });
   await signIn(page, accounts.users[0]);
   await expect(page.locator(".app-navigation")).toHaveCount(1);
-  await expect(primary(page).getByRole("link")).toHaveText(["Обзор", "Статистика", "Экономика", "Правила", "Управление", "Рекомендации", "Креативы", "Трекер"]);
+  await expect(primary(page).getByRole("link")).toHaveText(["Обзор", "Объявления", "Правила", "История"]);
   await expect(primary(page).getByRole("link", { name: "Обзор", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(primary(page).getByRole("link", { name: "API и подключения" })).toHaveCount(0);
   const button = page.getByRole("button", { name: "Настройки", exact: true });
   await button.focus(); await page.keyboard.press("ArrowDown");
-  await expect(popup(page).getByRole("link", { name: "Колонки и наборы" })).toBeFocused();
+  await expect(popup(page).getByRole("link", { name: "Экономика" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
-  await expect(popup(page).getByRole("link", { name: "Экономические профили" })).toBeFocused();
+  await expect(popup(page).getByRole("link", { name: "Креативы" })).toBeFocused();
   await page.keyboard.press("End");
   await expect(popup(page).getByRole("link", { name: "Администрирование", exact: true })).toBeFocused();
   await page.keyboard.press("Home");
-  await expect(popup(page).getByRole("link", { name: "Колонки и наборы" })).toBeFocused();
+  await expect(popup(page).getByRole("link", { name: "Экономика" })).toBeFocused();
   expect(await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle)).not.toBe("none");
   await page.keyboard.press("Escape"); await expect(button).toBeFocused();
   await expect(button).toHaveAttribute("aria-expanded", "false");
   await settings(page); await page.keyboard.press("Tab");
-  await expect(popup(page).getByRole("link", { name: "Колонки и наборы" })).toBeFocused();
+  await expect(popup(page).getByRole("link", { name: "Экономика" })).toBeFocused();
   await page.getByRole("heading", { name: "Сегодня", exact: true }).click();
   await expect(popup(page)).toHaveCount(0); await noOverflow(page);
 });
@@ -105,7 +105,7 @@ test("column settings retain statistics context and saved sets", async ({ page, 
   await expect(page.getByRole("dialog")).toBeVisible(); expect(page.url()).toBe(originalUrl);
   await page.getByRole("button", { name: "Закрыть настройку колонок" }).click();
   await expect(period).toHaveValue("7"); await expect(page.getByLabel("Набор колонок")).toHaveValue(preset);
-  await expect(primary(page).getByRole("link", { name: "Статистика", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(primary(page).getByRole("link", { name: "Объявления", exact: true })).toHaveAttribute("aria-current", "page");
   await page.goto("/?tab=statistics&columns=1&context=kept");
   await expect(page.getByRole("dialog")).toBeVisible();
   expect(new URL(page.url()).searchParams.get("context")).toBe("kept");
@@ -130,9 +130,9 @@ test("economic profile deep link, back/forward and tab switch preserve period", 
 test("existing rule, recommendations, manual control and connections remain reachable", async ({ page, accounts }) => {
   await signIn(page, accounts.users[0]);
   for (const [label, heading] of [["Правила", "Правила рекламы"], ["Рекомендации", "Центр рекомендаций"], ["Управление", "Управление рекламой"]]) {
-    await primary(page).getByRole("link", { name: label, exact: true }).click();
+    if (label === "Правила") await primary(page).getByRole("link", { name: label, exact: true }).click();
+    else { await settings(page); await popup(page).getByRole("link", { name: label, exact: true }).click(); }
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-    await expect(primary(page).getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
   }
   await settings(page); await popup(page).getByRole("link", { name: "Безопасность действий", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Настройки управления рекламой", exact: true })).toBeVisible();

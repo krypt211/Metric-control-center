@@ -1,13 +1,12 @@
 """Durable READ jobs with independent provider quotas and revision fencing."""
 import asyncio,os
-from datetime import timedelta,datetime
-from zoneinfo import ZoneInfo
+from datetime import timedelta
 from sqlalchemy import select,update
-from workers.ingestion import app,factory,window
-from services.providers.manager import ProviderManager,ensure
+from workers.ingestion import app,factory
+from services.providers.manager import ProviderManager
 from services.providers.contracts import ProviderError
 from services.meta.pilot import enabled as pilot_mode
-from services.providers.models import ProviderConnection,ProviderJob
+from services.providers.models import ProviderJob
 from services.providers.sync import MetaSync,metricflow_sync
 from services.sync.engine import utc_now
 def manager():return ProviderManager(factory(),os.environ.get("WORKSPACE_ID","default"))
@@ -16,20 +15,7 @@ def enabled():
 @app.task(name="providers.meta",ignore_result=True,bind=True)
 def meta_sync(self,job="today"):
     if not enabled():return {"status":"disabled"}
-    if pilot_mode():return {"status":"pilot_scheduler_held"}
-    m=manager()
-    with m.factory.begin() as s:
-        ensure(s,m.workspace)
-        if not s.get(ProviderConnection,(m.workspace,"meta")).enabled:return {"status":"disabled"}
-    deadline=datetime.fromisoformat(self.request.expires) if isinstance(self.request.expires,str) else self.request.expires
-    published=deadline-timedelta(seconds={"today":540,"yesterday":3300,"last7":82800}[job]) if deadline else utc_now()
-    day=published.astimezone(ZoneInfo(os.environ.get("SYNC_TIMEZONE","Europe/Moscow"))).date()
-    before,after={"today":(1,1),"yesterday":(2,0),"last7":(7,1)}[job]
-    start,end=day-timedelta(days=before),day+timedelta(days=after)
-    from services.meta.jobs import enqueue
-    with m.factory.begin() as s:
-        queued,created=enqueue(s,m.workspace,job,start,end,published_at=published,message_deadline=deadline)
-    return {"status":"queued" if created else "deduplicated","job_id":queued.id}
+    return {"status":"meta_scheduler_disabled"}
 
 @app.task(name="providers.job",ignore_result=True)
 def run_job(job_id):

@@ -34,6 +34,10 @@ class ProviderManager:
                 if not self.pilot_id:raise ProviderError("META_PILOT_STANDARD_READ_HELD")
                 with self.factory() as s:guard(s,self.workspace,self.pilot_id)
             if self.job_guard:self.job_guard()
+        if provider=="meta" and not self.pilot_id:
+            with self.factory() as s:
+                connection=s.get(ProviderConnection,(self.workspace,provider))
+                if not connection or not connection.enabled:raise ProviderError("PROVIDER_DISABLED")
         now=utc_now();limit=int(os.environ.get("SYNC_DAILY_BUDGET" if provider=="metricflow" else "META_DAILY_BUDGET","800" if provider=="metricflow" else "5000"))
         with self.factory.begin() as s:
             if s.scalar(select(ApiQuota).where(ApiQuota.workspace_id==self.workspace,ApiQuota.provider==provider,ApiQuota.blocked_until>now).limit(1)):raise ProviderError("PROVIDER_QUOTA_BLOCKED")
@@ -63,14 +67,14 @@ class ProviderManager:
             from services.meta.telemetry import MetaRequestMeter
             meter=MetaRequestMeter(self.factory,self.workspace,data["app_id"],run_id=run_id,
                 operation=operation,source=source,
-                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else max(10,float(c.config.get("request_interval_seconds",10))),pilot_id=self.pilot_id)
+                interval=0 if isinstance(self.transports.get(provider),__import__("httpx").MockTransport) else 1800,pilot_id=self.pilot_id)
             return MetaMarketingProvider(data,meter=meter,**kwargs)
         from services.providers.metricflow import MetricFlowProvider
         schema=InsightSchema.load(os.environ.get("METRICFLOW_SCHEMA_FILE","/config/metricflow-schema.json"))
         return MetricFlowProvider(data,schema=schema,**kwargs)
     def failure(self,provider,error,revision=None):
         code=getattr(error,"code",type(error).__name__)
-        if code not in {"META_TOKEN_INVALID","META_TOKEN_EXPIRED","META_ADS_READ_REQUIRED","META_PERMISSION_DENIED","META_SYNC_ACCOUNT_SELECTION_REQUIRED","META_REQUEST_QUEUE_TIMEOUT","META_RATE_LIMIT","META_TIMEOUT","META_UNAVAILABLE","PROVIDER_DISABLED","META_NOT_CONNECTED","CREDENTIAL_UNAVAILABLE","PROVIDER_QUOTA_BLOCKED","PROVIDER_QUOTA_EXHAUSTED","AuthenticationError","PermissionDenied","RateLimitExceeded","QuotaExhausted","SchemaError"}:code="PROVIDER_READ_FAILED"
+        if code not in {"META_TOKEN_INVALID","META_TOKEN_EXPIRED","META_ADS_READ_REQUIRED","META_PERMISSION_DENIED","META_SYNC_ACCOUNT_SELECTION_REQUIRED","META_REQUEST_QUEUE_TIMEOUT","META_PACING_WAIT","META_REQUEST_LEASE_LOST","META_RATE_LIMIT","META_TIMEOUT","META_UNAVAILABLE","PROVIDER_DISABLED","META_NOT_CONNECTED","CREDENTIAL_UNAVAILABLE","PROVIDER_QUOTA_BLOCKED","PROVIDER_QUOTA_EXHAUSTED","AuthenticationError","PermissionDenied","RateLimitExceeded","QuotaExhausted","SchemaError"}:code="PROVIDER_READ_FAILED"
         now=utc_now()
         with self.factory.begin() as s:
             c=s.get(ProviderConnection,(self.workspace,provider))

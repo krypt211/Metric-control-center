@@ -10,7 +10,7 @@ const n=(v:number|null)=>v===null?"Нет измерений":String(v);
 export default function MetaApiUsage(){
  const [usage,setUsage]=useState<Usage|null>(null),[error,setError]=useState(""),[tab,setTab]=useState("usage"),[logs,setLogs]=useState<Log[]>([]),[total,setTotal]=useState(0),[offset,setOffset]=useState(0);
  const [period,setPeriod]=useState("today");
- const [accounts,setAccounts]=useState(1),[days,setDays]=useState(1),[estimate,setEstimate]=useState<Estimate|null>(null),[interval,setInterval]=useState(10);
+ const [accounts,setAccounts]=useState(1),[days,setDays]=useState(1),[estimate,setEstimate]=useState<Estimate|null>(null),[interval,setInterval]=useState(1800);
  const [account,setAccount]=useState(""),[endpoint,setEndpoint]=useState(""),[code,setCode]=useState(""),[run,setRun]=useState(""),[start,setStart]=useState(""),[end,setEnd]=useState("");
  const [selected,setSelected]=useState<string[]>([]);
  const [busy,setBusy]=useState(false);
@@ -38,10 +38,10 @@ export default function MetaApiUsage(){
  <dt>Последняя операция</dt><dd>{usage.last_operation?usage.last_operation.kind+" · HTTP "+usage.last_operation.requests:"Нет измерений"}</dd><dt>Последний rate-limit incident</dt><dd>{usage.last_incident?usage.last_incident.at+" · "+usage.last_incident.endpoint+" · code "+usage.last_incident.code:"Не измерен"}</dd></dl>
  <p>Покрытие: {usage.coverage_since??"счётчик ещё не записал попыток"}. Исторические счётчики до установки meter не являются точной HTTP telemetry.</p>
  <ul>{Object.entries(usage.per_account).map(([id,count])=><li key={id}>{id}: {count} HTTP attempts за сутки</li>)}</ul>
- <p>Локальные ограничения: один запрос на приложение и аккаунт; до 2 retries; страница 100. Это локальная политика, не гарантированная квота Meta.</p>
+ <p>Локальные ограничения: один физический запрос на всё приложение каждые 1800 секунд; до 2 retries; страница 100. Это локальная политика, не гарантированная квота Meta.</p>
  <SearchableSelect label="Аккаунты Meta для синхронизации (до 3)" multiple value={selected} options={usage.available_accounts} onChange={v=>{const ids=v as string[];if(ids.length>3){setError("Выберите до трёх аккаунтов.");return;}setSelected(ids);}}/><p>До первого запуска выберите область. Более трёх аккаунтов за run не синхронизируются.</p>
- <label>Минимальный интервал запросов, секунд<input type="number" value={interval} min={10} max={600} onChange={e=>setInterval(Number(e.target.value))}/></label><button disabled={busy} onClick={()=>void pacing()}>Сохранить локальный интервал</button>
- <p>Scheduler: today каждые 10 минут, yesterday каждый час, 7 дней раз в сутки. Изменение интервала не включает Meta LIVE.</p>
+ <p>Минимальный интервал: {interval} секунд. Общий для всего приложения; уменьшить его нельзя.</p><button disabled={busy} onClick={()=>void pacing()}>Сохранить выбранные аккаунты</button>
+ <p>Плановые Meta jobs отключены. Полная синхронизация требует нескольких HTTP-запросов и отдельной подготовки возобновляемого чтения.</p>
  </>}
 
  {usage&&tab==="usage"&&<section aria-label="Очередь Meta READ"><h4>Очередь Meta READ</h4>{usage.queue&&<>

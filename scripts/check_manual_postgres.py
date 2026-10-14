@@ -29,7 +29,7 @@ from services.sync.engine import utc_now
 
 
 def run() -> dict:
-    if not os.environ.get("POSTGRES_DB", "").startswith("mcc_phase4_"):
+    if not os.environ.get("POSTGRES_DB", "").startswith(("mcc_phase4_", "mcc_integrations_")):
         raise RuntimeError("ISOLATED_RESTORE_REQUIRED")
     db = make_engine()
     factory = sessions(db)

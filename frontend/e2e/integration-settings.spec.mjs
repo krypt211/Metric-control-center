@@ -41,7 +41,7 @@ test("independent encrypted WRITE save, scope check, replace, refresh and delete
  expect(errors).toEqual([]);expect(advertising).toEqual([]);
 });
 test("Meta measured mock usage, durable cooldown, request log and network-free estimate",async({page})=>{
- await login(page);const meta=page.getByRole("region",{name:"Использование Meta API",exact:true});
+ await login(page);await page.getByText("Техническая диагностика Meta (ADMIN)",{exact:true}).click();const meta=page.getByRole("region",{name:"Использование Meta API",exact:true});
  await expect(meta).toContainText("Meta API не подключён");await expect(meta).toContainText("99%");await expect(meta).toContainText("80004");
  const response=await page.request.get("/api/admin/providers/meta/usage");const usage=await response.json();expect(usage.day).toBe(2);expect(usage.incidents).toBe(1);expect(usage.cooldown_until).toBeTruthy();
  await meta.getByRole("button",{name:"Журнал запросов",exact:true}).click();await expect(meta.locator("tbody tr")).toHaveCount(2);
@@ -58,7 +58,7 @@ test("VIEWER and OPERATOR cannot provision or reveal the credential",async({page
 });
 
 test("Meta queue monitoring and confirmed pending cancellation send no HTTP",async({page})=>{
- await login(page);const q=page.getByRole("region",{name:"Очередь Meta READ",exact:true});
+ await login(page);await page.getByText("Техническая диагностика Meta (ADMIN)",{exact:true}).click();const q=page.getByRole("region",{name:"Очередь Meta READ",exact:true});
  await expect(q).toContainText("JOB_TTL_EXPIRED");await expect(q).toContainText("META_RATE_LIMIT");
  const before=await(await page.request.get("/api/admin/providers/meta/usage")).json();expect(before.queue.pending).toBe(1);
  await q.getByRole("button",{name:"Отменить READ-задачу",exact:true}).click();await expect(q.getByRole("button",{name:"Отменить READ-задачу",exact:true})).toHaveCount(0);
@@ -69,37 +69,13 @@ for(const width of [1440,1024,768,390])test("responsive connections "+width,asyn
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();await page.screenshot({path:"test-results/integrations-"+width+".png",fullPage:true});
 });
 
-test("controlled READ pilot preparation stays offline, bounded and cancellable",async({page})=>{
+test("retired pilot has no active UI or automatic Meta request",async({page})=>{
  await login(page);
  const prior=inspect();
- const panel=page.getByRole("region",{name:"Тестовое READ-подключение",exact:true});
- await expect(panel).toContainText("Сохранённая конфигурация не разрешает тест");
- await expect(panel).toContainText("периодическая Meta sync остановлена");
- await panel.getByLabel("Кабинет пилота (act_ID)",{exact:true}).fill("act_100");
- const day=new Date(Date.now()-86400000).toISOString().slice(0,10);
- await panel.getByLabel("Пилот: начало периода",{exact:true}).fill(day);
- await panel.getByLabel("Пилот: конец периода",{exact:true}).fill(day);
- await panel.getByRole("button",{name:"Сохранить подготовку READ-теста",exact:true}).click();
- await expect(panel).toContainText("PREPARED");
- await expect(panel).toContainText("0 / 20");
- const status=await (await page.request.get("/api/admin/providers/meta/pilot")).json();
- const csrf=await (await page.request.get("/api/auth/csrf")).json();
- const forbidden=await page.request.post("/api/admin/providers/meta/pilot/"+status.session.id+"/start",{
-  headers:{"Origin":"http://127.0.0.1:3001","X-CSRF-Token":csrf.csrf_token},data:{}});
- expect(forbidden.status()).toBe(409);
- expect((await forbidden.json()).detail).toBe("META_PILOT_APPROVAL_REQUIRED");
- execFileSync(docker,["compose","-f",path.join(root,".tools/integrations-acceptance.yml"),"restart","backend"],{stdio:"pipe"});
- await expect.poll(async()=> (await page.request.get("/api/admin/providers/meta/pilot")).status()).toBe(200);
- await page.reload();
- await expect(panel).toContainText("PREPARED");
- for(const width of [1440,1024,768,390]){
-  await page.setViewportSize({width,height:900});
-  await panel.scrollIntoViewIfNeeded();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBeTruthy();
-  await panel.screenshot({path:"test-results/meta-pilot-panel-"+width+".png"});
- }
- await panel.getByRole("button",{name:"Отменить READ-тест",exact:true}).click();
- await expect(panel).toContainText("CANCELLED");
+ await expect(page.getByRole("region",{name:"Тестовое READ-подключение",exact:true})).toHaveCount(0);
+ await expect(page.locator("body")).toContainText("30 минут");
+ await page.getByText("Техническая диагностика Meta (ADMIN)",{exact:true}).click();
+ await expect(page.getByRole("region",{name:"Использование Meta API",exact:true})).toBeVisible();
  expect(inspect().meta_attempts).toBe(prior.meta_attempts);
  expect(inspect().action_executions).toBe(prior.action_executions);
 });

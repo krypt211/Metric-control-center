@@ -1,5 +1,4 @@
 "use client";
-import MetaReadPilot from "../../../components/MetaReadPilot";
 import MetricFlowWriteSettings from "../../../components/MetricFlowWriteSettings";
 import MetaApiUsage from "../../../components/MetaApiUsage";
 import SearchableSelect from "../../../components/SearchableSelect";
@@ -76,14 +75,13 @@ export default function ConnectionsPage(){
  </dl>{c.error_code&&<p className="notice error">{errors[c.error_code]??"READ-проверка не прошла: "+c.error_code}</p>}
  <div className="filterbar"><button disabled={!c.enabled||busy||running} onClick={()=>void attempt("/"+c.provider+"/check","POST")}>Проверить соединение</button>
  <button disabled={!c.enabled||busy||running||!start||!end} onClick={()=>void attempt("/"+c.provider+"/sync","POST",{start,end})}>Синхронизировать выбранный период</button>
- <button disabled={!c.routing_ready||busy} onClick={()=>void attempt("/routing","PUT",{scope:"workspace",primary_provider:c.provider,fallback_provider:null,action_provider:"disabled"})}>Выбрать основным</button>
  <button disabled={!c.enabled||busy} onClick={()=>{const another=data.connections.some(x=>x.provider!==c.provider&&x.enabled&&x.status==="healthy");if(window.confirm(another?"Отключить "+names[c.provider]+"? Снимок статистики сохранится.":"Это последний рабочий источник. Новая статистика перестанет поступать, панель покажет STALE. Отключить?"))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:!another,forget_credentials:false});}}>Отключить</button>
  <button disabled={c.enabled||busy} onClick={()=>{if(window.confirm("Удалить сохранённые credentials этого отключённого подключения? Для полного отзыва токена используйте настройки Meta / MetricFlow."))void attempt("/"+c.provider+"/disconnect","POST",{acknowledge_last_source:true,forget_credentials:true});}}>Удалить сохранённые credentials</button></div>
- {c.provider==="metricflow"?<MetricFlowWriteSettings/>:<><MetaReadPilot/><MetaApiUsage/></>}
+ {c.provider==="metricflow"?<MetricFlowWriteSettings/>:<><p>Глобальный минимум: один HTTP-запрос за 30 минут для всех аккаунтов. Автоматическая синхронизация отключена.</p><details><summary>Техническая диагностика Meta (ADMIN)</summary><MetaApiUsage/></details></>}
  <details><summary>Подключить или обновить credentials</summary><CredentialForm provider={c.provider} enabled={data.credentials_ui_enabled&&!busy} onSave={body=>mutate("/"+c.provider+"/credentials","POST",body)}/></details>
 
  </section>;})}</div>
- <ProviderCapabilities connections={data.connections}/>
+ <details><summary>Расширенная диагностика и маршрутизация (ADMIN)</summary><ProviderCapabilities connections={data.connections}/>
  <section className="group"><h2>Источники статистики и маршрутизация по аккаунтам</h2><p>Резерв применяется только к подтверждённому аккаунту при совпадении валюты, часового пояса, атрибуции и полноты периода. При несовместимости сохраняется снимок с пометкой STALE.</p>
  <label>Настройка для<SearchableSelect label="Настройка для" value={scope} options={[{id:"workspace",name:"Все аккаунты · общие настройки"},...Array.from(new Map(data.mappings.map(m=>[m.canonical_id,m])).values()).map(m=>({id:m.canonical_id,name:(m.name??m.provider_account_id)+" · "+(m.meta_account_id??"не сопоставлен")}))]} onChange={v=>setScope(v as string)}/></label>
  <RoutingForm key={scope} data={data} scope={scope} onSave={r=>attempt("/routing","PUT",r)} onReset={scope!=="workspace"?()=>attempt("/routing/"+scope,"DELETE"):undefined}/>
@@ -97,5 +95,5 @@ export default function ConnectionsPage(){
  </section>
  <section className="group"><h2>READ-задания</h2><div className="tablewrap"><table><thead><tr><th>Источник</th><th>Задание</th><th>Период</th><th>Статус</th><th>Ошибка</th></tr></thead><tbody>{data.jobs.map(j=><tr key={j.id}><td>{names[j.provider as Provider]??"Неизвестный источник"}</td><td>{j.kind==="health"?"Проверка подключения":"Синхронизация"}</td><td>{j.start} — {j.end}</td><td>{{queued:"В очереди",running:"Выполняется",succeeded:"Успешно",failed:"Ошибка",partial:"Частично",skipped_overlap:"Уже выполняется",skipped_quota:"Лимит запросов",disabled:"Отключено"}[j.status]??"Неизвестно"}</td><td>{errors[j.error_code??""]??j.error_code??"—"}</td></tr>)}</tbody></table></div></section>
  <section className="group"><h2>История переключений</h2><div className="tablewrap"><table><thead><tr><th>Дата</th><th>Аккаунт</th><th>Из</th><th>В</th><th>Причина</th></tr></thead><tbody>{data.events.map((e,i)=><tr key={i}><td>{when(e.at)}</td><td>{e.canonical_id}</td><td>{e.from??"—"}</td><td>{e.to??"—"}</td><td>{e.reason}</td></tr>)}</tbody></table></div></section>
- </>}</main>;
+ </details></>}</main>;
 }

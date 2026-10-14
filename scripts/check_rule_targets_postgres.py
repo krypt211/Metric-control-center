@@ -20,7 +20,7 @@ from services.storage.models import Ad, AdAccount, AdSet, Campaign, Entity, Rule
 
 
 def run() -> dict:
-    if not database_url().database.startswith("mcc_phase4_") or (
+    if not database_url().database.startswith(("mcc_phase4_", "mcc_integrations_")) or (
         os.environ.get("LOCAL_READ_ONLY") != "true"
         or os.environ.get("ACTIONS_ENABLED") != "false"
         or os.environ.get("APP_ENV") == "production"
@@ -35,7 +35,7 @@ def run() -> dict:
         with factory.begin() as s:
             assert (
                 s.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0012_manual_actions"
+                in ("0012_manual_actions", "0015_meta_pilot")
             )
             user = new_user(
                 s,

@@ -31,15 +31,20 @@ def child():
         pilot_id=os.environ["META_PILOT_AUTHORIZED_SESSION_ID"],
         interval=0,
     )
+    meter.interval = 0  # Isolated schema, no HTTP transport.
     reserved = denied = 0
     for _ in range(4):
+        import asyncio
+        ticket = asyncio.run(meter.acquire())
         try:
-            meter.begin_attempt("debug_token", 1, 1, None)
+            meter.begin_attempt("debug_token", 1, 1, None, ticket=ticket)
             reserved += 1
         except ProviderError as error:
             if error.code != "META_PILOT_ATTEMPT_LIMIT":
                 raise
             denied += 1
+        finally:
+            meter.release(ticket)
     print(json.dumps({"reserved": reserved, "denied": denied}))
 
 

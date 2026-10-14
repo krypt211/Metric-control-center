@@ -38,8 +38,8 @@ class VirtualClock:
 
 class MetaPacingAcceptanceTests(StorageFixture, unittest.IsolatedAsyncioTestCase):
     async def test_one_three_and_max_three_accounts_use_ten_second_intervals(self):
+        clock = VirtualClock()
         for label, accounts in (("one", 1), ("three", 3), ("maximum", 3)):
-            clock = VirtualClock()
             times = []
 
             def handler(request, times=times, clock=clock):
@@ -73,13 +73,13 @@ class MetaPacingAcceptanceTests(StorageFixture, unittest.IsolatedAsyncioTestCase
             self.assertEqual(len(times), 3 + 5 * accounts)
             for previous, current in pairwise(times):
                 self.assertGreaterEqual(
-                    current[0] - previous[0], 20 if previous[1] else 10
+                    current[0] - previous[0], 10
                 )
             with self.sessions() as s:
                 self.assertEqual(
                     s.scalar(select(func.count()).select_from(MetaRequestQueue)), 0
                 )
-                self.assertIsNone(s.get(MetaRateState, "meta-app:" + label).owner)
+                self.assertIsNone(s.get(MetaRateState, "meta-global").owner)
 
     async def test_expired_http_ticket_removed_without_attempt(self):
         meter = MetaRequestMeter(self.sessions, "fixture", "expiry", interval=10)

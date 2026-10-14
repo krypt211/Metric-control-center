@@ -307,14 +307,14 @@ class LifecycleTests(StorageFixture, unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
         with self.sessions() as s:
             self.assertIsNotNone(
-                s.get(MetaRateState, "meta-app:" + CREDS["app_id"]).cooldown_until
+                s.get(MetaRateState, "meta-global").cooldown_until
             )
 
     def test_14_cooldown_survives_new_engine_connection(self):
         with self.sessions.begin() as s:
             s.add(
                 MetaRateState(
-                    key="meta-app:" + CREDS["app_id"],
+                    key="meta-global",
                     cooldown_until=self.now + timedelta(hours=2),
                     usage={},
                 )

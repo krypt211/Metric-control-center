@@ -365,7 +365,7 @@ export default function ManualControl({
             <div className="filters">
               <label>
                 Кабинет
-                <SearchableSelect label="Кабинет" kind="account" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
+                <SearchableSelect label="Кабинет" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
                   onChange={v=>{setAccount(v as string);setOffset(0);setSelected(null);}}/>
               </label>
               <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
@@ -571,8 +571,8 @@ export default function ManualControl({
               </ol>
             </section>
           )}
-          <section aria-label="История операций">
-            <h2>История операций</h2>
+          <section id="history" aria-label="История операций">
+            <h2>История операций</h2><p><a href="/rules#history">История решений и проверок правил</a></p>
             {history.length === 0 && <p>Локальных команд пока нет.</p>}
             {history.map((r) => (
               <article key={r.id}>

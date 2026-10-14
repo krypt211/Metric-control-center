@@ -179,7 +179,7 @@ class PilotTests(StorageFixture, unittest.TestCase):
         )
         self.assertEqual(self.execute(), ("STOPPED", "META_RATE_LIMIT", 1))
         with self.sessions() as s:
-            self.assertIsNotNone(s.get(MetaRateState, "meta-app:123").cooldown_until)
+            self.assertIsNotNone(s.get(MetaRateState, "meta-global").cooldown_until)
 
     def test_06_permission_stop(self):
         self.behavior = lambda r: httpx.Response(403, json={"error": {"code": 200}})

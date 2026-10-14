@@ -472,9 +472,9 @@ def monitoring(session, workspace):
     capacity = option("META_JOB_QUEUE_LIMIT", 20, 1, 1000)
     latest = sorted(rows, key=lambda j: aware(j.created_at), reverse=True)[:40]
     from services.meta.diagnostics import estimate
+    from services.meta.telemetry import MIN_INTERVAL_SECONDS
 
-    c = session.get(ProviderConnection, (workspace, "meta"))
-    interval = max(10, float(c.config.get("request_interval_seconds", 10))) if c else 10
+    interval = MIN_INTERVAL_SECONDS
     drain = 0
     for j in pending:
         forecast = estimate(
@@ -488,7 +488,7 @@ def monitoring(session, workspace):
             * (
                 forecast["auth_and_accounts"]
                 + sum(forecast["catalog_pages"].values())
-                + 2 * forecast["insights_pages"]
+                + forecast["insights_pages"]
             )
             if j.purpose != "health"
             else interval * forecast["auth_and_accounts"]
@@ -545,11 +545,7 @@ def in_cooldown(session, workspace):
     from services.providers.integration_models import MetaRateState
 
     c = session.get(ProviderConnection, (workspace, "meta"))
-    state = (
-        session.get(MetaRateState, "meta-app:" + str(c.config.get("app_id", "")))
-        if c
-        else None
-    )
+    state = session.get(MetaRateState, "meta-global") if c else None
     return bool(
         state and state.cooldown_until and aware(state.cooldown_until) > utc_now()
     )

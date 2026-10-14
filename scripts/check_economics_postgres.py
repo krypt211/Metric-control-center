@@ -22,7 +22,7 @@ def run() -> dict[str, str | int]:
     """Verify CAS and cohort locks without touching the working database."""
     database = os.environ.get("POSTGRES_DB", "")
     if (
-        not database.startswith("mcc_economics_")
+        not database.startswith(("mcc_economics_", "mcc_integrations_"))
         or os.environ.get("APP_ENV") == "production"
         or os.environ.get("DATABASE_URL")
         or os.environ.get("LOCAL_READ_ONLY") != "true"

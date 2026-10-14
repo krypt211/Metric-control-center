@@ -64,3 +64,7 @@ Latest acceptance: [WRITE credential and Meta pacing review](docs/integrations/W
 Meta READ hardening: [durable TTL, deduplication, cancellation and recovery](docs/integrations/META_JOB_LIFECYCLE_REPORT.md). Meta LIVE remains disabled.
 
 Meta controlled READ pilot preparation and the separate LIVE approval procedure: [pilot report](docs/integrations/META_CONTROLLED_READ_PILOT_REPORT.md).
+
+## Core workflow audit
+
+[Full audit](docs/audit/PROJECT_FULL_AUDIT.md), [simplification](docs/audit/PROJECT_SIMPLIFICATION_REPORT.md), [Meta cleanup](docs/audit/META_DATABASE_CLEANUP.md), [Rule Engine acceptance](docs/audit/RULE_ENGINE_END_TO_END.md), and [remaining roadmap](docs/roadmap/FINAL_MCC_ROADMAP.md). Direct Meta is disconnected; the optional physical-request limiter is global at 1800 seconds. LIVE advertising WRITE remains blocked.

@@ -7,7 +7,11 @@ from datetime import timedelta
 
 from sqlalchemy import func, select
 
-from services.meta.telemetry import PERCENT_FIELDS
+from services.meta.telemetry import (
+    GLOBAL_RATE_KEY,
+    MIN_INTERVAL_SECONDS,
+    PERCENT_FIELDS,
+)
 from services.providers.integration_models import (
     MetaOperation,
     MetaRateState,
@@ -32,8 +36,7 @@ def report(session, workspace):
         )
     )
     connection = session.get(ProviderConnection, (workspace, "meta"))
-    app = str(connection.config.get("app_id", "")) if connection else ""
-    state = session.get(MetaRateState, "meta-app:" + app) if app else None
+    state = session.get(MetaRateState, GLOBAL_RATE_KEY)
     logical_day = session.scalar(
         select(func.count())
         .select_from(MetaOperation)
@@ -99,6 +102,12 @@ def report(session, workspace):
         "usage_checked_at": state.updated_at.isoformat()
         if state and state.updated_at
         else None,
+        "next_request_at": state.next_start.isoformat()
+        if state and state.next_start
+        else None,
+        "last_request_at": state.updated_at.isoformat()
+        if state and state.updated_at
+        else None,
         "cooldown_until": state.cooldown_until.isoformat()
         if state and state.cooldown_until
         else None,
@@ -129,16 +138,12 @@ def report(session, workspace):
         if latest
         else None,
         "settings": {
-            "request_interval_seconds": connection.config.get(
-                "request_interval_seconds", 10
-            )
-            if connection
-            else 10,
+            "request_interval_seconds": MIN_INTERVAL_SECONDS,
             "app_concurrency": 1,
             "account_concurrency": 1,
             "retry_cap": 2,
             "page_size": 100,
-            "scheduler_minutes": 10,
+            "scheduler_minutes": 0,
         },
         "legacy_history": "NO_PER_ATTEMPT_TELEMETRY_BEFORE_0013",
         "sync_account_ids": connection.config.get("sync_account_ids", [])
@@ -209,13 +214,15 @@ def estimate(session, workspace, accounts, days, *, object_counts=None):
         "total_no_retries": total,
         "maximum_with_two_retries": total * 3,
         "minimum_one_page_per_edge": 3 + 5 * accounts,
-        "scheduled_today_per_day": total * 144,
+        "scheduled_today_per_day": 0,
+        "minimum_elapsed_seconds": max(0, total - 1) * MIN_INTERVAL_SECONDS,
+        "maximum_physical_attempts_per_day": 48,
         "assumptions": [
             "100 rows/page; one Insights row per AD/day assumed, actual pages unknown",
             "four catalogs and one AD-level Insights query per account; no per-AD Insights calls",
             "fields, attribution and timezone unchanged; no breakdowns/batch/async jobs",
-            "Insights local pacing weight 2 is not a provider complexity score",
+            "one physical GET per 1800 seconds globally, including pagination and retries",
             "auth reads the full account roster; account selection does not constrain that roster",
-            "today every 10 minutes, yesterday hourly, seven-day reconciliation daily",
+            "standard Meta scheduler disabled; no automatic backfill",
         ],
     }

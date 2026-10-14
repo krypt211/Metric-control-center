@@ -26,7 +26,7 @@ app.conf.update(
         "last-seven-days": {"task": "sync.insights", "schedule": crontab(hour=4, minute=7), "args": ["last7"], "options": {"expires": 82800}},
         "actions": {"task": "actions.process", "schedule": 15.0, "options": {"queue": "actions", "expires": 14}},
         "breakdowns": {"task": "sync.insights", "schedule": crontab(hour=4, minute=17), "args": ["breakdowns"], "options": {"expires": 82800}},
-        "rules": {"task": "rules.evaluate", "schedule": 60.0, "options": {"expires": 55}},
+        "rules": {"task": "rules.evaluate", "schedule": 1800.0, "options": {"expires": 1700}},
         "frequency": {"task": "sync.insights", "schedule": crontab(hour=4, minute=27), "args": ["frequency"], "options": {"expires": 82800}},
         "ai": {"task": "ai.process", "schedule": 15.0, "options": {"queue": "ai", "expires": 14}},
     },
@@ -104,14 +104,8 @@ import workers.rules  # noqa: E402,F401
 
 import workers.providers  # noqa: E402,F401
 app.conf.beat_schedule.update({
-    "meta-today":{"task":"providers.meta","schedule":crontab(minute="*/10"),"args":["today"],"options":{"expires":540}},
-    "meta-yesterday":{"task":"providers.meta","schedule":crontab(minute=5),"args":["yesterday"],"options":{"expires":3300}},
-    "meta-reconciliation":{"task":"providers.meta","schedule":crontab(hour=4,minute=9),"args":["last7"],"options":{"expires":82800}},
     "provider-jobs":{"task":"providers.dispatch","schedule":30.0,"options":{"expires":25}},
 })
 
-# Pilot completion never enables the standard Meta schedule.
-from services.meta.pilot import enabled as meta_pilot_mode
-if meta_pilot_mode():
-    for entry in ("meta-today", "meta-yesterday", "meta-reconciliation"):
-        app.conf.beat_schedule.pop(entry, None)
+# Direct Meta has no periodic entries. Optional manual READ uses the existing
+# durable provider queue; reconnection never starts an automatic backfill.

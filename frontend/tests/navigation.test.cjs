@@ -46,3 +46,7 @@ test("same-page deep links preserve unrelated query context", () => {
   assert.equal(url.searchParams.get("start"), "2026-10-01");
   assert.equal(navigationHref(entry("profiles"), "/rules", "?rule=123"), "/economics?tab=profiles");
 });
+
+test("primary navigation is focused on the core workflow", () => {
+  assert.deepEqual(navigationForRole("admin").filter(x => x.category === "main").map(x=>x.id), ["overview", "statistics", "rules", "history"]);
+});

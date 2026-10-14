@@ -19,7 +19,7 @@ from services.storage.models import Base, Rule, User
 
 def run() -> dict:
     if (
-        not database_url().database.startswith("mcc_rules_")
+        not database_url().database.startswith(("mcc_rules_", "mcc_integrations_"))
         or os.environ.get("LOCAL_READ_ONLY") != "true"
         or os.environ.get("ACTIONS_ENABLED") != "false"
         or os.environ.get("APP_ENV") == "production"
@@ -41,7 +41,7 @@ def run() -> dict:
         with factory.begin() as s:
             assert (
                 s.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0011_smart_rules"
+                in ("0011_smart_rules", "0015_meta_pilot")
             )
             user = new_user(
                 s,

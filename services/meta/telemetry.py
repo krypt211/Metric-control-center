@@ -11,7 +11,7 @@ import time
 from datetime import timedelta
 from uuid import uuid4
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, func, select, text
 
 from services.providers.contracts import ProviderError
 from services.providers.integration_models import (
@@ -43,6 +43,8 @@ NUMBER_FIELDS = PERCENT_FIELDS | {
     "reset_time_duration",
 }
 RATE_CODES = {4, 17, 32, 613, 80004}
+MIN_INTERVAL_SECONDS = 1800
+GLOBAL_RATE_KEY = "meta-global"
 
 
 def usage_headers(headers) -> dict:
@@ -112,7 +114,7 @@ class MetaRequestMeter:
         run_id=None,
         operation="read",
         source=None,
-        interval=10.0,
+        interval=MIN_INTERVAL_SECONDS,
         pilot_id=None,
     ):
         self.pilot_id = pilot_id
@@ -122,8 +124,9 @@ class MetaRequestMeter:
         self.run_id = run_id or str(uuid4())
         self.operation = operation
         self.source = source or ("server:" + str(os.getpid()))
-        self.interval = max(0, interval)
-        self.key = "meta-app:" + app_id
+        self.mock_interval = max(0, interval)
+        self.interval = max(MIN_INTERVAL_SECONDS, interval)
+        self.key = GLOBAL_RATE_KEY
         self.started = False
         self.failed = False
 
@@ -157,9 +160,31 @@ class MetaRequestMeter:
         start = time.monotonic()
         now = utc_now()
         with self.factory.begin() as s:
+            lock(s, self.key)
+            # Carry forward existing per-app pacing/cooldown on upgrade.
+            old_next, old_cooldown, old_lease = s.execute(
+                select(
+                    func.max(MetaRateState.next_start),
+                    func.max(MetaRateState.cooldown_until),
+                    func.max(MetaRateState.lease_until),
+                )
+            ).one()
+            last_attempt = s.scalar(select(func.max(MetaRequestAttempt.started_at)))
+            starts = [aware(v) for v in (old_next,) if v]
+            if last_attempt:
+                starts.append(aware(last_attempt) + timedelta(seconds=self.interval))
             s.execute(
                 insert_for(s, MetaRateState.__table__)
-                .values(key=self.key, usage={})
+                .values(
+                    key=self.key,
+                    usage={},
+                    next_start=max(starts) if starts else None,
+                    cooldown_until=old_cooldown,
+                    lease_until=old_lease,
+                    owner="legacy-hold"
+                    if old_lease and aware(old_lease) > now
+                    else None,
+                )
                 .on_conflict_do_nothing(index_elements=["key"])
             )
             s.add(
@@ -176,7 +201,11 @@ class MetaRequestMeter:
                 delay = 0.05
                 with self.factory.begin() as s:
                     lock(s, self.key)
-                    now = utc_now()
+                    now = (
+                        aware(s.scalar(select(func.clock_timestamp())))
+                        if s.bind.dialect.name == "postgresql"
+                        else utc_now()
+                    )
                     state = s.get(MetaRateState, self.key)
                     if state.cooldown_until and aware(state.cooldown_until) > now:
                         raise ProviderError(
@@ -209,11 +238,18 @@ class MetaRequestMeter:
                     if first == ticket and available and next_start <= now:
                         state.owner = ticket
                         state.lease_until = now + timedelta(seconds=90)
-                        state.next_start = now + timedelta(
-                            seconds=self.interval * complexity
-                        )
+                        state.next_start = now + timedelta(seconds=self.interval)
                         s.delete(s.get(MetaRequestQueue, ticket))
                         return ticket
+                    if (
+                        first == ticket
+                        and available
+                        and self.interval >= MIN_INTERVAL_SECONDS
+                    ):
+                        raise ProviderError(
+                            "META_PACING_WAIT",
+                            max(1, math.ceil((next_start - now).total_seconds())),
+                        )
                     if first == ticket and available:
                         delay = min(0.5, max(0.05, (next_start - now).total_seconds()))
                 await asyncio.sleep(delay)
@@ -230,7 +266,7 @@ class MetaRequestMeter:
                 state.owner = None
                 state.lease_until = None
 
-    def begin_attempt(self, path, attempt, page, retry_reason):
+    def begin_attempt(self, path, attempt, page, retry_reason, *, ticket=None):
         self.start_operation()
         identifier = str(uuid4())
         category = (
@@ -245,6 +281,22 @@ class MetaRequestMeter:
         external = path.split("/")[0]
         canonical = None
         with self.factory.begin() as s:
+            lock(s, self.key)
+            now = (
+                aware(s.scalar(select(func.clock_timestamp())))
+                if s.bind.dialect.name == "postgresql"
+                else utc_now()
+            )
+            state = s.get(MetaRateState, self.key)
+            if not ticket or not state or state.owner != ticket:
+                raise ProviderError("META_REQUEST_LEASE_LOST")
+            if not state.lease_until or aware(state.lease_until) <= now:
+                raise ProviderError("META_REQUEST_LEASE_LOST")
+            if state.cooldown_until and aware(state.cooldown_until) > now:
+                raise ProviderError("META_RATE_LIMIT")
+            # Fence the physical attempt, not only the earlier reservation.
+            state.next_start = now + timedelta(seconds=self.interval)
+            state.updated_at = now
             if self.pilot_id:
                 from services.meta.pilot import reserve_attempt
 

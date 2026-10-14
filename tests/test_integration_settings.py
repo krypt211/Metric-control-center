@@ -296,13 +296,11 @@ class MeterTests(StorageFixture, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(calls), 1)
         with self.sessions() as s:
             data = report(s, "default")
-            self.assertEqual(
-                data["usage_percent"], None
-            )  # no app identifier on this isolated connection
+            self.assertEqual(data["usage_percent"], 99)  # shared application limit
             row = s.scalar(select(MetaRequestAttempt))
             self.assertEqual(row.error_code, 80004)
             self.assertEqual(row.error_subcode, 42)
-            state = s.get(MetaRateState, "meta-app:" + CREDS["app_id"])
+            state = s.get(MetaRateState, "meta-global")
             self.assertEqual(state.usage["x-app-usage"][0]["call_count"], 99)
 
     def test_empty_history_unknown_tier_and_forecast_is_not_network(self):
