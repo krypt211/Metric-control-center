@@ -59,7 +59,7 @@ Phase 4B: [Business WRITE readiness and migration repair](docs/phase4/BUSINESS_W
 [Meta rate-limit audit and independent MetricFlow WRITE settings](docs/integrations/META_RATE_LIMIT_AND_METRICFLOW_WRITE_SETTINGS_REPORT.md).
 LIVE advertising writes remain blocked; the private credential service does not dispatch actions.
 
-Latest acceptance: [WRITE credential and Meta pacing review](docs/integrations/WRITE_KEY_ACCEPTANCE_AND_META_PACING_REPORT.md). The configured key reports entities:write, while exact campaigns:write and object permissions remain unconfirmed.
+Latest acceptance: [WRITE credential and Meta pacing review](docs/integrations/WRITE_KEY_ACCEPTANCE_AND_META_PACING_REPORT.md). Historical key acceptance is preserved there. The newer [OpenAPI adapter audit](docs/integrations/METRICFLOW_WRITE_ADAPTER_ACCEPTANCE.md) confirms entities:write as the documented action scope; object permissions and LIVE execution remain blocked.
 
 Meta READ hardening: [durable TTL, deduplication, cancellation and recovery](docs/integrations/META_JOB_LIFECYCLE_REPORT.md). Meta LIVE remains disabled.
 

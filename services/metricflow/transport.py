@@ -59,6 +59,7 @@ class MetricFlowTransport:
         *,
         params: Query | None = None,
         payload: Mapping[str, Any] | None = None,
+        accepted_statuses: frozenset[int] | None = None,
     ) -> JSONPayload:
         expected = "POST" if self._write else "GET"
         if method != expected:
@@ -116,6 +117,10 @@ class MetricFlowTransport:
                     continue
             if not 200 <= status < 300:
                 raise APIError(status)
+            if accepted_statuses is not None and status not in accepted_statuses:
+                if self._write:
+                    raise ActionOutcomeUnknown("Undocumented action response status; reconcile")
+                raise InvalidResponse("Unexpected response status")
             if status == 204:
                 return {}
             try:

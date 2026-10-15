@@ -8,6 +8,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from services.meta.telemetry import lock
+from services.metricflow.writer import ENTITY_WRITE_SCOPE
 from services.providers.integration_models import (
     WriteCredentialAudit,
     WriteCredentialState,
@@ -17,16 +18,24 @@ from services.sync.engine import utc_now
 
 def metadata(session, workspace):
     row = session.get(WriteCredentialState, workspace)
+    status = row.status if row else "NOT_CONFIGURED"
+    scope_verified = bool(row and row.checked_at and ENTITY_WRITE_SCOPE in row.scopes)
+    # Reclassify cached scope evidence under the published contract without
+    # rewriting encrypted credentials, check timestamps, revisions or audit rows.
+    if row and row.checked_at and status in ("SCOPES_VERIFIED", "PERMISSIONS_PARTIAL"):
+        status = (
+            ("SCOPES_VERIFIED" if scope_verified else "PERMISSIONS_PARTIAL")
+            if row.access_state == "active_paid"
+            else "PERMISSIONS_UNVERIFIED"
+        )
     return {
         "configured": bool(row and row.encrypted),
         "revision": row.revision if row else 0,
-        "status": row.status if row else "NOT_CONFIGURED",
+        "status": status,
         "fingerprint": row.fingerprint if row else None,
         "checked_at": row.checked_at.isoformat() if row and row.checked_at else None,
         "scopes": row.scopes if row else [],
-        "scope_verified": bool(
-            row and row.checked_at and "campaigns:write" in row.scopes
-        ),
+        "scope_verified": scope_verified,
         "access_state": row.access_state if row else None,
         "permissions": "PERMISSIONS_UNVERIFIED",
         "live_actions": "LIVE_ACTIONS_BLOCKED",

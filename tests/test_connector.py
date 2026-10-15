@@ -169,7 +169,7 @@ class ConnectorTests(unittest.IsolatedAsyncioTestCase):
 
         def handler(request):
             requests.append(request)
-            return httpx.Response(200, json={"provider_response": "preserved"})
+            return httpx.Response(200, json={"success": True, "entity_id": "123", "message": "mock acknowledgement"})
 
         # Synthetic payload verifies passthrough, not the live budget schema.
         payload = {"contract_test_only": "do-not-use-in-production"}
@@ -180,6 +180,8 @@ class ConnectorTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(hasattr(writer, "get_accounts"))
         self.assertEqual([r.url.path for r in requests], [f"/api/v1/entities/123/{p}" for p in ("pause", "enable", "budget")])
         self.assertTrue(all(r.method == "POST" and r.headers["Authorization"] == f"Bearer {WRITE}" for r in requests))
+        self.assertEqual(json.loads(requests[0].content), {"level": "ad"})
+        self.assertEqual(json.loads(requests[1].content), {"level": "ad"})
         self.assertEqual(json.loads(requests[-1].content), payload)
 
     async def test_write_timeout_server_error_and_bad_success_never_retry(self):
@@ -260,7 +262,8 @@ class ConnectorTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_content_response(self):
         async with MetricFlowActionConnector(WRITE, transport=httpx.MockTransport(lambda r: httpx.Response(204))) as writer:
-            self.assertEqual(await writer.pause_entity("123"), {})
+            with self.assertRaises(ActionOutcomeUnknown):
+                await writer.pause_entity("123")
 
 
 if __name__ == "__main__":

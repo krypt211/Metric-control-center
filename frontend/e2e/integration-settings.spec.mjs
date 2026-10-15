@@ -34,7 +34,7 @@ test("independent encrypted WRITE save, scope check, replace, refresh and delete
  await expect(card(page)).toContainText("WRITE scope подтверждён");await expect(card(page)).toContainText("BLOCKED");
  await card(page).getByLabel("MetricFlow WRITE key",{exact:true}).fill("mfk_fixture-read-only-ui-456");
  await card(page).getByRole("button",{name:"Заменить ключ",exact:true}).click();await expect(card(page)).toContainText("Сохранён, не проверен");
- await card(page).getByRole("button",{name:"Проверить подключение WRITE",exact:true}).click();await expect(card(page)).toContainText("У ключа отсутствует campaigns:write");
+ await card(page).getByRole("button",{name:"Проверить подключение WRITE",exact:true}).click();await expect(card(page)).toContainText("У ключа отсутствует entities:write");
  await card(page).getByRole("button",{name:"Удалить локальный ключ",exact:true}).click();await expect(card(page)).toContainText("Не настроен");
  const after=inspect();expect(after.read_encrypted).toBe(before.read_encrypted);expect(after.read_revision).toBe(before.read_revision);expect(after.action_executions).toBe(before.action_executions);
  await page.goto("/settings/manual-control");await expect(page.locator("body")).toContainText("LIVE: BLOCKED");

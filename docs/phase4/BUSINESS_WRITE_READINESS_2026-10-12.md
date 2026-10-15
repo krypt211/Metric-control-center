@@ -1,5 +1,9 @@
 # Phase 4B — Business WRITE preparation — 2026-10-12
 
+> Scope/contract update: the newer [OpenAPI adapter acceptance](../integrations/METRICFLOW_WRITE_ADAPTER_ACCEPTANCE.md)
+> confirms entities:write and the AD request body. This dated report records the
+> earlier state; LIVE remains blocked by the narrower unresolved contract/permission/readback conditions.
+
 ## Status
 
 **PHASE 4B: PARTIAL — LIVE WRITE BLOCKED.**

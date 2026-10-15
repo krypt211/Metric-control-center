@@ -1,0 +1,519 @@
+{
+  "source_url": "https://metricflowit.click/api/v1/openapi.json?lang=en",
+  "retrieved_at": "2026-10-15T20:54:10.331003+00:00",
+  "source_sha256": "12cf5cc017e36ba54add51cb10eb2e625607f60bd55b7fa79f2cee5467d35077",
+  "note": "Unmodified selected operations and referenced schemas from the public specification; no credentials or live execution evidence.",
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MetricFlow Public API",
+    "description": "Public API for Facebook Ads analytics, campaign management, and automation.\n\n## Authentication\nPass your API key via header:\n```\nX-API-Key: mf_live_...\n```\nor\n```\nAuthorization: Bearer mf_live_...\n```\nCreate keys in [Settings > API](/settings?form=api-keys).\n\n## Scopes\n| Scope | Access |\n|---|---|\n| `analytics:read` | Overview, summary, daily breakdown |\n| `ad_accounts:read` | Ad accounts list with metrics |\n| `campaigns:read` | Campaigns, adsets, ads, creatives |\n| `rules:read` | Automation rules and history |\n| `rules:write` | Create, update, delete and pause automation rules |\n| `entities:write` | Pause/enable, budgets, duplicate |\n| `bundles:read` | Bundle configs and logs |\n| `bundles:write` | Pause/resume bundles |\n| `seeding:read` | Comment seeding: tasks, queue, author pages, images (Pro plan and higher or a custom plan) |\n| `seeding:write` | Comment seeding: create/update/start/pause/delete tasks, upload images (Pro plan and higher or a custom plan) |\n| `pages:read` | Fan pages, their comments and stats, comment-history scan jobs |\n| `pages:write` | Moderate comments, page settings, webhook subscription, queue comment-history scans |\n\n## Rate Limits\n- **Read:** 120 req/min\n- **Write:** 10-30 req/min\n- **Daily:** depends on plan (Starter: 1K, Growth: 2.5K, Pro: 5K, Business: 20K)\n\n## Date Ranges\nUse `from` and `to` query parameters in `YYYY-MM-DD` format. Defaults to last 90 days.\n\n## Comment history scan\nFacebook pushes only NEW comments over webhooks, so a delivery gap leaves a hole in a page's comment history and nothing re-sends it. A scan walks the page's posts and ingests what the webhook missed:\n\n- **Catch up after a gap** — `POST /api/v1/pages/{page_id}/backfill` with `{\"lookback_hours\": 6, \"mode\": \"apply\"}`. Cheap enough to schedule: the window is pushed to Facebook and only posts that can plausibly carry new comments (live ads, recently-commented posts, posts created inside the window) are walked.\n- **Decide comment by comment** — `mode=\"review\"` stops the job in status `review`. Read the verdicts from `GET /api/v1/pages/backfill-jobs/{job_id}/items`, then post your decision to `POST /api/v1/pages/backfill-review/apply`. While a job waits in `review` the page's cleaner is paused for those comments, for up to 24 hours — cancel any review you are not going to apply (`POST /api/v1/pages/backfill-jobs/{job_id}/cancel`).\n- **First-time cleanup** — `lookback_days` (0 = all history) walks the page's entire ad-post history. Thorough and slow; not for a schedule.\n\nScans are queued: the endpoints return a job, poll it via `GET /api/v1/pages/backfill-jobs/{job_id}`. One page can be scanned once every 30 minutes (429 with `Retry-After`, or `skipped_details` with `reason=\"cooldown\"` in a bulk call), and one account can hold 50 queued or running scans at a time. The endpoints themselves allow 10 req/min (single page) and 2 req/min (bulk, up to 50 pages per call).\n\n## Errors\n| Code | Meaning |\n|---|---|\n| 400 | Bad request |\n| 401 | Invalid API key |\n| 402 | Subscription expired — every endpoint except /usage and /me |\n| 403 | Missing scope |\n| 404 | Not found |\n| 429 | Rate limit exceeded |\n\n## Calling from a browser (CORS)\nAll `/api/v1/*` endpoints allow cross-origin requests from any origin (`Access-Control-Allow-Origin: *`) — no CORS proxy needed, and never route your key through one. Remember that a key embedded in client-side code is visible to anyone who can open the page: use a dedicated **read-only** key (`analytics:read` + `campaigns:read`) for browser dashboards and keep write-scoped keys server-side.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/entities/{entity_id}/pause": {
+      "post": {
+        "tags": [
+          "Entity Actions"
+        ],
+        "summary": "Pause entity",
+        "description": "Pause a campaign / adset / ad.\n\n**Recommended:** pass `?async=true` (default for new integrations) to enqueue the action on the worker and get an immediate 202 with a `job_id`. Poll `GET /api/v1/jobs/{job_id}` for completion. The synchronous path (default for backward compatibility) blocks until Facebook responds — calls can take 30+ s under FB rate-limit pressure and may time out client-side.",
+        "operationId": "api_pause_entity_api_v1_entities__entity_id__pause_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Id"
+            }
+          },
+          {
+            "name": "async",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, enqueue the action and return 202 + job_id.",
+              "default": false,
+              "title": "Async"
+            },
+            "description": "If true, enqueue the action and return 202 + job_id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntityActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entities/{entity_id}/enable": {
+      "post": {
+        "tags": [
+          "Entity Actions"
+        ],
+        "summary": "Enable entity",
+        "description": "Enable a paused campaign / adset / ad. Pass `?async=true` to enqueue and get an immediate 202 + `job_id` (recommended). Poll via `GET /api/v1/jobs/{job_id}`.",
+        "operationId": "api_enable_entity_api_v1_entities__entity_id__enable_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Id"
+            }
+          },
+          {
+            "name": "async",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, enqueue and return 202 + job_id.",
+              "default": false,
+              "title": "Async"
+            },
+            "description": "If true, enqueue and return 202 + job_id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntityActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Entity Actions"
+        ],
+        "summary": "Action job status",
+        "description": "Poll the state of a single- or bulk-entity action job queued via `?async=true` on any `POST /api/v1/entities/.../{pause|enable|budget|bid|bid-strategy}` endpoint, via `POST /api/v1/entities/bulk/status`, or a creative edit via `POST /api/v1/entities/{id}/edit` / `bulk/edit` (action_type=`edit`). Status progresses through pending → running → success / partial / failed / expired. Per-entity outcomes appear in `results` once the worker finishes (or partially finishes) the job.",
+        "operationId": "api_action_job_status_api_v1_jobs__job_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityActionJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "ApiMeta": {
+        "properties": {
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset"
+          },
+          "date_range": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Updated At",
+            "description": "Last successful sync timestamp (ISO 8601)"
+          }
+        },
+        "type": "object",
+        "title": "ApiMeta"
+      },
+      "EntityActionJobItem": {
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity_id",
+          "success"
+        ],
+        "title": "EntityActionJobItem"
+      },
+      "EntityActionJobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "title": "Job Id"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type",
+            "description": "status | budget | bid | delete | rename | targeting | edit"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "pending | running | success | partial | failed | expired"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "succeeded": {
+            "type": "integer",
+            "title": "Succeeded"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EntityActionJobItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "action_type",
+          "status",
+          "total",
+          "done",
+          "succeeded",
+          "failed",
+          "created_at",
+          "meta"
+        ],
+        "title": "EntityActionJobResponse",
+        "description": "Status + per-entity results for a queued single- or bulk-entity\naction. Returned by ``GET /api/v1/jobs/{job_id}``."
+      },
+      "EntityActionRequest": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "description": "Entity level: campaign, adset, or ad"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level"
+        ],
+        "title": "EntityActionRequest"
+      },
+      "EntityActionResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "entity_id",
+          "message"
+        ],
+        "title": "EntityActionResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

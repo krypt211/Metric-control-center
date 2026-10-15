@@ -20,10 +20,10 @@ export default function MetricFlowWriteSettings(){
  {!state?<p>Загрузка состояния…</p>:<>
  <dl className="provider-details"><dt>Ключ</dt><dd>{statuses[state.status]??state.status}</dd><dt>Обозначение</dt><dd>{state.fingerprint?"•••• · "+state.fingerprint:"Не сохранён"}</dd>
  <dt>Credential revision</dt><dd>{state.revision}</dd><dt>Последняя проверка</dt><dd>{state.checked_at?new Date(state.checked_at).toLocaleString("ru-RU"):"Не выполнялась"}</dd>
- <dt>campaigns:write</dt><dd>{state.scope_verified?"Подтверждён":state.checked_at&&state.scopes.length?"Отсутствует":"Не проверен"}</dd><dt>Подписка</dt><dd>{state.access_state??"Не проверена"}</dd>
+ <dt>entities:write</dt><dd>{state.scope_verified?"Подтверждён":state.checked_at&&state.scopes.length?"Отсутствует":"Не проверен"}</dd><dt>Подписка</dt><dd>{state.access_state??"Не проверена"}</dd>
  <dt>Права на конкретный AD</dt><dd>Не подтверждены</dd><dt>LIVE управление</dt><dd>BLOCKED</dd></dl>
  {state.scope_verified&&<p className="notice">WRITE scope подтверждён. Реальное управление пока заблокировано до подтверждения контракта и разрешений на объекты.</p>}
- {state.status==="PERMISSIONS_PARTIAL"&&!state.scope_verified&&<p>У ключа отсутствует campaigns:write.</p>}
+ {state.status==="PERMISSIONS_PARTIAL"&&!state.scope_verified&&<p>У ключа отсутствует entities:write.</p>}
  {!state.can_manage&&<p>Управление ключами доступно только ADMIN.</p>}
  {!state.management_available&&<p>Изолированный сервис provisioning не настроен. READ API продолжает работать.</p>}
  <form className="filterbar provider-credentials" onSubmit={e=>{e.preventDefault();void act(state.configured?"replace":"save");}}>

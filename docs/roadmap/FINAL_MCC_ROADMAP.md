@@ -1,43 +1,44 @@
-# Remaining roadmap to the first controlled automatic PAUSE/ENABLE
+# Remaining roadmap to the first controlled PAUSE/ENABLE
 
 Project status: PARTIAL. Keep ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true,
 AI_ENABLED=false, AI_AUTOPILOT_ALLOWED=false. Meta disconnected.
 
-Smart Rules core and DRY RUN scheduler accepted locally: [acceptance](../audit/SMART_RULES_FINAL_ACCEPTANCE.md).
+Smart Rules core and DRY RUN scheduler: [local acceptance](../audit/SMART_RULES_FINAL_ACCEPTANCE.md).
+WRITE contract subset and mock adapter: [OpenAPI acceptance](../integrations/METRICFLOW_WRITE_ADAPTER_ACCEPTANCE.md).
+The published OpenAPI confirms entities:write; campaigns:write is no longer a required blocker.
+Historical credential checks are not a new live permission verification.
 
-1. Obtain an authoritative MetricFlow Business WRITE contract and resolve scope mismatch.
-2. Test the exact typed adapter with mock responses including timeout/unknown outcome;
-   do not retry a mutation with unknown outcome until verified by readback.
-3. Complete object-level permission/binding and configured/effective-status checks.
-4. Rehearse a single-ad command through the shared manual/rule executor with hard limits.
-5. Obtain separate explicit user authorization for one real ad and bounded operation.
-6. Perform one controlled action, verify readback, retain evidence, restore gates.
-7. Only after acceptance, enable bounded 30-60 minute automation on that exact scope.
-Direct Meta LIVE is not a prerequisite for MetricFlow-based automation.
+1. Resolve remaining contract gaps listed below; preserve the hard LIVE gate.
+2. Complete the exact single-AD binding, object permission and configured/effective
+   fresh READ verification contract. Job completion alone does not prove readback.
+3. Integrate purpose/workspace/revision-bound encrypted WRITE credential handoff,
+   bounded job observation, durable one-attempt authorization/correlation and
+   unknown-outcome reconciliation in the existing ActionEngine; no automatic resend.
+   The legacy plaintext WRITE-key factory is not this provisioning flow.
+4. Accept that exact executor path on mocks and isolated PostgreSQL concurrency/restart tests.
+5. Choose one AD and obtain separate explicit user authorization for one bounded operation.
+6. Perform the authorized operation only after all gates pass; verify readback/audit,
+   restore safety flags. Restoration is a second separately authorized action.
+7. Only after a successful single-AD pilot consider bounded automated scope.
+Direct Meta LIVE is not a prerequisite for MetricFlow control.
 
-## Concrete MetricFlow support request (prepared, not sent)
-Please provide the versioned Business API/OpenAPI contract for pause and enable:
-- Does entities:write authorize these operations, or is campaigns:write mandatory?
-  The stored key check reports entities:write but not campaigns:write.
-- What namespace does entity_id use: MetricFlow database ID or Meta provider AD ID?
-  How is account ownership and level=AD validated?
-- Exact method/path/body/query/header fields, including whether the body is empty.
-- Success status and synchronous/asynchronous response schema and operation ID.
-- Errors for token/plan/scope/object permissions/validation/rate limits/not found.
-- A documented way to verify effective permissions on the specific advertising object.
-- Configured versus effective status fields; parent pause semantics and freshness.
-- Idempotency key support, scope/retention, duplicate response semantics.
-- Timeout/unknown-outcome recovery, safe retry policy and operation lookup.
-- Exact READ endpoint and polling bounds for post-write verification.
-No secrets need to be sent with this request.
+## Focused provider support request (prepared, not sent)
+The public OpenAPI now documents entities:write, POST pause/enable with level=ad,
+and GET /api/v1/jobs/{job_id}. Please clarify the remaining points:
 
-## Evidence and unresolved provider boundary
-[Official MetricFlow documentation](https://metricflowit.click/docs) recorded in
-the preceding full audit lists campaigns:write and /api/v1/entities/{entity_id}/pause, /enable.
-It does not resolve the full contract above; entities:write equivalence is not
-documented there. Cached key metadata is not a new live scope verification.
-No API contract was inferred from the UI or from Meta's different HTTP API.
+- Is entity_id a MetricFlow internal ID or Meta AD ID? Which READ field provides
+  the exact WRITE ID and how is its AD/account ownership checked?
+- Provide the exact HTTP 202 body/schema and all denial/error bodies. The operation
+  description mentions 202 but the formal responses list only 200 and 422.
+- What scopes and owner/team/acting-as permissions apply to GET jobs and a specific AD?
+  Is there a documented non-mutating way to verify effective object permissions?
+- Is Idempotency-Key supported? What are its scope/retention and duplicate semantics?
+- If a POST times out before job_id is received, how can the operation be located
+  without resending? Are partial application and expiration outcomes distinguishable?
+- Does READ status mean Meta configured_status, and effective_status mean effective
+  delivery? How fresh are these fields and the parent statuses after a WRITE?
+- Which READ route, timestamps and consistency deadline prove post-action readback?
+  Does a GET merely return the last sync cache? What are safe job-polling bounds?
 
-User actions: obtain the provider's contract/object permissions; after confirmed adapter acceptance, choose one AD and explicitly approve a single controlled mutation.
-No new key is required merely for this audit; existing independent encrypted key
-and READ connection are preserved.
+No API keys or secrets are needed for this request. Existing encrypted WRITE and
+READ connections are preserved. Public specification and local tests are not LIVE authorization.

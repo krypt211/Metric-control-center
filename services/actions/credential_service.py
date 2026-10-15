@@ -31,6 +31,7 @@ from services.metricflow.errors import (
     SubscriptionRequired,
 )
 from services.metricflow.reader import MetricFlowConnector
+from services.metricflow.writer import ENTITY_WRITE_SCOPE
 from services.providers.contracts import ProviderError
 from services.providers.integration_models import (
     WriteCredentialAudit,
@@ -117,7 +118,7 @@ def provider_transport():
                     "api_key": {
                         "scopes": ["campaigns:read"]
                         if "fixture-read-only" in token
-                        else ["campaigns:write"]
+                        else [ENTITY_WRITE_SCOPE]
                     },
                 },
             )
@@ -225,7 +226,7 @@ async def mutate(operation: str, body: Command, request: Request):
             scopes = values
             status = (
                 "SCOPES_VERIFIED"
-                if "campaigns:write" in scopes
+                if ENTITY_WRITE_SCOPE in scopes
                 else "PERMISSIONS_PARTIAL"
             )
         reported = data.get("access_state") if isinstance(data, dict) else None

@@ -41,7 +41,7 @@ class WriteSettingsTests(AuthTests):
                 200,
                 json={
                     "access_state": "active_paid",
-                    "api_key": {"scopes": ["campaigns:write"]},
+                    "api_key": {"scopes": ["entities:write"]},
                 },
             )
 
@@ -135,8 +135,8 @@ class WriteSettingsTests(AuthTests):
             "save", {"revision": 0, "token": "mfk_fixture_scope_acceptance"}
         )
         for scopes, verified in (
-            (["campaigns:read", "entities:write", "ai:use"], False),
-            (["campaigns:write", "ai:use", "seeding:*"], True),
+            (["campaigns:read", "entities:write", "ai:use"], True),
+            (["campaigns:write", "ai:use", "seeding:*"], False),
         ):
 
             def handler(request, scopes=scopes):
@@ -155,6 +155,25 @@ class WriteSettingsTests(AuthTests):
             self.assertEqual(result.json()["scopes"], scopes)
             self.assertEqual(result.json()["scope_verified"], verified)
             self.assertEqual(result.json()["live_actions"], "LIVE_ACTIONS_BLOCKED")
+
+    async def test_cached_scope_reclassification_does_not_mutate_credential(self):
+        from services.actions.write_settings import metadata
+
+        await self.login("admin")
+        await self.action("save", {"revision": 0, "token": "mfk_fixture_cached_scope"})
+        await self.action("check", {"revision": 1})
+        with self.sessions.begin() as s:
+            s.get(WriteCredentialState, "default").status = "PERMISSIONS_PARTIAL"
+        with self.sessions() as s:
+            row = s.get(WriteCredentialState, "default")
+            before = (row.encrypted, row.revision, row.checked_at, row.status)
+            result = metadata(s, "default")
+            assert result["scope_verified"] and result["status"] == "SCOPES_VERIFIED"
+            assert result["permissions"] == "PERMISSIONS_UNVERIFIED"
+            assert result["live_actions"] == "LIVE_ACTIONS_BLOCKED"
+            assert before == (row.encrypted, row.revision, row.checked_at, row.status)
+            assert not s.dirty
+        assert len(self.calls) == 1
 
     async def test_write_roles_csrf_workspace_and_no_validation_echo(self):
         for role in ("viewer", "operator"):
