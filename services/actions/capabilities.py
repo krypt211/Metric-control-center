@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
+from services.metricflow.writer import ENTITY_WRITE_SCOPE
 from services.providers.models import ProviderConnection
 
 OPERATIONS = (
@@ -20,27 +18,23 @@ class ActionCapabilityRegistry:
     @staticmethod
     def inspect(session, workspace: str, provider: str) -> dict:
         connection = session.get(ProviderConnection, (workspace, provider))
-        # READ credential settings never confer WRITE access.
-        path = (
-            os.environ.get("METRICFLOW_WRITE_KEY_FILE")
-            if provider == "metricflow"
-            else None
-        )
-        write_credential = bool(path and Path(path).is_file())
-        connected = bool(connection and connection.enabled)
         from services.actions.write_settings import metadata
-        stored=metadata(session,workspace) if provider=="metricflow" else None
-        if stored:write_credential=stored["configured"] or write_credential
+
+        # Only the separate encrypted record can be configured for this factory.
+        # Presence and a cached scope check still confer no object/execution permission.
+        connected = bool(connection and connection.enabled)
+        stored = metadata(session, workspace) if provider == "metricflow" else None
+        write_credential = bool(stored and stored["configured"])
         return {
             "provider": provider,
-            "write_connection":stored,
+            "write_connection": stored,
             "connected": connected,
             "health": connection.status if connection else "disconnected",
             "credential_revision": connection.revision if connection else None,
             "read_credentials": connected,
             "write_credentials": write_credential,
             "write_permission": False,
-            "required_permission": "campaigns:write"
+            "required_permission": ENTITY_WRITE_SCOPE
             if provider == "metricflow"
             else "ads_management",
             "operations": {key: "UNVERIFIED" for key in OPERATIONS},

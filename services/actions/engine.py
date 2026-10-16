@@ -288,6 +288,313 @@ class ActionEngine:
             log(session, request_id, "provider_" + outcome, self.clock(), error_code=error_code)
         return request_id
 
+    def _rehearsal_row(self, session, actor: dict, request_id: str):
+        """Use the manual lock order; never admit the working DB/workspace."""
+        from services.actions.manual import require_permission
+        from services.economics.store import lock
+
+        url = session.bind.url
+        isolated = session.bind.dialect.name == "sqlite" or (
+            session.bind.dialect.name == "postgresql"
+            and (url.database or "").startswith("mcc_integrations_")
+        )
+        if not isolated or not actor["workspace"].startswith("write-rehearsal-"):
+            raise ActionRejected("ISOLATED_REHEARSAL_REQUIRED")
+        lock(session, actor["workspace"])
+        require_permission(session, actor)
+        entity_id = session.scalar(
+            select(ActionRequest.entity_id).where(
+                ActionRequest.id == request_id,
+                ActionRequest.workspace_id == actor["workspace"],
+            )
+        )
+        if not entity_id:
+            raise ActionRejected("REHEARSAL_REQUEST_NOT_FOUND")
+        session.scalar(select(Entity).where(Entity.id == entity_id).with_for_update())
+        row = session.scalar(
+            select(ActionRequest)
+            .where(ActionRequest.id == request_id)
+            .with_for_update()
+        )
+        if row.initiator_id != actor["id"]:
+            raise ActionRejected("REHEARSAL_ACTOR_MISMATCH")
+        if row.provenance.get("phase") != "4A":
+            raise ActionRejected("CONFIRMED_MANUAL_REHEARSAL_REQUIRED")
+        return row
+
+    def _rehearsal_binding(self, session, row, actor: dict) -> dict:
+        from services.actions.manual import preflight, snapshot
+
+        entity = session.get(Entity, row.entity_id)
+        account = session.get(AdAccount, entity.account_id) if entity else None
+        if (
+            not entity
+            or entity.kind != "ad"
+            or not account
+            or account.provider != "metricflow"
+            or account.workspace_id != actor["workspace"]
+            or row.action not in ("PAUSE_AD", "ENABLE_AD")
+            or row.value is not None
+        ):
+            raise ActionRejected("SINGLE_METRICFLOW_AD_REQUIRED")
+        if not preflight(self, session, row, actor, self.clock())["local_allowed"]:
+            raise ActionRejected("REHEARSAL_PREFLIGHT_HELD")
+        if row.provenance.get("confirmation_actor") != actor["id"]:
+            raise ActionRejected("LOCAL_CONFIRMATION_REQUIRED")
+        return {
+            "workspace": actor["workspace"],
+            "actor_id": actor["id"],
+            "request_id": row.id,
+            "account_id": account.id,
+            "ad_id": entity.id,
+            "external_id": entity.external_id,
+            "action": row.action,
+            "confirmation_at": row.provenance.get("confirmation_at"),
+            "snapshot": snapshot(session, entity, account),
+        }
+
+    def prepare_rehearsal(
+        self,
+        actor: dict,
+        request_id: str,
+        revision: int,
+        credential_revision: int,
+        expires_at: datetime,
+    ) -> dict:
+        """Prepare a MOCK_ONLY single-AD permit in an isolated fixture namespace.
+
+        A local manual confirmation is not LIVE authorization. No public endpoint,
+        worker dispatch or working-database permit creation is provided here.
+        """
+        from services.actions.factory import checked_write_state, credential_digest
+
+        now = self.clock()
+        if (
+            type(revision) is not int
+            or revision < 1
+            or not isinstance(expires_at, datetime)
+            or expires_at.tzinfo is None
+            or not now < expires_at <= now + timedelta(minutes=10)
+        ):
+            raise ActionRejected("INVALID_REHEARSAL_WINDOW_OR_REVISION")
+        with self.sessions.begin() as session:
+            row = self._rehearsal_row(session, actor, request_id)
+            if row.status != "CONFIRMED" or row.revision != revision:
+                raise ActionRejected("CONFIRMED_REVISION_REQUIRED")
+            if row.provenance.get("controlled"):
+                raise ActionRejected("REHEARSAL_ALREADY_PREPARED")
+            if expires_at > datetime.fromisoformat(row.provenance["expires_at"]):
+                raise ActionRejected("REHEARSAL_EXCEEDS_DRAFT_WINDOW")
+            state = checked_write_state(
+                session, actor["workspace"], credential_revision, now
+            )
+            control = {
+                "mode": "MOCK_ONLY",
+                "state": "PREPARED",
+                "attempts": 0,
+                "expires_at": expires_at.isoformat(),
+                "job_id": None,
+                "credential_revision": credential_revision,
+                "credential_digest": credential_digest(state),
+                "binding": self._rehearsal_binding(session, row, actor),
+            }
+            row.provenance = {**row.provenance, "controlled": control}
+            row.revision += 1
+            log(
+                session,
+                row.id,
+                "controlled_mock_prepared",
+                now,
+                actor_id=actor["id"],
+                credential_revision=credential_revision,
+                expires_at=control["expires_at"],
+                max_attempts=1,
+                mode="MOCK_ONLY",
+            )
+            return {
+                "id": row.id,
+                "revision": row.revision,
+                "mode": "MOCK_ONLY",
+                "expires_at": control["expires_at"],
+                "max_attempts": 1,
+            }
+
+    async def execute_rehearsal(
+        self, actor: dict, request_id: str, revision: int, *, vault, transport
+    ) -> str | None:
+        """Spend one durable permit before one MockTransport POST; never resend."""
+        import asyncio
+
+        import httpx
+        from fastapi import HTTPException
+
+        from services.actions.factory import (
+            checked_write_state,
+            create_action_connector,
+            credential_digest,
+        )
+        from services.actions.safety import ActionSafetyGate
+        from services.actions.write_credentials import WriteCredentialError
+        from services.metricflow.errors import MetricFlowError
+        from services.providers.contracts import WriteDisabled
+
+        if not isinstance(transport, httpx.MockTransport):
+            raise ActionRejected("EXPLICIT_MOCK_TRANSPORT_REQUIRED")
+        ActionSafetyGate.require_write()  # No runtime exception to the hard LIVE gate.
+        if not self.policy.enabled:
+            raise ActionRejected("ACTION_POLICY_DISABLED")
+        if type(revision) is not int or revision < 1:
+            raise ActionRejected("INVALID_ACTION_REVISION")
+        now = self.clock()
+        with self.sessions.begin() as session:
+            row = self._rehearsal_row(session, actor, request_id)
+            control = dict(row.provenance.get("controlled") or {})
+            if control.get("mode") != "MOCK_ONLY":
+                raise ActionRejected("MOCK_ONLY_PERMIT_REQUIRED")
+            if control.get("attempts") or row.status != "CONFIRMED":
+                return None
+            if row.revision != revision:
+                raise ActionRejected("ACTION_REVISION_CONFLICT")
+            if now >= datetime.fromisoformat(control["expires_at"]):
+                raise ActionRejected("REHEARSAL_PERMIT_EXPIRED")
+            if control["binding"] != self._rehearsal_binding(session, row, actor):
+                raise ActionRejected("REHEARSAL_BINDING_CHANGED")
+            state = checked_write_state(
+                session, actor["workspace"], control["credential_revision"], now
+            )
+            if credential_digest(state) != control["credential_digest"]:
+                raise ActionRejected("REHEARSAL_CREDENTIAL_CHANGED")
+            claim_id = str(uuid4())
+            control.update(
+                attempts=1,
+                state="CLAIMED",
+                claim_id=claim_id,
+                consumed_at=now.isoformat(),
+                http_started=False,
+            )
+            row.provenance = {**row.provenance, "controlled": control}
+            row.status, row.revision = "executing", row.revision + 1
+            session.add(
+                ActionExecution(
+                    id=str(uuid4()),
+                    request_id=row.id,
+                    started_at=now,
+                    outcome="mock_started",
+                )
+            )
+            log(
+                session,
+                row.id,
+                "controlled_mock_attempt_claimed",
+                now,
+                claim_id=claim_id,
+                mode="MOCK_ONLY",
+                max_attempts=1,
+            )
+
+        # The claim and unique ActionExecution are committed before opening a vault.
+        def guard_before_http():
+            with self.sessions.begin() as session:
+                current = self._rehearsal_row(session, actor, request_id)
+                permit = dict(current.provenance["controlled"])
+                if (
+                    current.status != "executing"
+                    or permit.get("claim_id") != claim_id
+                    or permit.get("http_started")
+                    or self.clock() >= datetime.fromisoformat(permit["expires_at"])
+                    or permit["binding"]
+                    != self._rehearsal_binding(session, current, actor)
+                ):
+                    raise ActionRejected("REHEARSAL_FINAL_GUARD_HELD")
+                permit["http_started"] = True
+                current.provenance = {**current.provenance, "controlled": permit}
+                log(
+                    session,
+                    current.id,
+                    "controlled_mock_http_reserved",
+                    self.clock(),
+                    claim_id=claim_id,
+                )
+
+        async def before_http():
+            await asyncio.to_thread(guard_before_http)
+
+        result, error, unexpected = None, None, False
+        try:
+            self.reserve_api_request(actor["workspace"])
+            async with create_action_connector(
+                workspace=actor["workspace"],
+                credential_revision=control["credential_revision"],
+                session_factory=self.sessions,
+                vault=vault,
+                transport=transport,
+                before_request=before_http,
+                clock=self.clock,
+            ) as connector:
+                operation = (
+                    connector.pause_entity
+                    if control["binding"]["action"] == "PAUSE_AD"
+                    else connector.enable_entity
+                )
+                result = await operation(
+                    control["binding"]["external_id"], asynchronous=True
+                )
+        except Exception as caught:  # noqa: BLE001 - sanitize every unknown boundary error
+            error = type(
+                caught
+            ).__name__  # Never store upstream bodies/credential inputs.
+            if not isinstance(
+                caught,
+                (
+                    ActionRejected,
+                    WriteCredentialError,
+                    MetricFlowError,
+                    WriteDisabled,
+                    HTTPException,
+                ),
+            ):
+                unexpected = True
+        # Recording an already-started outcome must survive permission revocation,
+        # credential rotation and expiry. They cannot recall an in-flight command.
+        with self.sessions.begin() as session:
+            row = session.scalar(
+                select(ActionRequest)
+                .where(ActionRequest.id == request_id)
+                .with_for_update()
+            )
+            saved = dict(row.provenance["controlled"])
+            if saved.get("claim_id") != claim_id:
+                raise ActionRejected("REHEARSAL_CLAIM_CHANGED")
+            saved.update(
+                state="ACKNOWLEDGED_NEEDS_READBACK" if result else "OUTCOME_UNKNOWN",
+                job_id=result["job_id"] if result else None,
+            )
+            row.provenance = {**row.provenance, "controlled": saved}
+            row.status, row.revision = (
+                ("verifying" if result else "unknown"),
+                row.revision + 1,
+            )
+            execution = session.scalar(
+                select(ActionExecution).where(ActionExecution.request_id == request_id)
+            )
+            execution.completed_at = self.clock()
+            execution.outcome, execution.error_code = (
+                ("mock_acknowledged" if result else "mock_unknown"),
+                error,
+            )
+            log(
+                session,
+                row.id,
+                "controlled_mock_acknowledged" if result else "controlled_mock_unknown",
+                self.clock(),
+                claim_id=claim_id,
+                job_id=saved["job_id"],
+                error_code=error,
+                mode="MOCK_ONLY",
+            )
+        if unexpected:
+            raise ActionRejected("REHEARSAL_INTERNAL_ERROR_RECONCILE") from None
+        return request_id
     def verify_pending(self) -> int:
         """Verify against a newer current-state observation fetched by the read worker."""
         now, count = self.clock(), 0
@@ -300,6 +607,18 @@ class ActionEngine:
                 if not execution:
                     continue
                 started = aware(execution.started_at)
+                controlled = dict(request.provenance.get("controlled") or {})
+                if controlled:
+                    # Rehearsal acknowledgements cannot become LIVE ownership
+                    # evidence through the legacy effective-status reconciler.
+                    if request.status == "executing" and (now - started).total_seconds() >= 120:
+                        controlled["state"] = "OUTCOME_UNKNOWN"
+                        request.provenance = {**request.provenance, "controlled": controlled}
+                        request.status, execution.outcome = "unknown", "mock_unknown"
+                        execution.completed_at, execution.error_code = now, "PROCESS_INTERRUPTED"
+                        log(session, request.id, "controlled_mock_recovery_no_resend", now,
+                            claim_id=controlled.get("claim_id"), mode="MOCK_ONLY")
+                    continue
                 if request.status == "executing":
                     if (now - started).total_seconds() < 120:
                         continue

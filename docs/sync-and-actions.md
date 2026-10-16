@@ -60,6 +60,13 @@ pagination. Можно использовать _context.account_id/currency/tim
 
 ## Action Engine
 
+Current deployment note (2026-10-17): legacy unbound Celery action dispatch is
+blocked even if permissive flags are supplied. The following legacy queue/state
+description is not an enabled LIVE path. New MOCK_ONLY one-attempt rehearsal uses
+the existing ActionEngine and encrypted Credential Manager record, requires
+isolated fixtures and explicit MockTransport, and cannot verify real pause ownership.
+See [current acceptance](integrations/CONTROLLED_WRITE_REHEARSAL_REPORT.md).
+
 POST /api/actions принимает provider entity_id, entity_type, action и value;
 инициатор определяется сервером по операторскому токену. Заголовок
 Idempotency-Key обязателен. Повтор с тем же ключом/командой возвращает ту же

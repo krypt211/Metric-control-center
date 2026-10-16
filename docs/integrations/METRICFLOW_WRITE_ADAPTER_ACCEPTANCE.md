@@ -3,6 +3,8 @@
 Report date: 2026-10-16, Europe/Moscow. Public documentation snapshot uses UTC timestamps.
 Baseline: 72ee5f5. Phase 4B: PARTIAL. LIVE advertising WRITE: BLOCKED.
 
+Historical stage report. Subsequent [encrypted handoff/mock rehearsal](CONTROLLED_WRITE_REHEARSAL_REPORT.md) replaces the plaintext factory and accepts durable mock claims/job correlation. Its LIVE authorization/observation/readback boundaries remain blocked; the test counts and runtime snapshot below belong to this earlier stage.
+
 ## Official evidence
 
 - [API reference](https://metricflowit.click/api/v1/docs).

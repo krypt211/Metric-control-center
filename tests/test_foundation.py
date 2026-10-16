@@ -26,7 +26,10 @@ class FoundationTests(unittest.IsolatedAsyncioTestCase):
                 secrets = config.get("secrets", [])
                 environment = config.get("environment", {})
                 if name == "action-worker":
-                    self.assertIn("metricflow_write_key", secrets)
+                    self.assertIn("metricflow_write_encryption_key", secrets)
+                    self.assertNotIn("metricflow_write_key", secrets)
+                    self.assertNotIn("metricflow_write_vault", secrets)
+                    self.assertNotIn("METRICFLOW_WRITE_KEY_FILE", environment)
                     self.assertNotIn("metricflow_read_key", secrets)
                     self.assertEqual(config["profiles"], ["actions"])
                     self.assertNotIn("METRICFLOW_READ_KEY_FILE", environment)

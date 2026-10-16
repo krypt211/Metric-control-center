@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any, Literal, Self
 
 import httpx
@@ -94,9 +94,15 @@ class MetricFlowActionConnector:
     """
 
     def __init__(
-        self, write_key: str, *, transport: httpx.AsyncBaseTransport | None = None
+        self,
+        write_key: str,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        before_request: Callable[[], Awaitable[None]] | None = None,
     ):
-        self._http = MetricFlowTransport(write_key, write=True, transport=transport)
+        self._http = MetricFlowTransport(
+            write_key, write=True, transport=transport, before_request=before_request
+        )
 
     async def __aenter__(self) -> Self:
         return self

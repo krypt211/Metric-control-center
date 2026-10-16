@@ -248,11 +248,10 @@ class ConnectorTests(unittest.IsolatedAsyncioTestCase):
             write_path.write_text(WRITE, encoding="utf-8")
             with patch.dict(os.environ, {"METRICFLOW_READ_KEY_FILE": str(read_path), "METRICFLOW_WRITE_KEY_FILE": str(write_path)}, clear=True):
                 reader = MetricFlowConnector.from_environment()
-                writer = create_action_connector()
+                with self.assertRaises(ConfigurationError):
+                    create_action_connector()
                 self.assertEqual(reader._http._client.headers["Authorization"], f"Bearer {READ}")
-                self.assertEqual(writer._http._client.headers["Authorization"], f"Bearer {WRITE}")
                 await reader.close()
-                await writer.close()
             with patch.dict(os.environ, {"METRICFLOW_WRITE_KEY_FILE": str(write_path)}, clear=True):
                 with self.assertRaises(ConfigurationError):
                     MetricFlowConnector.from_environment()

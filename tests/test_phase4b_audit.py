@@ -75,16 +75,15 @@ def test_read_permissions_and_key_file_do_not_verify_write(
         missing = ActionCapabilityRegistry.inspect(s, "default", "metricflow")
         assert not missing["write_credentials"] and not missing["write_permission"]
         assert "WRITE_CREDENTIAL_MISSING" in missing["reason_codes"]
-    # A synthetic path is evidence of presence only; this is not a real credential.
+    # Legacy plaintext presence is not a supported provisioning source anymore.
     key = tmp_path / "mock-only-key"
+    key.write_text("mfk_fixture_legacy_not_supported", encoding="utf-8")
     monkeypatch.setenv("METRICFLOW_WRITE_KEY_FILE", str(key))
-    # Mock metadata presence without creating any credential file.
-    with (
-        patch("services.actions.capabilities.Path.is_file", return_value=True),
-        store() as s,
-    ):
+    with store() as s:
         present = ActionCapabilityRegistry.inspect(s, "default", "metricflow")
-        assert present["write_credentials"] and not present["write_permission"]
+        assert not present["write_credentials"] and not present["write_permission"]
+        assert present["required_permission"] == "entities:write"
+        assert "WRITE_CREDENTIAL_MISSING" in present["reason_codes"]
         assert set(present["operations"].values()) == {"UNVERIFIED"}
         assert present["live_status"] == "BLOCKED"
 

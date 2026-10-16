@@ -1,0 +1,355 @@
+"""One-attempt MOCK_ONLY acceptance in a private restored PostgreSQL schema."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import subprocess
+import sys
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from unittest.mock import patch
+from uuid import uuid4
+
+import httpx
+from cryptography.fernet import Fernet
+from sqlalchemy import func, select, text
+
+from services.actions.engine import ActionEngine, ActionPolicy
+from services.actions.manual_schema import ManualDraftInput
+from services.actions.safety import ActionSafetyGate
+from services.actions.write_credentials import WriteCredentialVault
+from services.providers.integration_models import WriteCredentialState
+from services.providers.models import (
+    ProviderAccountMapping,
+    ProviderConnection,
+    ProviderRoutingSetting,
+)
+from services.storage.database import database_url, make_engine, sessions
+from services.storage.models import (
+    ActionExecution,
+    ActionLog,
+    ActionRequest,
+    Ad,
+    AdAccount,
+    AdSet,
+    Base,
+    Campaign,
+    Entity,
+    EntityCurrentState,
+    User,
+)
+
+# Synthetic fixtures only; this script does not depend on pytest in runtime images.
+NOW = datetime(2026, 10, 6, 12, tzinfo=UTC)
+WORKSPACE = "write-rehearsal-postgres"
+ACTOR = {"id": "admin", "workspace": WORKSPACE, "role": "admin"}
+TOKEN = "mfk_fixture_encrypted_postgres_write"
+
+
+def seed_rehearsal(sf, vault, now):
+    with sf.begin() as s:
+        s.add(
+            User(
+                id="admin",
+                workspace_id=WORKSPACE,
+                email="fixture@invalid",
+                role="admin",
+            )
+        )
+        s.add(
+            AdAccount(
+                id="account",
+                workspace_id=WORKSPACE,
+                provider="metricflow",
+                external_id="act_100",
+                name="Synthetic account",
+                currency="USD",
+                timezone="Europe/Moscow",
+                observed_at=now,
+            )
+        )
+        s.flush()
+        for key, kind, external in (
+            ("campaign", "campaign", "1001"),
+            ("adset", "adset", "1002"),
+            ("ad", "ad", "1003"),
+        ):
+            s.add(
+                Entity(
+                    id=key,
+                    account_id="account",
+                    kind=kind,
+                    external_id=external,
+                    name=key,
+                )
+            )
+        s.flush()
+        s.add(Campaign(entity_id="campaign"))
+        s.flush()
+        s.add(AdSet(entity_id="adset", campaign_id="campaign"))
+        s.flush()
+        s.add(Ad(entity_id="ad", adset_id="adset"))
+        s.add(
+            EntityCurrentState(entity_id="ad", status="ACTIVE", observed_at=now, raw={})
+        )
+        s.add(
+            ProviderAccountMapping(
+                account_id="account",
+                workspace_id=WORKSPACE,
+                canonical_id="account",
+                meta_account_id="act_100",
+                proof="catalog_meta_id",
+                updated_at=now,
+            )
+        )
+        s.add(
+            ProviderConnection(
+                workspace_id=WORKSPACE,
+                provider="metricflow",
+                enabled=True,
+                credential_source="server",
+                revision=1,
+                config={},
+                status="healthy",
+                permissions={"read": True},
+                capabilities={},
+                quota={},
+                updated_at=now,
+            )
+        )
+        s.add(
+            ProviderRoutingSetting(
+                workspace_id=WORKSPACE,
+                scope="workspace",
+                primary_provider="metricflow",
+                action_provider="disabled",
+                updated_at=now,
+            )
+        )
+        s.add(
+            WriteCredentialState(
+                workspace_id=WORKSPACE,
+                revision=1,
+                encrypted=vault.seal(WORKSPACE, TOKEN, 1).decode(),
+                status="SCOPES_VERIFIED",
+                scopes=["entities:write"],
+                access_state="active_paid",
+                checked_at=now,
+            )
+        )
+
+
+def prepared(engine, entity_id="ad", external_id="1003"):
+    command = ManualDraftInput(
+        entity_id=entity_id,
+        account_id="account",
+        meta_ad_id=external_id,
+        provider="metricflow",
+        operation="PAUSE_AD",
+        expected_status="ACTIVE",
+        reason="Synthetic rehearsal",
+    )
+    draft = engine.prepare_manual(ACTOR, command, "mock-controlled-" + entity_id)
+    checked = engine.transition_manual(
+        ACTOR, draft["id"], "preflight", draft["revision"]
+    )
+    confirmed = engine.transition_manual(
+        ACTOR, checked["id"], "confirm", checked["revision"]
+    )
+    return engine.prepare_rehearsal(
+        ACTOR, confirmed["id"], confirmed["revision"], 1, NOW + timedelta(minutes=5)
+    )
+
+
+def fixture():
+    """Refuse the working database before opening a connection."""
+    if not (database_url().database or "").startswith("mcc_integrations_"):
+        raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
+    schema = os.environ["REHEARSAL_SCHEMA"]
+    if (
+        not schema.startswith("controlled_rehearsal_")
+        or not schema.replace("_", "").isalnum()
+    ):
+        raise RuntimeError("PRIVATE_SCHEMA_REQUIRED")
+    db = make_engine(database_url().set(query={"options": "-csearch_path=" + schema}))
+    sf = sessions(db)
+    vault = WriteCredentialVault(
+        Path("/tmp/unused-rehearsal-namespace"), os.environ["REHEARSAL_CIPHER"].encode()
+    )
+    return db, sf, vault
+
+
+def child(mode, request_id, revision):
+    db, sf, vault = fixture()
+    now = NOW + timedelta(seconds=121) if mode == "recover" else NOW
+    engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: now)
+
+    def respond(request):
+        assert request.method == "POST"
+        assert request.headers["authorization"] == "Bearer " + TOKEN
+        assert json.loads(request.content) == {"level": "ad"}
+        assert dict(request.url.params) == {"async": "true"}
+        external = request.url.path.split("/")[-2]
+        assert external in {"1003", "1004"}
+        with sf.begin() as s:
+            s.add(
+                ActionLog(
+                    id=str(uuid4()),
+                    request_id=request_id,
+                    event="mock_physical_http",
+                    created_at=NOW,
+                    details={"mode": "MOCK_ONLY"},
+                )
+            )
+        if mode == "crash":
+            os._exit(17)  # Durable claim + physical mock attempt survive abrupt death.
+        return httpx.Response(
+            202,
+            json={
+                "success": True,
+                "entity_id": external,
+                "message": "mock only",
+                "job_id": 41,
+            },
+        )
+
+    if mode == "recover":
+        engine.verify_pending()
+    with (
+        patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}),
+        patch.object(ActionSafetyGate, "require_verified_contract"),
+    ):
+        result = asyncio.run(
+            engine.execute_rehearsal(
+                ACTOR,
+                request_id,
+                int(revision),
+                vault=vault,
+                transport=httpx.MockTransport(respond),
+            )
+        )
+    db.dispose()
+    print(json.dumps({"claimed": result is not None}))
+
+
+def main():
+    if not (database_url().database or "").startswith("mcc_integrations_"):
+        raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
+    admin = make_engine()
+    schema = "controlled_rehearsal_" + uuid4().hex
+    with admin.begin() as c:
+        assert (
+            c.scalar(text("SELECT version_num FROM alembic_version"))
+            == "0016_smart_control"
+        )
+        c.execute(text("CREATE SCHEMA " + schema))
+    os.environ["REHEARSAL_SCHEMA"] = schema
+    os.environ["REHEARSAL_CIPHER"] = Fernet.generate_key().decode()
+    db, sf, vault = fixture()
+    Base.metadata.create_all(db)
+    seed_rehearsal(sf, vault, NOW)
+    engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: NOW)
+    permit = prepared(engine)
+    args = [sys.executable, __file__, "send", permit["id"], str(permit["revision"])]
+    children = [
+        subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        for _ in range(8)
+    ]
+    results = []
+    for p in children:
+        out, _err = p.communicate(timeout=120)
+        if p.returncode:
+            raise RuntimeError("MOCK_RACE_CHILD_FAILED")
+        results.append(json.loads(out))
+    assert sum(v["claimed"] for v in results) == 1
+    repeated = subprocess.run(args, capture_output=True, timeout=120, check=False)
+    assert repeated.returncode == 0 and not json.loads(repeated.stdout)["claimed"]
+    with sf() as s:
+        first = s.get(ActionRequest, permit["id"])
+        assert first.status == "verifying"
+        assert first.provenance["controlled"]["job_id"] == 41
+        assert first.provenance["controlled"]["attempts"] == 1
+    with sf.begin() as s:
+        s.add(
+            Entity(
+                id="ad2",
+                account_id="account",
+                kind="ad",
+                external_id="1004",
+                name="Synthetic second AD",
+            )
+        )
+        s.flush()
+        s.add(Ad(entity_id="ad2", adset_id="adset"))
+        s.add(
+            EntityCurrentState(
+                entity_id="ad2", status="ACTIVE", observed_at=NOW, raw={}
+            )
+        )
+    second = prepared(engine, entity_id="ad2", external_id="1004")
+    crash = subprocess.run(
+        [sys.executable, __file__, "crash", second["id"], str(second["revision"])],
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert crash.returncode == 17
+    recovered = subprocess.run(
+        [sys.executable, __file__, "recover", second["id"], str(second["revision"])],
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert recovered.returncode == 0 and not json.loads(recovered.stdout)["claimed"]
+    with sf() as s:
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 2
+        assert (
+            s.scalar(
+                select(func.count())
+                .select_from(ActionLog)
+                .where(ActionLog.event == "mock_physical_http")
+            )
+            == 2
+        )
+        assert (
+            s.scalar(
+                select(func.count())
+                .select_from(ActionLog)
+                .where(ActionLog.event == "verified")
+            )
+            == 0
+        )
+        second_row = s.get(ActionRequest, second["id"])
+        assert second_row.status == "unknown"
+        assert second_row.provenance["controlled"]["attempts"] == 1
+        assert second_row.provenance["controlled"]["job_id"] is None
+    print(
+        json.dumps(
+            {
+                "database": database_url().database,
+                "schema": schema,
+                "concurrent_processes": 8,
+                "race_claims": 1,
+                "race_physical_mock_attempts": 1,
+                "job_id_persisted": 41,
+                "restart": "NO_RESEND",
+                "abrupt_exit": 17,
+                "crash_recovery": "UNKNOWN_NO_RESEND",
+                "total_physical_mock_attempts": 2,
+                "live_provider_requests": 0,
+                "advertising_write_requests": 0,
+                "result": "PASS",
+            }
+        )
+    )
+    db.dispose()
+    admin.dispose()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 4:
+        child(*sys.argv[1:])
+    else:
+        main()

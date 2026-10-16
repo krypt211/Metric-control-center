@@ -22,9 +22,10 @@ from services.providers.models import (
     ProviderConnection,
     ProviderCredential,
 )
-from services.storage.database import make_engine, sessions
+from services.storage.database import database_url, make_engine, sessions
 from services.storage.models import ActionExecution, AdAccount
 
+assert (database_url().database or "").startswith("mcc_integrations_")
 factory = sessions(make_engine())
 workspace = os.environ["WORKSPACE_ID"]
 assert workspace.startswith("integration-ui-")

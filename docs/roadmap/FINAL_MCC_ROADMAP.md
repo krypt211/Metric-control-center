@@ -7,15 +7,20 @@ Smart Rules core and DRY RUN scheduler: [local acceptance](../audit/SMART_RULES_
 WRITE contract subset and mock adapter: [OpenAPI acceptance](../integrations/METRICFLOW_WRITE_ADAPTER_ACCEPTANCE.md).
 The published OpenAPI confirms entities:write; campaigns:write is no longer a required blocker.
 Historical credential checks are not a new live permission verification.
+Encrypted handoff and durable one-attempt preparation are now accepted only in
+[isolated mock rehearsal](../integrations/CONTROLLED_WRITE_REHEARSAL_REPORT.md).
 
 1. Resolve remaining contract gaps listed below; preserve the hard LIVE gate.
 2. Complete the exact single-AD binding, object permission and configured/effective
    fresh READ verification contract. Job completion alone does not prove readback.
-3. Integrate purpose/workspace/revision-bound encrypted WRITE credential handoff,
-   bounded job observation, durable one-attempt authorization/correlation and
-   unknown-outcome reconciliation in the existing ActionEngine; no automatic resend.
-   The legacy plaintext WRITE-key factory is not this provisioning flow.
-4. Accept that exact executor path on mocks and isolated PostgreSQL concurrency/restart tests.
+3. Complete bounded job observation and authoritative unknown-outcome/readback
+   reconciliation in the existing ActionEngine once the missing provider contract
+   is confirmed; no automatic resend. Encrypted handoff and durable mock claim/job
+   correlation are implemented. The plaintext WRITE-key factory is removed.
+4. Implement and accept the actual single-AD LIVE authorization/dispatch path only
+   after those prerequisites pass. Current MOCK_ONLY permits refuse the working DB,
+   require explicit MockTransport and have no public route or scheduled dispatcher.
+   Mock race/restart acceptance does not authorize or certify a LIVE executor.
 5. Choose one AD and obtain separate explicit user authorization for one bounded operation.
 6. Perform the authorized operation only after all gates pass; verify readback/audit,
    restore safety flags. Restoration is a second separately authorized action.

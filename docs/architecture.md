@@ -100,8 +100,10 @@ Details: [Multi-select and search report](rules/MULTI_SELECT_AND_SEARCH_REPORT.m
 ## WRITE storage and deployment boundary
 
 The independent encrypted WRITE vault is not mounted into READ services and never
-grants execution permission. A typed provider wire contract and controlled one-action
-dispatch remain blocked pending provider evidence. Migration containers use a shared
+grants execution permission. The documented AD wire subset and encrypted
+purpose/workspace/revision-bound handoff are accepted on mocks. Controlled LIVE
+dispatch remains blocked pending provider evidence and an actual authorization path.
+Migration containers use a shared
 transaction lock and skip upgrade when the database is already current.
 Details: [Phase 4B readiness](phase4/BUSINESS_WRITE_READINESS_2026-10-12.md).
 
@@ -127,3 +129,17 @@ The Request Meter atomically reserves the session cap with each attempt record.
 A lost worker owner stops the pilot; neither restart nor completion enables the
 standard scheduler. Pilot validation stores counts, not replacement advertising
 facts. See [pilot acceptance](integrations/META_CONTROLLED_READ_PILOT_REPORT.md).
+
+## Durable WRITE rehearsal boundary
+
+The existing ActionEngine prepares MOCK_ONLY permits solely in isolated fixture
+workspaces/databases. A transaction binds the confirmed manual revision, actor,
+account, AD, snapshot, credential revision/ciphertext digest and a short deadline.
+It commits the sole attempt and unique ActionExecution before vault access or HTTP.
+Explicit MockTransport is mandatory; production database admission is refused.
+Acknowledged job_id is persisted, but neither job ACK nor a legacy effective-status
+comparison creates verified ownership. Interrupted claims become UNKNOWN without
+resend. No table, migration, public route, queue or second executor was introduced.
+The legacy action task refuses unbound dispatch; the opt-in action process has no
+plaintext WRITE-key mount. The hard LIVE contract gate remains unconditional.
+See [rehearsal acceptance](integrations/CONTROLLED_WRITE_REHEARSAL_REPORT.md).
