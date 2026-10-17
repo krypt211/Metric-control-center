@@ -176,3 +176,9 @@ METRICFLOW LIVE WRITE: BLOCKED
 METRICFLOW READ: HEALTHY / PRESERVED
 META LIVE REQUESTS: 0
 ADVERTISING WRITE REQUESTS: 0
+
+
+Subsequent stage (2026-10-18): [bounded mock job observation](METRICFLOW_JOB_OBSERVER_ACCEPTANCE.md)
+adds durable GET steps and deadline recovery in isolated rehearsals. It supersedes
+the earlier absence of observation in this dated report. LIVE authorization,
+dispatch and authoritative readback remain blocked; no working deployment was made.

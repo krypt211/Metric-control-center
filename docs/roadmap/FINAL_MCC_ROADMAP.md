@@ -58,3 +58,14 @@ The [detailed acceptance plan](../integrations/METRICFLOW_NEXT_PHASE_ACCEPTANCE_
 separates attribution, history freshness policy and actual LIVE execution work.
 The [provider clarification request](../integrations/METRICFLOW_PROVIDER_CLARIFICATION_REQUEST.md)
 is ready for the user to send; no message was sent by the agent.
+
+
+## Bounded job observer accepted in isolation (2026-10-18)
+
+The existing ActionEngine now has durable single-step MOCK_ONLY job observation:
+see [acceptance](../integrations/METRICFLOW_JOB_OBSERVER_ACCEPTANCE.md).
+The confirmed GET job contract is implemented without waiting for all provider
+clarifications. A success is JOB_SUCCESS_NEEDS_READBACK, never verified ownership.
+No LIVE route, production permit, deployment or scheduler activation was added.
+Next: authoritative READ readback contract and local acceptance; preserve the
+remaining identity, permission, 202 and lost-job UNKNOWN boundaries.

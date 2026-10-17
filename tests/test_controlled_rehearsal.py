@@ -218,7 +218,13 @@ def test_encrypted_handoff_one_attempt_correlated_job_and_no_live_verification(
         assert not any(v.event == "verified" for v in logs)
         assert TOKEN not in json.dumps([v.details for v in logs])
         assert TOKEN not in json.dumps(s.get(ActionRequest, result).provenance)
-        assert s.get(ActionRequest, result).status == "verifying"
+        # The newly bounded observer expires even if no GET was ever dispatched.
+        recovered = s.get(ActionRequest, result)
+        assert recovered.status == "unknown"
+        assert (
+            recovered.provenance["controlled"]["observation"]["error_code"]
+            == "OBSERVATION_DEADLINE"
+        )
     assert not vault.path.exists()  # SQL envelope, no plaintext or file vault.
 
 

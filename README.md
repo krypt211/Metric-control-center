@@ -72,3 +72,8 @@ Meta controlled READ pilot preparation and the separate LIVE approval procedure:
 Smart Rules core: [local acceptance](docs/audit/SMART_RULES_FINAL_ACCEPTANCE.md). PAUSE/ENABLE preparation, MCC notifications, profile timezone, conflict/cooldown guards and the PostgreSQL-only DRY RUN scheduler are locally tested. LIVE WRITE remains blocked.
 
 WRITE preparation: [encrypted handoff and durable mock rehearsal](docs/integrations/CONTROLLED_WRITE_REHEARSAL_REPORT.md). Single-attempt claims, job correlation and crash recovery use the existing ActionEngine in isolated fixtures. LIVE dispatch, provider readback and per-object authorization remain blocked.
+
+Bounded action-job observation: [mock and isolated PostgreSQL acceptance](docs/integrations/METRICFLOW_JOB_OBSERVER_ACCEPTANCE.md).
+Durable GET budgets, spacing, deadline and UNKNOWN recovery are implemented only
+for isolated MOCK_ONLY rehearsals. Production authorization, dispatch and
+verified readback remain blocked; working containers have not been updated.

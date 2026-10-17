@@ -185,12 +185,14 @@ class ActionEngine:
             blocked = session.scalar(select(ApiQuota).where(
                 ApiQuota.workspace_id == workspace, ApiQuota.provider == "metricflow", ApiQuota.blocked_until > now,
             ).limit(1))
+            if blocked:
+                raise ActionRejected("API quota exhausted")
             reserved = session.execute(update(ApiQuota).where(
                 ApiQuota.workspace_id == workspace, ApiQuota.provider == "metricflow", ApiQuota.utc_day == now.date(),
                 ApiQuota.requests < self.policy.daily_api_budget,
                 or_(ApiQuota.blocked_until.is_(None), ApiQuota.blocked_until <= now),
             ).values(requests=ApiQuota.requests + 1))
-            if blocked or reserved.rowcount != 1:
+            if reserved.rowcount != 1:
                 raise ActionRejected("API quota exhausted")
 
     async def execute_next(self, connector) -> str | None:
@@ -367,6 +369,7 @@ class ActionEngine:
         worker dispatch or working-database permit creation is provided here.
         """
         from services.actions.factory import checked_write_state, credential_digest
+        from services.actions.job_observation import new_observation
 
         now = self.clock()
         if (
@@ -390,6 +393,7 @@ class ActionEngine:
             )
             control = {
                 "mode": "MOCK_ONLY",
+                "observation": new_observation(),
                 "state": "PREPARED",
                 "attempts": 0,
                 "expires_at": expires_at.isoformat(),
@@ -569,6 +573,10 @@ class ActionEngine:
                 state="ACKNOWLEDGED_NEEDS_READBACK" if result else "OUTCOME_UNKNOWN",
                 job_id=result["job_id"] if result else None,
             )
+            if result:
+                from services.actions.job_observation import arm_observation
+
+                arm_observation(saved, self.clock())
             row.provenance = {**row.provenance, "controlled": saved}
             row.status, row.revision = (
                 ("verifying" if result else "unknown"),
@@ -595,6 +603,17 @@ class ActionEngine:
         if unexpected:
             raise ActionRejected("REHEARSAL_INTERNAL_ERROR_RECONCILE") from None
         return request_id
+
+    async def observe_rehearsal_job(
+        self, actor: dict, request_id: str, *, vault: Any, transport: Any
+    ) -> str | None:
+        """One durable mock GET step; no route, scheduler, or LIVE authorization."""
+        from services.actions.job_observation import observe_rehearsal_job
+
+        return await observe_rehearsal_job(
+            self, actor, request_id, vault=vault, transport=transport
+        )
+
     def verify_pending(self) -> int:
         """Verify against a newer current-state observation fetched by the read worker."""
         now, count = self.clock(), 0
@@ -609,6 +628,10 @@ class ActionEngine:
                 started = aware(execution.started_at)
                 controlled = dict(request.provenance.get("controlled") or {})
                 if controlled:
+                    from services.actions.job_observation import recover_observation
+
+                    if recover_observation(session, request, execution, now):
+                        continue
                     # Rehearsal acknowledgements cannot become LIVE ownership
                     # evidence through the legacy effective-status reconciler.
                     if request.status == "executing" and (now - started).total_seconds() >= 120:

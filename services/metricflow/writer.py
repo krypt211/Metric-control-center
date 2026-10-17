@@ -89,8 +89,8 @@ class MetricFlowActionConnector:
     """AD-only POST adapter, tested with mocks. Never retries commands.
 
     IDs are safe opaque path segments here, not verified provider IDs. Binding to
-    the account/AD namespace is still a LIVE prerequisite. No job poller or budget
-    contract is enabled by this adapter.
+    the account/AD namespace is still a LIVE prerequisite. Job GETs are single
+    attempts behind the same hard gate; no LIVE polling or budget contract.
     """
 
     def __init__(
@@ -104,6 +104,22 @@ class MetricFlowActionConnector:
             write_key, write=True, transport=transport, before_request=before_request
         )
 
+        async def observation_guard():
+            from services.actions.safety import ActionSafetyGate
+
+            ActionSafetyGate.require_write()
+            if before_request:
+                await before_request()
+            ActionSafetyGate.require_write()
+
+        # Same purpose-bound key, separate GET-only client, no hidden retries.
+        self._jobs = MetricFlowTransport(
+            write_key,
+            transport=transport,
+            read_retries=0,
+            before_request=observation_guard,
+        )
+
     async def __aenter__(self) -> Self:
         return self
 
@@ -111,7 +127,20 @@ class MetricFlowActionConnector:
         await self.close()
 
     async def close(self) -> None:
-        await self._http.close()
+        try:
+            await self._http.close()
+        finally:
+            await self._jobs.close()
+
+    async def get_action_job(self, job_id: int, *, entity_id: str) -> ActionJob:
+        """Fetch one correlated job; neither retry nor verify an AD state."""
+        if type(job_id) is not int or job_id < 1:
+            raise ValueError("A positive job ID is required")
+        self._path(entity_id, "pause")  # Validate identity without guessing namespace.
+        payload = await self._jobs.request(
+            "GET", f"jobs/{job_id}", accepted_statuses=frozenset({200})
+        )
+        return decode_action_job(payload, job_id=job_id, entity_id=entity_id)
 
     @staticmethod
     def _path(entity_id: str, operation: str) -> str:
