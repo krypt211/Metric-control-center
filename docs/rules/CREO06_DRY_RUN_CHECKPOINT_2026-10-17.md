@@ -141,6 +141,21 @@ Its only command was the earlier SIMULATED request
 cb3370e7-036d-43ad-b243-190b6d8de6d4. ActionExecution rows: 0.
 Backend runtime: ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
 AI_AUTOPILOT_ALLOWED=false. Rule scheduler remains off, next_evaluation_at null.
-The rule currently retains the temporary 2 USD test threshold; next UI step is
-to restore Maximum profile threshold and save, keeping scheduling disabled.
+At that inspection rule revision 3 retained the temporary 2 USD test threshold.
+The user subsequently restored the profile threshold; see closure below.
 No new test suite was run for this read-only audit/documentation update.
+
+## Test configuration restored ? 22:37 Moscow
+
+The user saved rule revision 4 at 22:37:02.790950; read-only verification at
+22:37:25 confirmed CPL_ABOVE_LIMIT, limit=maximum, value=null, source=actual,
+currency=USD. The temporary 2 USD threshold is removed. MX AD profile revision 1,
+one exact AD target, dates 2026-10-10..2026-10-16 and cooldown 3600 are unchanged.
+The rule remains DRY_RUN, enabled=false, next_evaluation_at=null.
+No revision-4 simulation was executed or claimed. The accepted revision-2 FALSE
+and revision-3 TRUE results remain immutable historical evidence.
+AD remains ACTIVE in the last READ at 22:30; one prior SIMULATED command,
+ActionExecution rows zero; all four backend safety flags remain preserved.
+Local manual/rule logic and fail-closed guard walkthrough is complete for these
+cases. Positive actionable rule preparation, live PAUSE/ENABLE and automated
+advertising execution remain unaccepted and blocked; no live permission granted.
