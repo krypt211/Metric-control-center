@@ -9,8 +9,9 @@ AD: #70495691_EGR_Creo 06 / 120247747556780571.
 Rule: 9cf962b0-a2ed-4b87-9e74-7695aedb8efd, revision 2,
 TEST ? Creo 06 ? PAUSE. Profile: MX AD, revision 1.
 Period: 2026-10-10 through 2026-10-16, America/Los_Angeles.
-Scheduler remains disabled for this rule. No new rule simulation was executed by
-this maintenance step; the user's last recorded simulation remains DATA_STALE.
+Scheduler remains disabled for this rule. The READ maintenance step did not
+execute a simulation. Subsequent user-run UI checks confirmed FALSE -> KEEP and
+TRUE -> REVIEW with attribution still unverified; see the acceptance below.
 
 ## Why the user's first rule check held
 
@@ -111,3 +112,35 @@ current coverage first rather than repeatedly scheduling historical refreshes.
 Before any positive actionable acceptance, obtain documented historical insight
 attribution semantics from MetricFlow; do not treat creation-input examples as
 read evidence or lower safeguards. LIVE dispatch remains blocked separately.
+
+## Subsequent user-run UI acceptance
+
+At 22:31:25, simulation 02233fcd-6790-4b69-beeb-5d1526293e89
+used rule revision 2 and the same seven-day period, selected AD and MX AD profile.
+Exactly one row, no target issues, source_stale=false. Actual CPL 2.84781395,
+maximum-profile threshold 7.11864407, delta -4.27083012: FALSE -> KEEP.
+Attribution remained unknown, action_eligibility=false and real_action=false.
+A false signal can safely hold the existing AD without authorizing an action.
+
+At 22:34:16, simulation 6e8acd63-0a72-435e-935c-8bd7e5daa88d
+used rule revision 3 after the user set a temporary custom threshold of 2 USD
+in this test rule only. Profile revision 1 and factual statistics were unchanged.
+Exactly one row, no target issues, source_stale=false. Actual CPL 2.84781395,
+threshold 2.00000000, delta +0.84781395: TRUE -> REVIEW.
+Reason ATTRIBUTION_UNVERIFIED was retained; action_eligibility=false,
+safe_to_consider_for_future_action=false and real_action=false.
+No WOULD_PAUSE or new command was produced. Audit UPDATE/SIMULATE entries persist.
+
+Measured local acceptance: manual PAUSE simulation PASS; stale-evidence hold PASS;
+fresh FALSE -> KEEP PASS; fresh TRUE with unknown attribution -> REVIEW PASS.
+Positive actionable WOULD_PAUSE -> manual preparation remains BLOCKED.
+LIVE PAUSE/ENABLE is not accepted or authorized by these checks.
+
+At the 22:34:40 inspection the selected AD remained ACTIVE (observed 22:30).
+Its only command was the earlier SIMULATED request
+cb3370e7-036d-43ad-b243-190b6d8de6d4. ActionExecution rows: 0.
+Backend runtime: ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false. Rule scheduler remains off, next_evaluation_at null.
+The rule currently retains the temporary 2 USD test threshold; next UI step is
+to restore Maximum profile threshold and save, keeping scheduling disabled.
+No new test suite was run for this read-only audit/documentation update.
