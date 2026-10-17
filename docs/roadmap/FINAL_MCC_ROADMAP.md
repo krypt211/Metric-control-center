@@ -47,3 +47,14 @@ and GET /api/v1/jobs/{job_id}. Please clarify the remaining points:
 
 No API keys or secrets are needed for this request. Existing encrypted WRITE and
 READ connections are preserved. Public specification and local tests are not LIVE authorization.
+
+
+## After the user-run single-AD DRY RUN acceptance (2026-10-17)
+
+The [measured walkthrough](../rules/CREO06_DRY_RUN_CHECKPOINT_2026-10-17.md)
+accepted FALSE -> KEEP and TRUE with unknown attribution -> REVIEW, then restored
+the profile threshold and left scheduling off. LIVE operations remain blocked.
+The [detailed acceptance plan](../integrations/METRICFLOW_NEXT_PHASE_ACCEPTANCE_PLAN.md)
+separates attribution, history freshness policy and actual LIVE execution work.
+The [provider clarification request](../integrations/METRICFLOW_PROVIDER_CLARIFICATION_REQUEST.md)
+is ready for the user to send; no message was sent by the agent.
