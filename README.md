@@ -77,3 +77,8 @@ Bounded action-job observation: [mock and isolated PostgreSQL acceptance](docs/i
 Durable GET budgets, spacing, deadline and UNKNOWN recovery are implemented only
 for isolated MOCK_ONLY rehearsals. Production authorization, dispatch and
 verified readback remain blocked; working containers have not been updated.
+
+READ readback diagnostics: [acceptance and LIVE boundaries](docs/integrations/METRICFLOW_READBACK_ACCEPTANCE.md).
+The isolated mock path now covers POST -> correlated job -> bounded account-filtered
+READ, including process races and crash recovery. Reported status matches remain
+non-authoritative; production WRITE and automatic re-enabling stay blocked.

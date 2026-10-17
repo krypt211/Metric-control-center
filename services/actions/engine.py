@@ -614,6 +614,16 @@ class ActionEngine:
             self, actor, request_id, vault=vault, transport=transport
         )
 
+    async def readback_rehearsal(
+        self, actor: dict, request_id: str, *, read_key: str, transport: Any
+    ) -> str | None:
+        """Bounded mock READ diagnostic; never certifies LIVE ownership."""
+        from services.actions.readback import readback_rehearsal
+
+        return await readback_rehearsal(
+            self, actor, request_id, read_key=read_key, transport=transport
+        )
+
     def verify_pending(self) -> int:
         """Verify against a newer current-state observation fetched by the read worker."""
         now, count = self.clock(), 0
@@ -629,6 +639,10 @@ class ActionEngine:
                 controlled = dict(request.provenance.get("controlled") or {})
                 if controlled:
                     from services.actions.job_observation import recover_observation
+                    from services.actions.readback import recover_readback
+
+                    if recover_readback(session, request, now):
+                        continue
 
                     if recover_observation(session, request, execution, now):
                         continue

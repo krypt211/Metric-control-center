@@ -69,3 +69,12 @@ clarifications. A success is JOB_SUCCESS_NEEDS_READBACK, never verified ownershi
 No LIVE route, production permit, deployment or scheduler activation was added.
 Next: authoritative READ readback contract and local acceptance; preserve the
 remaining identity, permission, 202 and lost-job UNKNOWN boundaries.
+
+## Reported-status readback accepted in isolation (2026-10-18)
+
+The [READ diagnostic stage](../integrations/METRICFLOW_READBACK_ACCEPTANCE.md)
+completes the mock POST/job/READ path in the existing ActionEngine. A durable claim,
+three-page budget, quota/identity guards and original deadline survive restart.
+A reported match remains UNKNOWN / authoritative=false; it cannot create pause
+ownership. Production dispatch still requires the unresolved mandatory contract.
+Next external step: targeted provider evidence; repeat DRY_RUN clicks are unnecessary.

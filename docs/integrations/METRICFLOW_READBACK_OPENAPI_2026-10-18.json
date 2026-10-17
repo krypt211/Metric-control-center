@@ -1,0 +1,966 @@
+{
+  "source_url": "https://metricflowit.click/api/v1/openapi.json?lang=en",
+  "retrieved_at": "2026-10-17T21:26:25.227121+00:00",
+  "source_sha256": "f52bc8ca0691fa0e2f2b5a5de06aa74a897546b88705ee16851859138a2f3327",
+  "note": "Unmodified public READ operation and recursively referenced schemas; no credentials or LIVE provider calls.",
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MetricFlow Public API",
+    "description": "Public API for Facebook Ads analytics, campaign management, and automation.\n\n## Authentication\nPass your API key via header:\n```\nX-API-Key: mf_live_...\n```\nor\n```\nAuthorization: Bearer mf_live_...\n```\nCreate keys in [Settings > API](/settings?form=api-keys).\n\n## Scopes\n| Scope | Access |\n|---|---|\n| `analytics:read` | Overview, summary, daily breakdown |\n| `ad_accounts:read` | Ad accounts list with metrics |\n| `campaigns:read` | Campaigns, adsets, ads, creatives |\n| `rules:read` | Automation rules and history |\n| `rules:write` | Create, update, delete and pause automation rules |\n| `entities:write` | Pause/enable, budgets, duplicate |\n| `bundles:read` | Bundle configs and logs |\n| `bundles:write` | Pause/resume bundles |\n| `seeding:read` | Comment seeding: tasks, queue, author pages, images (Pro plan and higher or a custom plan) |\n| `seeding:write` | Comment seeding: create/update/start/pause/delete tasks, upload images (Pro plan and higher or a custom plan) |\n| `pages:read` | Fan pages, their comments and stats, comment-history scan jobs |\n| `pages:write` | Moderate comments, page settings, webhook subscription, queue comment-history scans |\n\n## Rate Limits\n- **Read:** 120 req/min\n- **Write:** 10-30 req/min\n- **Daily:** depends on plan (Starter: 1K, Growth: 2.5K, Pro: 5K, Business: 20K)\n\n## Date Ranges\nUse `from` and `to` query parameters in `YYYY-MM-DD` format. Defaults to last 90 days.\n\n## Comment history scan\nFacebook pushes only NEW comments over webhooks, so a delivery gap leaves a hole in a page's comment history and nothing re-sends it. A scan walks the page's posts and ingests what the webhook missed:\n\n- **Catch up after a gap** — `POST /api/v1/pages/{page_id}/backfill` with `{\"lookback_hours\": 6, \"mode\": \"apply\"}`. Cheap enough to schedule: the window is pushed to Facebook and only posts that can plausibly carry new comments (live ads, recently-commented posts, posts created inside the window) are walked.\n- **Decide comment by comment** — `mode=\"review\"` stops the job in status `review`. Read the verdicts from `GET /api/v1/pages/backfill-jobs/{job_id}/items`, then post your decision to `POST /api/v1/pages/backfill-review/apply`. While a job waits in `review` the page's cleaner is paused for those comments, for up to 24 hours — cancel any review you are not going to apply (`POST /api/v1/pages/backfill-jobs/{job_id}/cancel`).\n- **First-time cleanup** — `lookback_days` (0 = all history) walks the page's entire ad-post history. Thorough and slow; not for a schedule.\n\nScans are queued: the endpoints return a job, poll it via `GET /api/v1/pages/backfill-jobs/{job_id}`. One page can be scanned once every 30 minutes (429 with `Retry-After`, or `skipped_details` with `reason=\"cooldown\"` in a bulk call), and one account can hold 50 queued or running scans at a time. The endpoints themselves allow 10 req/min (single page) and 2 req/min (bulk, up to 50 pages per call).\n\n## Errors\n| Code | Meaning |\n|---|---|\n| 400 | Bad request |\n| 401 | Invalid API key |\n| 402 | Subscription expired — every endpoint except /usage and /me |\n| 403 | Missing scope |\n| 404 | Not found |\n| 429 | Rate limit exceeded |\n\n## Calling from a browser (CORS)\nAll `/api/v1/*` endpoints allow cross-origin requests from any origin (`Access-Control-Allow-Origin: *`) — no CORS proxy needed, and never route your key through one. Remember that a key embedded in client-side code is visible to anyone who can open the page: use a dedicated **read-only** key (`analytics:read` + `campaigns:read`) for browser dashboards and keep write-scoped keys server-side.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/insights": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Flat cross-account insights",
+        "description": "One row per ``(ad_account, hierarchy entity, date)`` across many ad accounts in a single request — replaces the 4-step ``ad-accounts → campaigns → adsets → ads`` walk.\n\n**Query parameters:**\n* ``from`` / ``to`` — date range (YYYY-MM-DD), max 90 days.\n* ``level`` — ``campaign`` (default), ``adset``, or ``ad``.\n* ``ad_account_ids`` — comma-separated, e.g. ``act_123,act_456``. If omitted, includes every account you own.\n* ``fields`` — comma-separated subset of metric fields. Metrics not listed are OMITTED from response rows entirely (they are not returned as null). Identifier and name columns are always returned. Allowed metric names: ``spend, impressions, clicks, reach, frequency, cpc, cpm, ctr, unique_clicks, inline_link_clicks, unique_inline_link_clicks, leads, purchases, registrations, video_views, app_installs, landing_page_views, conversions, video_3s_views, video_p100_views, video_starts, video_total_watch_time, hook_rate, hold_rate, video_avg_time_watched``. ``hook_rate``, ``hold_rate`` and ``video_avg_time_watched`` are derived (no DB column); asking for them auto-pulls their dependencies (`impressions`, `video_3s_views`, `video_p100_views`; `video_total_watch_time`, `video_starts`) so the response is self-contained.\n* ``currency`` — ``usd`` (default) or ``native``. Controls the denomination of every monetary field (``spend``, ``cpc``, ``cpm``). USD values are computed as ``native × ad_account.currency_ratio_to_usd``; the ratio is also returned on each row so the client can convert the other way without a round-trip.\n* ``limit`` — page size, default 100, max 100.\n* ``cursor`` — opaque token from previous response's ``pagination.cursor``.\n\n**Always-returned identifier / metadata columns** (in addition to the metric fields listed above):\n* ``campaign_id`` / ``campaign_name`` — populated for every level.\n* ``adset_id`` / ``adset_name`` — populated for ``adset`` and ``ad``.\n* ``ad_id`` / ``ad_name`` — populated for ``ad``.\n* ``status`` / ``effective_status`` — entity status at the requested level (ACTIVE / PAUSED / DISAPPROVED / ...).\n* ``daily_budget`` / ``lifetime_budget`` — the entity's current budget (campaign at ``level=campaign`` (CBO), adset at ``level=adset`` (ABO); always null at ``level=ad``). It's the current value (not per-date) so it repeats across a campaign/adset's date rows. Honors ``?currency``.\n* ``targeting_country`` (list of ISO codes), ``targeting_age`` (e.g. ``18-65``), ``targeting_gender`` (``all`` / ``male`` / ``female``) — populated for ``adset`` and ``ad`` levels.\n* ``landing_url`` — primary landing URL (Ad.call_to_action_link). Populated only at ``level=ad``.\n* ``url_tags`` — UTM-style query string Meta appends to clicks (e.g. ``utm_source=fb&utm_campaign=spring``). ``ad`` level only.\n* ``app_link`` — app deep link / store URL for app-promo CTAs (``ad`` level only).\n* ``call_to_action_type`` — CTA enum (SHOP_NOW / LEARN_MORE / INSTALL_APP / ...). ``ad`` level only.\n* ``google_play_link`` — narrow subset of ``landing_url`` (only when the host is ``play.google.com``). Kept for backward compatibility — new integrations should prefer ``landing_url``.\n\n**URL filters (ad level only)**:\n* ``url_contains`` — case-insensitive substring on landing_url.\n* ``utm_source`` / ``utm_campaign`` / ``utm_medium`` — substring on url_tags. Returns 400 when used with ``level != ad``.\n\n**Pagination**: keyset-based. When ``pagination.has_more`` is true, pass ``pagination.cursor`` as ``?cursor=...`` to fetch the next page.",
+        "operationId": "flat_insights_api_v1_insights_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "From"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD)",
+              "title": "To"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(campaign|adset|ad)$",
+              "default": "campaign",
+              "title": "Level"
+            }
+          },
+          {
+            "name": "ad_account_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated provider account IDs (e.g. act_123,act_456). Omit for all your accounts.",
+              "title": "Ad Account Ids"
+            },
+            "description": "Comma-separated provider account IDs (e.g. act_123,act_456). Omit for all your accounts."
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated subset of metric fields. Omit for all.",
+              "title": "Fields"
+            },
+            "description": "Comma-separated subset of metric fields. Omit for all."
+          },
+          {
+            "name": "url_contains",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ad-only. Substring match on the ad's landing URL (call_to_action_link). Case-insensitive. Returns 400 when level != ad.",
+              "title": "Url Contains"
+            },
+            "description": "ad-only. Substring match on the ad's landing URL (call_to_action_link). Case-insensitive. Returns 400 when level != ad."
+          },
+          {
+            "name": "utm_source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ad-only. Substring match on url_tags for utm_source=<value>.",
+              "title": "Utm Source"
+            },
+            "description": "ad-only. Substring match on url_tags for utm_source=<value>."
+          },
+          {
+            "name": "utm_campaign",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ad-only. Substring match on url_tags for utm_campaign=<value>.",
+              "title": "Utm Campaign"
+            },
+            "description": "ad-only. Substring match on url_tags for utm_campaign=<value>."
+          },
+          {
+            "name": "utm_medium",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ad-only. Substring match on url_tags for utm_medium=<value>.",
+              "title": "Utm Medium"
+            },
+            "description": "ad-only. Substring match on url_tags for utm_medium=<value>."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(usd|native)$",
+              "description": "Denomination for monetary fields. Default `usd` (uses the account's stored ratio); `native` returns FB's raw values in the account's currency.",
+              "default": "usd",
+              "title": "Currency"
+            },
+            "description": "Denomination for monetary fields. Default `usd` (uses the account's stored ratio); `native` returns FB's raw values in the account's currency."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "InsightsResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/InsightRow"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/InsightsPagination"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta",
+          "pagination"
+        ],
+        "title": "InsightsResponse"
+      },
+      "InsightsPagination": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor",
+            "description": "Pass to next request as ``?cursor=`` to fetch the next page"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "InsightsPagination"
+      },
+      "ApiMeta": {
+        "properties": {
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset"
+          },
+          "date_range": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Updated At",
+            "description": "Last successful sync timestamp (ISO 8601)"
+          }
+        },
+        "type": "object",
+        "title": "ApiMeta"
+      },
+      "InsightRow": {
+        "properties": {
+          "ad_account_id": {
+            "type": "string",
+            "title": "Ad Account Id"
+          },
+          "ad_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Account Name"
+          },
+          "custom_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Name"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Id"
+          },
+          "campaign_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Name"
+          },
+          "adset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adset Id"
+          },
+          "adset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adset Name"
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "ad_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Name"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "effective_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Status"
+          },
+          "daily_budget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Budget",
+            "description": "Daily budget of the entity (campaign at level=campaign, adset at level=adset). null at level=ad and when the entity uses a lifetime budget instead. **Unit:** the ad account currency's MINOR unit, exactly as Facebook returns it — a $1,300.00 budget on a USD account reads `130000`. Divide by 100, EXCEPT for the zero-decimal currencies (CLP, COP, CRC, HUF, IDR, ISK, JPY, KRW, PYG, TWD, VND), whose Facebook offset is 1: there the number is already whole. Note this differs from `spend`, `cpc` and `cpm` (major units) and from the write endpoints (`POST /entities/{id}/budget`, `/bid`), which take major units. With `?currency=usd` the value is multiplied by the FX ratio, which does NOT change the scale: you get USD cents on a 100-offset account and whole USD on a zero-decimal one."
+          },
+          "lifetime_budget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifetime Budget",
+            "description": "Lifetime budget of the entity. null at level=ad and when the entity uses a daily budget instead. **Unit:** the ad account currency's MINOR unit, exactly as Facebook returns it — a $1,300.00 budget on a USD account reads `130000`. Divide by 100, EXCEPT for the zero-decimal currencies (CLP, COP, CRC, HUF, IDR, ISK, JPY, KRW, PYG, TWD, VND), whose Facebook offset is 1: there the number is already whole. Note this differs from `spend`, `cpc` and `cpm` (major units) and from the write endpoints (`POST /entities/{id}/budget`, `/bid`), which take major units. With `?currency=usd` the value is multiplied by the FX ratio, which does NOT change the scale: you get USD cents on a 100-offset account and whole USD on a zero-decimal one."
+          },
+          "targeting_country": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targeting Country"
+          },
+          "targeting_age": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targeting Age"
+          },
+          "targeting_gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targeting Gender"
+          },
+          "landing_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landing Url",
+            "description": "Primary landing URL — Ad.call_to_action_link. Populated only for level=ad."
+          },
+          "url_tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Tags",
+            "description": "UTM-style query string Meta appends to clicks (e.g. utm_source=fb&utm_campaign=...). Ad level only."
+          },
+          "app_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Link",
+            "description": "App deep link / store URL for app-promo CTAs. Ad level only."
+          },
+          "call_to_action_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call To Action Type",
+            "description": "CTA enum (SHOP_NOW / LEARN_MORE / INSTALL_APP / ...). Ad level only."
+          },
+          "google_play_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Play Link"
+          },
+          "currency_ratio_to_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency Ratio To Usd",
+            "description": "Multiplier: native_value × ratio = USD. Returned regardless of the `currency` query param."
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "impressions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impressions"
+          },
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency"
+          },
+          "cpc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpc"
+          },
+          "cpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpm"
+          },
+          "ctr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctr"
+          },
+          "unique_clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Clicks"
+          },
+          "inline_link_clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Link Clicks"
+          },
+          "unique_inline_link_clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Inline Link Clicks"
+          },
+          "leads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leads"
+          },
+          "purchases": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchases"
+          },
+          "registrations": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrations"
+          },
+          "video_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Views"
+          },
+          "app_installs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Installs"
+          },
+          "landing_page_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landing Page Views"
+          },
+          "conversions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversions"
+          },
+          "video_3s_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video 3S Views",
+            "description": "Video plays of at least 3 seconds (Meta `actions` → `video_view`) — matches Ads Manager's hook-rate numerator."
+          },
+          "video_p100_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video P100 Views",
+            "description": "Video plays watched to 100% (Meta `video_p100_watched_actions`)."
+          },
+          "video_starts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Starts",
+            "description": "Video playback starts (Meta `video_play_actions`; with autoplay ≈ every impression). Denominator of `video_avg_time_watched`."
+          },
+          "video_total_watch_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Total Watch Time",
+            "description": "Total seconds watched = Σ(avg seconds × starts). Additive carrier of `video_avg_time_watched`: divide by `video_starts` for the weighted average at any grouping."
+          },
+          "video_avg_time_watched": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Avg Time Watched",
+            "description": "Average seconds a video was watched, weighted by video plays across the rows (Meta `video_avg_time_watched_actions`). Ad level; null outside video. Aggregated as Σ(avg×plays)/Σ(plays), so parent rows are a true weighted average, not an average of averages."
+          },
+          "hook_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hook Rate",
+            "description": "% of impressions that watched ≥3s — `video_3s_views / impressions × 100`. Computed only when both deps are selected (or `fields` is omitted)."
+          },
+          "hold_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Rate",
+            "description": "% of 3s-viewers who watched to 100% — `video_p100_views / video_3s_views × 100`. Computed only when both deps are selected (or `fields` is omitted)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "ad_account_id",
+          "date"
+        ],
+        "title": "InsightRow",
+        "description": "One flat insight row from ``GET /api/v1/insights``.\n\nHierarchy fields not relevant for the requested level come back as\n``null`` (e.g. ``adset_id``/``ad_id`` when ``level=campaign``).\nMetric fields not requested via ``?fields=...`` come back as\n``null`` rather than being absent — that keeps the response shape\nstable for OpenAPI consumers. Use ``response_model_exclude_none``\non a per-call basis if you need a smaller payload."
+      }
+    }
+  }
+}

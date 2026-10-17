@@ -369,9 +369,13 @@ test("browser-only mock verifies WOULD_PAUSE prepare button and draft navigation
   const base = history.requests.find((request) => request.actor === accounts.users[0].login);
   expect(base).toBeTruthy();
   const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const sourceCard =
+    ruleFixture.simulation.rows.find((row) => row.external_id === freshAd.meta_ad_id) ??
+    ruleFixture.simulation.rows.find((row) => row.ad_status === "ACTIVE") ??
+    ruleFixture.simulation.rows[0];
+  expect(sourceCard, "A complete saved decision is required for the browser mock").toBeTruthy();
   const mockCard = {
-    ...(ruleFixture.simulation.rows.find((row) => row.external_id === freshAd.meta_ad_id) ??
-      ruleFixture.simulation.rows.find((row) => row.ad_status === "ACTIVE")),
+    ...sourceCard,
     name: "Изолированный browser mock — не рекламная команда",
     status: "WOULD_PAUSE", reason_codes: [],
   };

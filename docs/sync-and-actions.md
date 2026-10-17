@@ -94,3 +94,14 @@ campaign/adset, и только если провайдер подтвердил
 Сторонние изменения в Meta/MetricFlow между проверкой и POST нельзя
 атомарно исключить без поддержки compare-and-set у провайдера.
 Система обнаруживает результат последующей сверкой и хранит журнал.
+
+## Текущая граница MetricFlow WRITE (18.10.2026)
+
+Описание legacy очереди выше не является разрешением LIVE. Для controlled
+MOCK_ONLY rehearsal существует отдельное доказательство происхождения внутри
+того же ActionEngine; legacy verify_pending не может превратить его в succeeded.
+Успешный job ведёт к ограниченному READ diagnostic, а совпадение возвращённых
+status/effective_status остаётся UNKNOWN / authoritative=false до принятия
+контракта авторитетности. Rehearsal работает только на изолированной БД с явным
+MockTransport и не имеет production endpoint/dispatcher.
+См. [текущую приёмку](integrations/METRICFLOW_READBACK_ACCEPTANCE.md).

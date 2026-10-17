@@ -101,3 +101,11 @@ ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
 AI_AUTOPILOT_ALLOWED=false сохраняются. Новые реальные рекламные WRITE и Meta
 LIVE не разрешены. Миграции, бизнес-профиль, правила и действующие ключи
 изменением документации не затрагиваются.
+## Уточнение этапа READ readback — 18.10.2026
+
+[Локальный диагностический путь](METRICFLOW_READBACK_ACCEPTANCE.md) реализован:
+POST -> correlated job success -> максимум 3 READ insights pages, без retries.
+Это закрывает документированную часть пункта 2 и соответствующую mock/PostgreSQL
+приёмку пункта 4. Авторитетность READ, object permission и namespace WRITE ID
+не подменены предположениями. LIVE permit/dispatcher по пункту 3 по-прежнему
+ожидают обязательного evidence. Уже пройденные ручные DRY_RUN повторять не требуется.

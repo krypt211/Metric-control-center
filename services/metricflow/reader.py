@@ -62,7 +62,10 @@ class MetricFlowConnector:
         return await self._http.request("GET", "summary", params=_period(start, end, params))
 
     async def get_insights(self, start: date, end: date, *, params: Query | None = None) -> JSONPayload:
-        return await self._http.request("GET", "insights", params=_period(start, end, params))
+        return await self._http.request(
+            "GET", "insights", params=_period(start, end, params),
+            accepted_statuses=frozenset({200}),
+        )
 
     async def _account_data(
         self, endpoint: str, account_id: str, start: date, end: date, params: Query | None
