@@ -117,3 +117,13 @@ POST -> correlated job success -> максимум 3 READ insights pages, без
 сообщает CAMPAIGN_PAUSED, поэтому прежняя предпосылка ACTIVE больше не принимается.
 Эта ручная сверка не подтверждает WRITE namespace/asset permission автоматически.
 Production permit/dispatcher остаются BLOCKED до принятия обязательных сведений.
+
+## Checkpoint 18.10.2026 — ручная сверка принята, WRITE scope обновлён
+
+Пользователь в 17:28 подтвердил AD включён, группа включена, кампания выключена,
+доставка неактивна; право управления в MetricFlow не видно. В 17:30:26 МСК
+Credential Manager проверил сохранённый WRITE credential одним GET /me:
+SCOPES_VERIFIED, entities:write, active_paid; READ healthy, revisions 1/1 сохранены.
+Квота 237 -> 238/800. Это снимает блокер устаревшего scope check на момент проверки,
+но не подтверждает object permissions/WRITE ID/authoritative readback и не разрешает
+LIVE. Подробности: [checkpoint](METRICFLOW_PILOT_MANUAL_CHECKPOINT_2026-10-18.md).
