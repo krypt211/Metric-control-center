@@ -409,6 +409,64 @@ test("browser-only mock verifies WOULD_PAUSE prepare button and draft navigation
     .requests.some((request) => request.id === id)).toBe(false);
 });
 
+test("AD dropdown browses without search, paginates and discards stale account selections", async ({ page, accounts }) => {
+  test.setTimeout(120000);
+  await restoreAdmin(page, accounts.users[0]);
+  await open(page);
+  const writes = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname.startsWith("/api/manual-control") && request.method() !== "GET") writes.push(request.method());
+  });
+  const picker = page.getByLabel("Объявление", {exact:true});
+  await expect(picker).toBeDisabled();
+  await page.getByLabel("Кабинет", {exact:true}).click();
+  await page.getByRole("combobox", {name:"Поиск: Кабинет", exact:true}).fill(freshAd.account_id);
+  await page.getByRole("listbox", {name:"Кабинет результаты", exact:true}).getByRole("option").first().click();
+  const catalog = await (await page.request.get(`/api/smart-rules/catalog/search?kind=ad&accounts=${freshAd.account_id}`)).json();
+  await picker.click();
+  const popup = page.locator(".searchable-popup").filter({has:page.getByRole("combobox", {name:"Поиск: Объявление", exact:true})});
+  await expect(popup.getByRole("combobox")).toHaveValue("");
+  await expect(popup.getByRole("option")).toHaveCount(catalog.rows.length);
+  let chosen = catalog.rows[0];
+  expect(chosen).toBeTruthy();
+  if (catalog.next_offset !== null) {
+    const next = await (await page.request.get(`/api/smart-rules/catalog/search?kind=ad&accounts=${freshAd.account_id}&offset=${catalog.next_offset}`)).json();
+    await popup.getByRole("button", {name:"Далее", exact:true}).click();
+    await expect(popup.getByRole("option").first()).toContainText(next.rows[0].external_id);
+    chosen = next.rows[0];
+  }
+  await popup.getByRole("option").first().click();
+  const panel = page.getByRole("article", {name:"Выбранное объявление", exact:true});
+  await expect(panel).toContainText(chosen.external_id);
+  await expect(panel).toBeFocused();
+  await expect(page.getByLabel("Поиск объявления", {exact:true})).toHaveValue("");
+  await expect(page.getByRole("button", {name:"Подготовить ручную проверку пилота", exact:true})).toBeInViewport();
+
+  // A slow AD load must not resurrect a selection after changing the account.
+  let release, ready;
+  const held = new Promise(resolve => {release=resolve;});
+  const loaded = new Promise(resolve => {ready=resolve;});
+  const detail = url => url.pathname === "/api/manual-control/ads" && url.searchParams.get("q") === chosen.id;
+  await page.route(detail, async route => {
+    const response = await route.fetch();
+    ready();
+    await held;
+    await route.fulfill({response});
+  });
+  await picker.click();
+  await popup.getByRole("option").filter({hasText:chosen.external_id}).click();
+  await loaded;
+  await page.getByLabel("Кабинет", {exact:true}).click();
+  await page.locator(".searchable-popup").filter({has:page.getByRole("combobox", {name:"Поиск: Кабинет", exact:true})}).getByRole("button", {name:"Снять выбор", exact:true}).click();
+  const completed = page.waitForResponse(response => detail(new URL(response.url())));
+  release();
+  await completed;
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(panel).toHaveCount(0);
+  await expect(picker).toBeDisabled();
+  expect(writes).toEqual([]);
+});
+
 test("pilot review is local GET only, preserves commands and ignores stale operation responses", async ({ page, accounts }) => {
   await restoreAdmin(page, accounts.users[0]);
   await open(page);

@@ -1,5 +1,5 @@
 "use client";
-import SearchableSelect from "./SearchableSelect";
+import SearchableSelect, { type SearchOption } from "./SearchableSelect";
 import PilotReview from "./PilotReview";
 
 import { useEffect, useRef, useState } from "react";
@@ -87,7 +87,8 @@ export default function ManualControl({
     [table, setTable] = useState<Catalog | null>(null),
     [history, setHistory] = useState<Action[]>([]),
     [active, setActive] = useState<Action | null>(null),
-    [selected, setSelected] = useState<Ad | null>(null);
+    [selected, setSelected] = useState<Ad | null>(null),
+    [pickedAd, setPickedAd] = useState<SearchOption | null>(null);
   const [account, setAccount] = useState(""),
     [campaign, setCampaign] = useState(""),
     [adset, setAdset] = useState(""),
@@ -107,10 +108,36 @@ export default function ManualControl({
     selectedPanel.current?.focus({ preventScroll: true });
   }, [selected]);
   function selectAd(id: string) {
+    setPickedAd(null);
     const ad = table?.rows.find(value => value.id === id);
     // Reselecting the same row must also bring its panel back into view.
     setSelected(ad ? { ...ad } : null);
   }
+  function clearSelection() {
+    setPickedAd(null);
+    setSelected(null);
+  }
+  useEffect(() => {
+    if (!pickedAd) return;
+    let ignore = false;
+    const params = new URLSearchParams({ q: pickedAd.id });
+    if (account) params.set("account_id", account);
+    if (campaign) params.set("campaign", campaign);
+    if (adset) params.set("adset", adset);
+    void manualRead<Catalog>("/ads?" + params).then(data => {
+      if (ignore) return;
+      // Resolve the provider's source entity, not a similarly named/mapped AD.
+      const ad = data.rows.find(row => row.id === pickedAd.source_id && row.provider === pickedAd.provider);
+      if (!ad) throw new Error("Выбранное объявление недоступно в текущем кабинете");
+      setSelected(ad);
+    }).catch(e => {
+      if (!ignore) {
+        setError(e.message);
+        setPickedAd(null);
+      }
+    });
+    return () => { ignore = true; };
+  }, [pickedAd, account, campaign, adset]);
 
   useEffect(() => {
     void Promise.all([
@@ -379,13 +406,20 @@ export default function ManualControl({
               <label>
                 Кабинет
                 <SearchableSelect label="Кабинет" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
-                  onChange={v=>{setAccount(v as string);setOffset(0);setSelected(null);}}/>
+                  onChange={v=>{setAccount(v as string);setCampaign("");setAdset("");setSearch("");setOffset(0);clearSelection();}}/>
               </label>
               <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
-                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setOffset(0);}}/></label>
+                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setAdset("");setOffset(0);clearSelection();}}/></label>
               <label>Группа объявлений<SearchableSelect label="Группа объявлений" kind="adset" value={adset}
                 filters={new URLSearchParams([...(account?[["accounts",account]]:[]),...(campaign?[["campaigns",campaign]]:[])]).toString()}
-                onChange={v=>{setAdset(v as string);setOffset(0);}}/></label>
+                onChange={v=>{setAdset(v as string);setOffset(0);clearSelection();}}/></label>
+              <label>Объявление<SearchableSelect label="Объявление" kind="ad"
+                value={pickedAd?.id ?? selected?.id ?? ""}
+                disabled={!account}
+                placeholder="Выберите из списка"
+                filters={new URLSearchParams([...(account?[["accounts",account]]:[]),...(campaign?[["campaigns",campaign]]:[]),...(adset?[["adsets",adset]]:[])]).toString()}
+                onPick={option=>{setError("");setSelected(null);setPickedAd({...option});}}
+                onChange={value=>{if(!value)clearSelection();}}/></label>
               <label>
                 Статус
                 <select
@@ -412,6 +446,8 @@ export default function ManualControl({
                 Обновить из БД
               </button>
             </div>
+            <p>Выберите кабинет, затем объявление из списка. Поиск необязателен.</p>
+            {pickedAd && !selected && <p role="status">Загрузка выбранного объявления…</p>}
             <ColumnManager scope="manual_ad" controller={columns} rows={rows} />
             <StatisticsTable
               scope="manual_ad"
