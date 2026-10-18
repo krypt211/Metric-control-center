@@ -89,6 +89,8 @@ export default function ManualControl({
     [active, setActive] = useState<Action | null>(null),
     [selected, setSelected] = useState<Ad | null>(null),
     [pickedAd, setPickedAd] = useState<SearchOption | null>(null);
+  const [checked, setChecked] = useState<Record<string, Ad>>({});
+  const checkedAds = Object.values(checked);
   const [account, setAccount] = useState(""),
     [campaign, setCampaign] = useState(""),
     [adset, setAdset] = useState(""),
@@ -116,6 +118,17 @@ export default function ManualControl({
   function clearSelection() {
     setPickedAd(null);
     setSelected(null);
+  }
+  function toggleChecked(row: StatisticsRow, value: boolean) {
+    const ad = table?.rows.find(item => item.id === row.id);
+    if (!ad) return;
+    setChecked(previous => {
+      if (value && !previous[ad.id] && Object.keys(previous).length >= 200) return previous;
+      const next = { ...previous };
+      if (value) next[ad.id] = ad;
+      else delete next[ad.id];
+      return next;
+    });
   }
   useEffect(() => {
     if (!pickedAd) return;
@@ -406,13 +419,13 @@ export default function ManualControl({
               <label>
                 Кабинет
                 <SearchableSelect label="Кабинет" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
-                  onChange={v=>{setAccount(v as string);setCampaign("");setAdset("");setSearch("");setOffset(0);clearSelection();}}/>
+                  onChange={v=>{setAccount(v as string);setCampaign("");setAdset("");setSearch("");setOffset(0);clearSelection();setChecked({});}}/>
               </label>
               <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
-                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setAdset("");setOffset(0);clearSelection();}}/></label>
+                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setAdset("");setOffset(0);clearSelection();setChecked({});}}/></label>
               <label>Группа объявлений<SearchableSelect label="Группа объявлений" kind="adset" value={adset}
                 filters={new URLSearchParams([...(account?[["accounts",account]]:[]),...(campaign?[["campaigns",campaign]]:[])]).toString()}
-                onChange={v=>{setAdset(v as string);setOffset(0);clearSelection();}}/></label>
+                onChange={v=>{setAdset(v as string);setOffset(0);clearSelection();setChecked({});}}/></label>
               <label>Объявление<SearchableSelect label="Объявление" kind="ad"
                 value={pickedAd?.id ?? selected?.id ?? ""}
                 disabled={!account}
@@ -456,13 +469,13 @@ export default function ManualControl({
               change={columns.change}
               commit={() => void columns.persist().catch(() => {})}
               disabled={!columns.ready || columns.busy}
-              nameControl={r => (
-                <input type="checkbox"
-                  aria-label={"Выбрать объявление " + r.name + " · " + r.meta_ad_id}
-                  checked={selected?.id === r.id}
-                  onChange={e => e.target.checked ? selectAd(String(r.id)) : clearSelection()}
-                />
-              )}
+              selection={{
+                maxSelected: 200,
+                selectedCount: checkedAds.length,
+                selected: row => Boolean(checked[String(row.id)]),
+                disabled: row => busy || (!checked[String(row.id)] && checkedAds.length >= 200),
+                toggle: toggleChecked,
+              }}
               rowActions={(r) => (
                 <button
                   onClick={() =>
@@ -478,8 +491,20 @@ export default function ManualControl({
             />
             <p>
               Всего объявлений: {table?.total ?? "…"} · на странице:{" "}
-              {rows.length}. Выберите одно объявление флажком рядом с названием для подготовки команды.
+              {rows.length}. Можно отметить несколько объявлений или текущую страницу.
             </p>
+            <section className="target-actions" aria-label="Выбранные объявления">
+              <p role="status">Выбрано: {checkedAds.length} / 200</p>
+              <div className="actionbuttons">
+                <button disabled={!checkedAds.length || busy} onClick={() => setChecked({})}>Очистить выбор</button>
+                <button disabled={checkedAds.length !== 1 || busy} onClick={() => {
+                  setPickedAd(null);
+                  const ad = table?.rows.find(row => row.id === checkedAds[0].id) ?? checkedAds[0];
+                  setSelected({ ...ad });
+                }}>Открыть выбранное объявление</button>
+              </div>
+              <p>Для ручной команды откройте одно объявление кнопкой или нажмите его название.</p>
+            </section>
             <button
               disabled={offset === 0 || busy}
               onClick={() => setOffset(Math.max(0, offset - 100))}

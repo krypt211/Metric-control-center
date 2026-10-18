@@ -467,6 +467,85 @@ test("AD dropdown browses without search, paginates and discards stale account s
   expect(writes).toEqual([]);
 });
 
+test("standard checkbox column supports multiple ADs, page selection and search persistence without commands", async ({ page, accounts }) => {
+  test.setTimeout(120000);
+  await restoreAdmin(page, accounts.users[0]);
+  await open(page);
+  const mutations = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname.startsWith("/api/manual-control") && request.method() !== "GET") mutations.push(request.method());
+  });
+  const before = await (await page.request.get("/api/manual-control/requests")).json();
+  await page.getByLabel("Кабинет", {exact:true}).click();
+  await page.getByRole("combobox", {name:"Поиск: Кабинет", exact:true}).fill(freshAd.account_id);
+  const accountCatalog = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/manual-control/ads" && url.searchParams.get("account_id") === freshAd.account_id && !url.searchParams.get("q") && url.searchParams.get("offset") === "0";
+  });
+  await page.getByRole("listbox", {name:"Кабинет результаты", exact:true}).getByRole("option").first().click();
+  const data = await (await accountCatalog).json();
+  expect(data.rows.length).toBeGreaterThan(2);
+  await expect(page.locator("tbody tr")).toHaveCount(data.rows.length);
+  const firstRow = page.locator("tbody tr").filter({hasText:data.rows[0].meta_ad_id});
+  const secondRow = page.locator("tbody tr").filter({hasText:data.rows[1].meta_ad_id});
+  const first = firstRow.locator("td.selection-column").getByRole("checkbox");
+  const second = secondRow.locator("td.selection-column").getByRole("checkbox");
+  const header = page.getByRole("checkbox", {name:"Выбрать текущую страницу", exact:true});
+  const selection = page.getByRole("region", {name:"Выбранные объявления", exact:true});
+  await expect(firstRow.locator("td").first()).toHaveClass("selection-column");
+  await first.check();
+  await second.check();
+  await expect(first).toBeChecked();
+  await expect(second).toBeChecked();
+  if (data.next_offset !== null) {
+    const nextPage = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/manual-control/ads" && url.searchParams.get("account_id") === freshAd.account_id && url.searchParams.get("offset") === String(data.next_offset);
+    });
+    await page.getByRole("button", {name:"Следующие", exact:true}).click();
+    const nextData = await (await nextPage).json();
+    await expect(page.locator("tbody tr")).toHaveCount(nextData.rows.length);
+    await expect(selection.getByRole("status")).toHaveText("Выбрано: 2 / 200");
+    const previousPage = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/manual-control/ads" && url.searchParams.get("account_id") === freshAd.account_id && url.searchParams.get("offset") === "0" && !url.searchParams.get("q");
+    });
+    await page.getByRole("button", {name:"Предыдущие", exact:true}).click();
+    await previousPage;
+    await expect(page.locator("tbody tr")).toHaveCount(data.rows.length);
+    await expect(first).toBeChecked();
+    await expect(second).toBeChecked();
+  }
+  await expect(selection.getByRole("status")).toHaveText("Выбрано: 2 / 200");
+  await expect(selection.getByRole("button", {name:"Открыть выбранное объявление", exact:true})).toBeDisabled();
+  expect(await header.evaluate(element => element.indeterminate)).toBe(true);
+  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toHaveCount(0);
+  await page.getByLabel("Поиск объявления", {exact:true}).fill("no-such-local-ad-928176");
+  await expect(page.getByText("Нет сохранённых данных по выбранным фильтрам", {exact:true})).toBeVisible();
+  await expect(selection.getByRole("status")).toHaveText("Выбрано: 2 / 200");
+  await expect(header).toBeDisabled();
+  await page.getByLabel("Поиск объявления", {exact:true}).fill("");
+  await expect(page.locator("tbody tr")).toHaveCount(data.rows.length);
+  await expect(first).toBeChecked();
+  await expect(second).toBeChecked();
+  await header.check();
+  await expect(page.locator("tbody .selection-column input:checked")).toHaveCount(data.rows.length);
+  await expect(selection.getByRole("status")).toHaveText(`Выбрано: ${data.rows.length} / 200`);
+  await header.uncheck();
+  await expect(selection.getByRole("status")).toHaveText("Выбрано: 0 / 200");
+  await first.check();
+  await page.locator(".customizable-table-wrap").evaluate(element => {element.scrollLeft=element.scrollWidth;});
+  await first.scrollIntoViewIfNeeded();
+  expect(await page.locator(".customizable-table-wrap").evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+  await expect(first).toBeInViewport();
+  await selection.getByRole("button", {name:"Открыть выбранное объявление", exact:true}).click();
+  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toContainText(data.rows[0].meta_ad_id);
+  await selection.getByRole("button", {name:"Очистить выбор", exact:true}).click();
+  await expect(selection.getByRole("status")).toHaveText("Выбрано: 0 / 200");
+  expect((await (await page.request.get("/api/manual-control/requests")).json()).requests).toEqual(before.requests);
+  expect(mutations).toEqual([]);
+});
+
 test("pilot review is local GET only, preserves commands and ignores stale operation responses", async ({ page, accounts }) => {
   const mutations = [];
   page.on("request", request => {
@@ -485,27 +564,6 @@ test("pilot review is local GET only, preserves commands and ignores stale opera
   const fullRows = await (await fullCatalog).json();
   await expect(page.locator("tbody tr")).toHaveCount(fullRows.rows.length);
   const selectedRow = page.locator("tbody tr").filter({hasText:freshAd.meta_ad_id});
-  const checkbox = selectedRow.locator('td[data-column="name"]').getByRole("checkbox");
-  await expect(checkbox).toBeChecked();
-  await checkbox.uncheck();
-  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toHaveCount(0);
-  await checkbox.check();
-  await expect(checkbox).toBeChecked();
-  const otherAd = fullRows.rows.find(row => row.id !== freshAd.id);
-  expect(otherAd, "Single AD selection needs a second row to verify exclusivity").toBeTruthy();
-  const otherCheckbox = page.locator("tbody tr").filter({hasText:otherAd.meta_ad_id}).locator('td[data-column="name"]').getByRole("checkbox");
-  await otherCheckbox.check();
-  await expect(checkbox).not.toBeChecked();
-  await expect(otherCheckbox).toBeChecked();
-  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toContainText(otherAd.meta_ad_id);
-  await checkbox.check();
-  await expect(otherCheckbox).not.toBeChecked();
-  await expect(page.locator('tbody td[data-column="name"] input:checked')).toHaveCount(1);
-  // The choice remains available in the sticky name column after horizontal scrolling.
-  await page.locator(".customizable-table-wrap").evaluate(element => {element.scrollLeft=element.scrollWidth;});
-  await checkbox.scrollIntoViewIfNeeded();
-  expect(await page.locator(".customizable-table-wrap").evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
-  await expect(checkbox).toBeInViewport();
   await selectedRow.locator(".rowlink").click();
   await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toBeFocused();
   await expect(page.getByRole("button", {name:"Подготовить ручную проверку пилота", exact:true})).toBeInViewport();

@@ -110,9 +110,6 @@ summary { cursor: pointer; }
 .customizable-table .identity-column{position:sticky;left:0;background:var(--panel);z-index:2;text-align:left;min-width:0}
 .customizable-table th.identity-column{z-index:3}
 .customizable-table .identity-column .rowlink{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
-.customizable-table .identity-with-control{display:flex;align-items:flex-start;gap:8px;min-width:0}
-.customizable-table .identity-with-control input[type=checkbox]{flex:none;width:18px;height:18px;margin:3px 0 0;cursor:pointer}
-.customizable-table .identity-with-control .rowlink{min-width:0;flex:1}
 .customizable-table .identity-column small{overflow:hidden;text-overflow:ellipsis}
 .customizable-table .selection-column{position:sticky;left:0;width:52px;min-width:52px;z-index:3;background:var(--panel);text-align:center}
 .customizable-table tbody tr:hover td{background:#1b2834}
