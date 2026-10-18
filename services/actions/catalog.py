@@ -1,4 +1,4 @@
-"""AD catalog with routed Phase 2 economics; no external HTTP or persisted facts."""
+"""Entity catalog with routed Phase 2 economics; no external HTTP or persisted facts."""
 
 from __future__ import annotations
 
@@ -17,15 +17,19 @@ from services.storage.models import AdAccount, Entity, Rule
 
 
 def catalog(
-    s, workspace: str, now, account_id: str | None = None, offset: int = 0, q: str = "", campaign: str | None = None, adset: str | None = None
+    s, workspace: str, now, account_id: str | None = None, offset: int = 0, q: str = "", campaign: str | None = None, adset: str | None = None, level: str = "ad"
 ) -> dict:
+    if level not in ("campaign", "adset", "ad"):
+        raise HTTPException(422, "UNSUPPORTED_ENTITY_LEVEL")
     today = now.astimezone(ZoneInfo("Europe/Moscow")).date()
     first, last = today - timedelta(days=7), today - timedelta(days=1)
     query = (
         select(Entity, AdAccount)
         .join(AdAccount)
-        .where(AdAccount.workspace_id == workspace, Entity.kind == "ad")
+        .where(AdAccount.workspace_id == workspace, Entity.kind == level)
     )
+    if level != "ad":
+        query = query.where(AdAccount.provider == "metricflow")
     if account_id:
         query = query.where(AdAccount.id == account_id)
     count = s.scalar(select(func.count()).select_from(query.subquery())) or 0
@@ -36,7 +40,7 @@ def catalog(
         s,
         workspace,
         Filters(first, last, account=accounts.get(account_id, account_id)),
-        level="ad",
+        level=level,
         now=now,
         limit=2000,
         persist_snapshot=False,
@@ -70,7 +74,7 @@ def catalog(
     from services.automation.smart_targets import catalog as target_catalog
     scope = {
         r["source_id"] for r in target_catalog(s, workspace)
-        if r["scope_type"] == "AD"
+        if r["scope_type"] == level.upper()
         and (not campaign or r["campaign_id"] == campaign)
         and (not adset or r["adset_id"] == adset)
         and all(word in f'{r["name"]} {r["external_id"]} {r["id"]}'.casefold() for word in q.casefold().split())
@@ -97,7 +101,7 @@ def catalog(
                 "actual_roi": row.get("actual_roi"),
                 "source_provider": account.provider,
                 "last_synced": captured["status_refreshed_at"],
-                "recommendation": recs.get((identity, account.provider)),
+                "recommendation": recs.get((identity, account.provider)) if level == "ad" else None,
                 "has_facts": bool(row),
             }
         )

@@ -8,6 +8,7 @@ from services.providers.models import ProviderConnection
 OPERATIONS = (
     "PAUSE_AD",
     "ENABLE_AD",
+    "PAUSE_ADSET", "ENABLE_ADSET", "PAUSE_CAMPAIGN", "ENABLE_CAMPAIGN",
     "SET_ADSET_BUDGET",
     "SET_CAMPAIGN_BUDGET",
     "SET_BID",

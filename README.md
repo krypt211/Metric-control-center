@@ -86,3 +86,8 @@ Manual pilot review without provider correspondence: [read-only UI acceptance](d
 The selected-AD screen now provides a local review card with exact identity,
 status freshness and credential revisions. It sends no provider requests and
 cannot authorize execution. LIVE WRITE remains blocked pending required evidence.
+
+Multilevel manual status preparation: [campaign / adset / ad local acceptance](docs/integrations/MULTILEVEL_STATUS_LOCAL_ACCEPTANCE.md).
+All six PAUSE/ENABLE intentions support local preparation and simulation; backend/frontend
+are deployed for manual LOCAL acceptance. LIVE dispatch and authoritative parent readback
+remain blocked. No advertising WRITE was sent.

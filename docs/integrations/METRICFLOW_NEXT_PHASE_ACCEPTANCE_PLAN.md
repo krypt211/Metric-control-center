@@ -127,3 +127,19 @@ SCOPES_VERIFIED, entities:write, active_paid; READ healthy, revisions 1/1 сох
 Квота 237 -> 238/800. Это снимает блокер устаревшего scope check на момент проверки,
 но не подтверждает object permissions/WRITE ID/authoritative readback и не разрешает
 LIVE. Подробности: [checkpoint](METRICFLOW_PILOT_MANUAL_CHECKPOINT_2026-10-18.md).
+
+## Checkpoint 18.10.2026 — три уровня локального управления
+
+[Локальная подготовка кампаний, групп и объявлений](MULTILEVEL_STATUS_LOCAL_ACCEPTANCE.md)
+установлена в backend/frontend и проверена без рекламного WRITE. Для кампании
+и группы доступны отдельный уровень каталога, стандартные чекбоксы и тот же
+DRAFT/preflight/confirm/SIMULATED путь. AD-поведение и прежние черновики совместимы.
+Следующая ручная проверка — только локальная: campaign 120247747556760571,
+затем adset 120247747556830571 в Valya Sergeeva. При stale/unknown статусе
+нужно передать блокер, а не обходить freshness gate.
+
+READ healthy подтверждён локально на 19:14 UTC. Исторический WRITE scope check
+17:30:26 МСК не объявляется текущим. Namespace WRITE ID, object permissions,
+ACK/UNKNOWN/authoritative readback и одноразовый production dispatcher остаются
+обязательными условиями перед отдельным разрешением на каждый LIVE запуск.
+Расширение локальных уровней не закрывает эти блокеры и не активирует правила.

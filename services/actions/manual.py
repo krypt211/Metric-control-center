@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from services.actions.capabilities import ActionCapabilityRegistry
 from services.actions.manual_models import ManualActionGrant
-from services.actions.manual_schema import ManualDraftInput
+from services.actions.manual_schema import STATUS_OPERATIONS, ManualDraftInput
 from services.actions.safety import ActionSafetyGate
 from services.automation.smart_models import RuleSimulation
 from services.providers.models import (
@@ -29,6 +29,7 @@ from services.storage.models import (
     Ad,
     AdAccount,
     AdSet,
+    Campaign,
     Entity,
     EntityCurrentState,
     User,
@@ -97,12 +98,22 @@ def snapshot(s, entity: Entity, account: AdAccount) -> dict:
     state = s.get(EntityCurrentState, entity.id)
     connection = s.get(ProviderConnection, (account.workspace_id, account.provider))
     ad = s.get(Ad, entity.id)
-    aset = s.get(AdSet, ad.adset_id) if ad and ad.adset_id else None
+    aset = s.get(AdSet, entity.id) if entity.kind == "adset" else s.get(AdSet, ad.adset_id) if ad and ad.adset_id else None
     parent = s.get(Entity, ad.adset_id) if ad and ad.adset_id else None
     campaign = s.get(Entity, aset.campaign_id) if aset and aset.campaign_id else None
     mapping = s.get(ProviderAccountMapping, account.id)
+    numeric_id = bool(re.fullmatch(r"[0-9]+", entity.external_id))
+    parent_valid = bool(campaign and campaign.kind == "campaign" and campaign.account_id == account.id and re.fullmatch(r"[0-9]+", campaign.external_id))
+    parent_hierarchy = (
+        bool(s.get(Campaign, entity.id) and numeric_id)
+        if entity.kind == "campaign"
+        else bool(aset and parent_valid and numeric_id)
+        if entity.kind == "adset" else None
+    )
     return {
         "entity_id": entity.id,
+        "entity_level": entity.kind,
+        "external_id": entity.external_id,
         "meta_ad_id": entity.external_id,
         "account_id": account.id,
         "meta_account_id": account.external_id,
@@ -114,7 +125,7 @@ def snapshot(s, entity: Entity, account: AdAccount) -> dict:
             parent.external_id if parent else None,
             campaign.external_id if campaign else None,
         ],
-        "hierarchy_confirmed": bool(
+        "hierarchy_confirmed": parent_hierarchy if parent_hierarchy is not None else bool(
             parent
             and campaign
             and parent.kind == "adset"
@@ -202,7 +213,8 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
     failures = []
     if (
         not entity
-        or entity.kind != "ad"
+        or entity.kind != m.get("entity_level", "ad")
+        or STATUS_OPERATIONS.get(row.action) != entity.kind
         or not account
         or account.workspace_id != row.workspace_id
     ):
@@ -274,7 +286,7 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
         )
     ).all()
     if any(
-        p.action in (row.action, "pause" if row.action == "PAUSE_AD" else "enable")
+        p.action in (row.action, "pause" if row.action.startswith("PAUSE_") else "enable")
         and p.baseline_status == row.baseline_status
         for p in previous
     ):
@@ -322,8 +334,11 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
 def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
     if not key or len(key) > 128 or any(ord(c) < 33 for c in key):
         raise HTTPException(422, "INVALID_IDEMPOTENCY_KEY")
+    fingerprint_input = command.model_dump()
+    if command.entity_level == "ad":
+        fingerprint_input.pop("entity_level")
     fingerprint = hashlib.sha256(
-        json.dumps(command.model_dump(), sort_keys=True).encode()
+        json.dumps(fingerprint_input, sort_keys=True).encode()
     ).hexdigest()
     now = engine.clock()
     try:
@@ -342,7 +357,7 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
                 )
                 .with_for_update(of=Entity)
             )
-            if not entity or entity.kind != "ad":
+            if not entity or entity.kind != command.entity_level:
                 raise HTTPException(404, "AD_NOT_FOUND")
             old = s.scalar(
                 select(ActionRequest).where(
@@ -447,13 +462,15 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
                 "source": "manual",
                 "fingerprint": fingerprint,
                 "provider": command.provider,
+                "entity_level": command.entity_level,
+                "external_id": command.meta_ad_id,
                 "provider_entity_id": captured["meta_ad_id"],
                 "entity_id": entity.id,
                 "meta_ad_id": command.meta_ad_id,
                 "account_id": command.account_id,
                 "expected_status": command.expected_status,
                 "target_status": "PAUSED"
-                if command.operation == "PAUSE_AD"
+                if command.operation.startswith("PAUSE_")
                 else "ACTIVE",
                 "reason": command.reason,
                 "captured": captured,

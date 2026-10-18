@@ -29,7 +29,9 @@ from services.sync.engine import utc_now
 
 
 def run() -> dict:
-    if not os.environ.get("POSTGRES_DB", "").startswith(("mcc_phase4_", "mcc_integrations_")):
+    if not os.environ.get("POSTGRES_DB", "").startswith(
+        ("mcc_phase4_", "mcc_integrations_")
+    ):
         raise RuntimeError("ISOLATED_RESTORE_REQUIRED")
     db = make_engine()
     factory = sessions(db)
@@ -162,7 +164,64 @@ def run() -> dict:
                 )
                 == 0
             )
+        # Exercise the same local lifecycle for all six operations in this
+        # disposable workspace; none of these fixture statuses is a live fact.
+        for level, external in (
+            ("campaign", "999001"),
+            ("adset", "999002"),
+            ("ad", "999003"),
+        ):
+            for operation, baseline in (("PAUSE", "ACTIVE"), ("ENABLE", "PAUSED")):
+                if level == "ad" and operation == "PAUSE":
+                    continue  # Already covered with eight concurrent callers above.
+                with factory.begin() as s:
+                    state = s.get(EntityCurrentState, ids[level])
+                    if state:
+                        state.status = baseline
+                    else:
+                        s.add(
+                            EntityCurrentState(
+                                entity_id=ids[level],
+                                status=baseline,
+                                observed_at=now,
+                                raw={"fixture": True},
+                            )
+                        )
+                body = ManualDraftInput(
+                    entity_id=ids[level],
+                    account_id=ids["account"],
+                    external_id=external,
+                    entity_level=level,
+                    provider="metricflow",
+                    operation=f"{operation}_{level.upper()}",
+                    expected_status=baseline,
+                    reason="Isolated multilevel simulation",
+                )
+                prepared = engine.prepare_manual(actor, body, f"{level}-{operation}")
+                for event in ("preflight", "confirm", "simulate"):
+                    prepared = engine.transition_manual(
+                        actor, prepared["id"], event, prepared["revision"]
+                    )
+                    assert (
+                        prepared["preflight"]["local_allowed"]
+                        and not prepared["preflight"]["live_allowed"]
+                    )
+                assert prepared["status"] == "SIMULATED"
+                with factory() as s:
+                    assert s.get(EntityCurrentState, ids[level]).status == baseline
+        with factory() as s:
+            assert (
+                s.scalar(
+                    select(func.count())
+                    .select_from(ActionExecution)
+                    .join(ActionRequest)
+                    .where(ActionRequest.workspace_id == workspace)
+                )
+                == 0
+            )
         return {
+            "status_levels": 3,
+            "simulated_operations": 6,
             "postgres_manual": "PASS",
             "same_key_threads": 8,
             "conflicting_threads": 8,
@@ -181,7 +240,9 @@ def run() -> dict:
             )
             s.execute(
                 delete(EntityCurrentState).where(
-                    EntityCurrentState.entity_id == ids["ad"]
+                    EntityCurrentState.entity_id.in_(
+                        [ids["ad"], ids["adset"], ids["campaign"]]
+                    )
                 )
             )
             for model, key in ((Ad, "ad"), (AdSet, "adset"), (Campaign, "campaign")):

@@ -37,6 +37,7 @@ type Ad = StatisticsRow & {
   account_id: string;
   provider: "metricflow" | "meta";
   status: string;
+  entity_level?: "campaign" | "adset" | "ad";
   hierarchy: (string | null)[];
   recommendation: { simulation_id: string; status: string } | null;
 };
@@ -91,6 +92,8 @@ export default function ManualControl({
     [pickedAd, setPickedAd] = useState<SearchOption | null>(null);
   const [checked, setChecked] = useState<Record<string, Ad>>({});
   const checkedAds = Object.values(checked);
+  const [entityLevel, setEntityLevel] = useState<"campaign" | "adset" | "ad">("ad");
+  const objectLabel = entityLevel === "ad" ? "Объявление" : entityLevel === "adset" ? "Группа объявлений" : "Кампания";
   const [account, setAccount] = useState(""),
     [campaign, setCampaign] = useState(""),
     [adset, setAdset] = useState(""),
@@ -134,6 +137,7 @@ export default function ManualControl({
     if (!pickedAd) return;
     let ignore = false;
     const params = new URLSearchParams({ q: pickedAd.id });
+    if (entityLevel !== "ad") params.set("level", entityLevel);
     if (account) params.set("account_id", account);
     if (campaign) params.set("campaign", campaign);
     if (adset) params.set("adset", adset);
@@ -150,7 +154,7 @@ export default function ManualControl({
       }
     });
     return () => { ignore = true; };
-  }, [pickedAd, account, campaign, adset]);
+  }, [pickedAd, account, campaign, adset, entityLevel]);
 
   useEffect(() => {
     void Promise.all([
@@ -175,7 +179,7 @@ export default function ManualControl({
     const timer=setTimeout(()=>{void manualRead<Catalog>(
       "/ads?offset=" +
         offset +
-        (account ? "&account_id=" + encodeURIComponent(account) : "") + "&q=" + encodeURIComponent(search) + (campaign?"&campaign="+encodeURIComponent(campaign):"") + (adset?"&adset="+encodeURIComponent(adset):""),
+        (account ? "&account_id=" + encodeURIComponent(account) : "") + "&q=" + encodeURIComponent(search) + (campaign?"&campaign="+encodeURIComponent(campaign):"") + (adset?"&adset="+encodeURIComponent(adset):"") + (entityLevel !== "ad" ? "&level=" + entityLevel : ""),
     )
       .then((data) => {
         if (!ignore) setTable(data);
@@ -187,7 +191,7 @@ export default function ManualControl({
       ignore = true;
       clearTimeout(timer);
     };
-  }, [account, offset, settingsOnly, catalogRevision, search, campaign, adset]);
+  }, [account, offset, settingsOnly, catalogRevision, search, campaign, adset, entityLevel]);
   useEffect(()=>{setOffset(0);},[search,campaign,adset]);
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -218,9 +222,10 @@ export default function ManualControl({
         {
           entity_id: selected.id,
           account_id: selected.account_id,
-          meta_ad_id: selected.meta_ad_id,
+          ...(entityLevel === "ad" ? {meta_ad_id: selected.meta_ad_id} : {external_id: selected.meta_ad_id}),
           provider: selected.provider,
-          operation,
+          operation: entityLevel === "ad" ? operation : operation.replace("_AD", entityLevel === "adset" ? "_ADSET" : "_CAMPAIGN"),
+          entity_level: entityLevel,
           expected_status: selected.status,
           reason,
           simulation_id: null,
@@ -228,7 +233,7 @@ export default function ManualControl({
         crypto.randomUUID(),
       );
       setActive(r);
-      setNotice("Черновик сохранён. Рекламное объявление не изменено.");
+      setNotice(r.operation.endsWith("_AD") ? "Черновик сохранён. Рекламное объявление не изменено." : "Черновик сохранён. Рекламные данные не изменены.");
       await refreshHistory();
     });
   }
@@ -242,7 +247,7 @@ export default function ManualControl({
       setActive(r);
       setNotice(
         r.status === "SIMULATED"
-          ? "Команда проверена в режиме симуляции. Рекламное объявление не изменено."
+          ? (r.operation.endsWith("_AD") ? "Команда проверена в режиме симуляции. Рекламное объявление не изменено." : "Команда проверена в режиме симуляции. Рекламные данные не изменены.")
           : "Состояние команды: " + manualLabel(r.status),
       );
       await refreshHistory();
@@ -408,25 +413,34 @@ export default function ManualControl({
       )}
       {!settingsOnly && (
         <>
-          <section aria-label="Объявления">
-            <h2>Объявления</h2>
+          <section aria-label={entityLevel === "ad" ? "Объявления" : "Объекты управления"}>
+            <h2>{entityLevel === "ad" ? "Объявления" : entityLevel === "adset" ? "Группы объявлений" : "Кампании"}</h2>
             <p>
               Семь завершённых дней: {table?.start ?? "…"} — {table?.end ?? "…"}{" "}
               · Europe/Moscow; календарные дни кабинета. Неизвестные значения
               отображаются как «—».
             </p>
             <div className="filters">
+              <label>Уровень управления<select aria-label="Уровень управления" value={entityLevel} onChange={event => {
+                setEntityLevel(event.target.value as typeof entityLevel);
+                setCampaign(""); setAdset(""); setSearch(""); setOffset(0);
+                clearSelection(); setChecked({}); setReason(""); setActive(null);
+              }}>
+                <option value="ad">Объявления</option>
+                <option value="adset">Группы объявлений</option>
+                <option value="campaign">Кампании</option>
+              </select></label>
               <label>
                 Кабинет
                 <SearchableSelect label="Кабинет" value={account} options={settings?.accounts.map(a=>({id:a.id,name:a.name}))}
                   onChange={v=>{setAccount(v as string);setCampaign("");setAdset("");setSearch("");setOffset(0);clearSelection();setChecked({});}}/>
               </label>
-              <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
-                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setAdset("");setOffset(0);clearSelection();setChecked({});}}/></label>
-              <label>Группа объявлений<SearchableSelect label="Группа объявлений" kind="adset" value={adset}
+              {entityLevel !== "campaign" && <label>Кампания<SearchableSelect label="Кампания" kind="campaign" value={campaign}
+                filters={account?"accounts="+encodeURIComponent(account):""} onChange={v=>{setCampaign(v as string);setAdset("");setOffset(0);clearSelection();setChecked({});}}/></label>}
+              {entityLevel === "ad" && <label>Группа объявлений<SearchableSelect label="Группа объявлений" kind="adset" value={adset}
                 filters={new URLSearchParams([...(account?[["accounts",account]]:[]),...(campaign?[["campaigns",campaign]]:[])]).toString()}
-                onChange={v=>{setAdset(v as string);setOffset(0);clearSelection();setChecked({});}}/></label>
-              <label>Объявление<SearchableSelect label="Объявление" kind="ad"
+                onChange={v=>{setAdset(v as string);setOffset(0);clearSelection();setChecked({});}}/></label>}
+              <label>{objectLabel}<SearchableSelect key={entityLevel} label={entityLevel === "ad" ? "Объявление" : "Объект управления"} kind={entityLevel}
                 value={pickedAd?.id ?? selected?.id ?? ""}
                 disabled={!account}
                 placeholder="Выберите из списка"
@@ -445,7 +459,7 @@ export default function ManualControl({
                 </select>
               </label>
               <label>
-                Поиск объявления
+                {entityLevel === "ad" ? "Поиск объявления" : "Поиск объекта"}
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -459,8 +473,8 @@ export default function ManualControl({
                 Обновить из БД
               </button>
             </div>
-            <p>Выберите кабинет, затем объявление из списка. Поиск необязателен.</p>
-            {pickedAd && !selected && <p role="status">Загрузка выбранного объявления…</p>}
+            <p>Выберите кабинет, затем объект из списка. Поиск необязателен.</p>
+            {pickedAd && !selected && <p role="status">Загрузка выбранного объекта…</p>}
             <ColumnManager scope="manual_ad" controller={columns} rows={rows} />
             <StatisticsTable
               scope="manual_ad"
@@ -490,10 +504,10 @@ export default function ManualControl({
               }
             />
             <p>
-              Всего объявлений: {table?.total ?? "…"} · на странице:{" "}
-              {rows.length}. Можно отметить несколько объявлений или текущую страницу.
+              Всего объектов: {table?.total ?? "…"} · на странице:{" "}
+              {rows.length}. Можно отметить несколько объектов или текущую страницу.
             </p>
-            <section className="target-actions" aria-label="Выбранные объявления">
+            <section className="target-actions" aria-label={entityLevel === "ad" ? "Выбранные объявления" : "Выбранные объекты"}>
               <p role="status">Выбрано: {checkedAds.length} / 200</p>
               <div className="actionbuttons">
                 <button disabled={!checkedAds.length || busy} onClick={() => setChecked({})}>Очистить выбор</button>
@@ -501,9 +515,9 @@ export default function ManualControl({
                   setPickedAd(null);
                   const ad = table?.rows.find(row => row.id === checkedAds[0].id) ?? checkedAds[0];
                   setSelected({ ...ad });
-                }}>Открыть выбранное объявление</button>
+                }}>{entityLevel === "ad" ? "Открыть выбранное объявление" : "Открыть выбранный объект"}</button>
               </div>
-              <p>Для ручной команды откройте одно объявление кнопкой или нажмите его название.</p>
+              <p>Для ручной команды откройте один объект кнопкой или нажмите его название.</p>
             </section>
             <button
               disabled={offset === 0 || busy}
@@ -518,16 +532,16 @@ export default function ManualControl({
               Следующие
             </button>
             {selected && (
-              <article aria-label="Выбранное объявление" ref={selectedPanel} tabIndex={-1} style={{ scrollMarginTop: "6rem" }}>
+              <article aria-label={entityLevel === "ad" ? "Выбранное объявление" : "Выбранный объект"} ref={selectedPanel} tabIndex={-1} style={{ scrollMarginTop: "6rem" }}>
                 <h3>{String(selected.name)}</h3>
                 <p>
-                  Ad ID: {selected.meta_ad_id} · кабинет:{" "}
+                  {entityLevel === "ad" ? "Ad ID" : objectLabel + " ID"}: {selected.meta_ad_id} · кабинет:{" "}
                   {String(selected.account_name)} · {selected.provider} ·
                   статус: {selected.status} · источник статуса:{" "}
                   {selected.provider} · обновлён:{" "}
                   {time(selected.status_refreshed_at as string | null)}
                 </p>
-                {settings?.can_control && selected.provider === "metricflow" && (
+                {settings?.can_control && selected.provider === "metricflow" && entityLevel === "ad" && (
                   <PilotReview key={selected.id} entityId={selected.id} />
                 )}
                 <label>
@@ -571,7 +585,7 @@ export default function ManualControl({
               <h2>Подготовленное действие</h2>
               <h3>{active.captured.name}</h3>
               <p>
-                {manualLabel(active.operation)} · {active.provider} · Ad ID:{" "}
+                {manualLabel(active.operation)} · {active.provider} · {active.operation.endsWith("_AD") ? "Ad ID" : "ID объекта"}:{" "}
                 {active.meta_ad_id} · кабинет: {active.captured.account_name}
               </p>
               <p>

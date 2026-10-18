@@ -600,3 +600,46 @@ test("pilot review is local GET only, preserves commands and ignores stale opera
   expect(after.requests).toEqual(before.requests);
   expect(mutations).toEqual([]);
 });
+
+test("campaign and adset catalogs prepare correctly bound local drafts through the real backend", async ({page, accounts}) => {
+  test.setTimeout(120000);
+  await restoreAdmin(page, accounts.users[0]);
+  for (const level of ["campaign", "adset"]) {
+    await open(page);
+    await page.getByLabel("Уровень управления", {exact:true}).selectOption(level);
+    await page.getByLabel("Кабинет", {exact:true}).click();
+    await page.getByRole("combobox", {name:"Поиск: Кабинет", exact:true}).fill(freshAd.account_id);
+    await page.getByRole("listbox", {name:"Кабинет результаты", exact:true}).getByRole("option").first().click();
+    const response = await page.request.get(`/api/manual-control/ads?account_id=${freshAd.account_id}&level=${level}`);
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.rows.length).toBeGreaterThan(0);
+    expect(data.rows.every(row => row.entity_level === level)).toBe(true);
+    const candidate = data.rows.find(row => ["ACTIVE", "PAUSED"].includes(row.status));
+    expect(candidate, "A locally observed parent status is required; facts must not be invented").toBeTruthy();
+    await expect(page.locator("tbody tr").filter({hasText:candidate.meta_ad_id})).toHaveCount(1);
+    await page.locator("tbody tr").filter({hasText:candidate.meta_ad_id}).locator("td.selection-column").getByRole("checkbox").check();
+    await page.getByRole("button", {name:"Открыть выбранный объект", exact:true}).click();
+    const panel = page.getByRole("article", {name:"Выбранный объект", exact:true});
+    await expect(panel).toContainText(candidate.meta_ad_id);
+    await panel.getByLabel("Причина ручной команды").fill("Изолированная локальная проверка уровня " + level);
+    const operation = candidate.status === "ACTIVE" ? "PAUSE" : "ENABLE";
+    const returned = page.waitForResponse(r => new URL(r.url()).pathname === "/api/manual-control/requests" && r.request().method() === "POST");
+    await panel.getByRole("button", {name:operation === "PAUSE" ? "Подготовить отключение" : "Подготовить включение", exact:true}).click();
+    const created = await returned;
+    expect(created.ok()).toBe(true);
+    const draft = await created.json();
+    expect(draft.entity_level).toBe(level);
+    expect(draft.entity_id).toBe(candidate.id);
+    expect(draft.external_id).toBe(candidate.meta_ad_id);
+    expect(draft.operation).toBe(operation + "_" + level.toUpperCase());
+    const shown = page.getByRole("region", {name:"Подготовленное действие", exact:true});
+    await expect(shown).toContainText("DRAFT");
+    await shown.getByRole("button", {name:"Проверить команду", exact:true}).click();
+    await expect(shown).toContainText("LIVE: заблокирован");
+    await shown.getByRole("button", {name:"Отменить команду", exact:true}).click();
+    await expect(shown).toContainText("CANCELLED");
+    const after = await (await page.request.get(`/api/manual-control/ads?account_id=${freshAd.account_id}&level=${level}&q=${candidate.meta_ad_id}`)).json();
+    expect(after.rows.find(row => row.id === candidate.id).status).toBe(candidate.status);
+  }
+});

@@ -1,4 +1,4 @@
-"""Documented AD wire format; LIVE execution remains behind ActionSafetyGate."""
+"""Documented status wire format; LIVE remains behind ActionSafetyGate."""
 
 from __future__ import annotations
 
@@ -15,10 +15,11 @@ from .errors import ActionOutcomeUnknown, InvalidResponse
 from .transport import MetricFlowTransport
 
 ENTITY_WRITE_SCOPE = "entities:write"
+EntityLevel = Literal["campaign", "adset", "ad"]
 
 
 class ActionAcknowledgement(BaseModel):
-    """Provider acknowledgement, never proof of configured/effective AD state."""
+    """Provider acknowledgement, never proof of configured/effective object state."""
 
     model_config = ConfigDict(strict=True, extra="ignore", frozen=True)
 
@@ -86,7 +87,7 @@ def decode_action_job(
 
 
 class MetricFlowActionConnector:
-    """AD-only POST adapter, tested with mocks. Never retries commands.
+    """Status POST adapter for three levels, tested with mocks. Never retries commands.
 
     IDs are safe opaque path segments here, not verified provider IDs. Binding to
     the account/AD namespace is still a LIVE prerequisite. Job GETs are single
@@ -152,15 +153,22 @@ class MetricFlowActionConnector:
         return f"entities/{entity_id}/{operation}"
 
     async def _status(
-        self, entity_id: str, operation: str, *, asynchronous: bool
+        self,
+        entity_id: str,
+        operation: str,
+        *,
+        asynchronous: bool,
+        level: EntityLevel = "ad",
     ) -> ActionAcknowledgement:
         if type(asynchronous) is not bool:
             raise ValueError("Asynchronous must be a boolean")
+        if level not in ("campaign", "adset", "ad"):
+            raise ValueError("Unsupported entity level")
         data = await self._http.request(
             "POST",
             self._path(entity_id, operation),
             params={"async": "true"} if asynchronous else None,
-            payload={"level": "ad"},
+            payload={"level": level},
             accepted_statuses=frozenset({200, 202} if asynchronous else {200}),
         )
         try:
@@ -179,15 +187,19 @@ class MetricFlowActionConnector:
         return result
 
     async def pause_entity(
-        self, entity_id: str, *, asynchronous: bool = False
+        self, entity_id: str, *, asynchronous: bool = False, level: EntityLevel = "ad"
     ) -> JSONPayload:
-        result = await self._status(entity_id, "pause", asynchronous=asynchronous)
+        result = await self._status(
+            entity_id, "pause", asynchronous=asynchronous, level=level
+        )
         return result.model_dump()
 
     async def enable_entity(
-        self, entity_id: str, *, asynchronous: bool = False
+        self, entity_id: str, *, asynchronous: bool = False, level: EntityLevel = "ad"
     ) -> JSONPayload:
-        result = await self._status(entity_id, "enable", asynchronous=asynchronous)
+        result = await self._status(
+            entity_id, "enable", asynchronous=asynchronous, level=level
+        )
         return result.model_dump()
 
     async def change_budget(

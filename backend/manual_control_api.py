@@ -126,11 +126,12 @@ def ads(
     q: str = Query("", max_length=200),
     campaign: str | None = Query(None, max_length=36),
     adset: str | None = Query(None, max_length=36),
+    level: Literal["campaign", "adset", "ad"] = "ad",
 ) -> dict:
     a = actor(request)
     with factory()() as s:
         return catalog(
-            s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset
+            s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset, level
         )
 
 
