@@ -3,7 +3,7 @@ import {useEffect,useRef,useState,type ReactNode} from "react";
 import {labelFor,metricRegistry,type MetricKey,type TableScope} from "../lib/metric-registry";
 import {formatMetric,moveColumn,resizeColumn,type ColumnConfig} from "../lib/column-model";
 export type StatisticsRow=Record<string,string|number|boolean|null|undefined>;
-export default function StatisticsTable({scope,rows,config,change,commit,disabled=false,onName,selection,rowActions}:{scope:TableScope;rows:StatisticsRow[];config:ColumnConfig;change:(fn:(c:ColumnConfig)=>ColumnConfig,defer?:boolean)=>void;commit:()=>void;disabled?:boolean;onName?:(row:StatisticsRow)=>void;rowActions?:(row:StatisticsRow)=>ReactNode;selection?:{maxSelected?:number;selectedCount?:number;selected:(row:StatisticsRow)=>boolean;toggle:(row:StatisticsRow,checked:boolean)=>void;disabled:(row:StatisticsRow)=>boolean}}){
+export default function StatisticsTable({scope,rows,config,change,commit,disabled=false,onName,nameControl,selection,rowActions}:{scope:TableScope;rows:StatisticsRow[];config:ColumnConfig;change:(fn:(c:ColumnConfig)=>ColumnConfig,defer?:boolean)=>void;commit:()=>void;disabled?:boolean;onName?:(row:StatisticsRow)=>void;nameControl?:(row:StatisticsRow)=>ReactNode;rowActions?:(row:StatisticsRow)=>ReactNode;selection?:{maxSelected?:number;selectedCount?:number;selected:(row:StatisticsRow)=>boolean;toggle:(row:StatisticsRow,checked:boolean)=>void;disabled:(row:StatisticsRow)=>boolean}}){
  const wrap=useRef<HTMLDivElement>(null),dragging=useRef<MetricKey|null>(null),speed=useRef(0),frame=useRef(0);
  const resizing=useRef<{key:MetricKey;start:number;width:number}|null>(null);
  const [target,setTarget]=useState<MetricKey|null>(null),[isResizing,setResizing]=useState(false);
@@ -49,9 +49,9 @@ export default function StatisticsTable({scope,rows,config,change,commit,disable
  <tbody>{rows.map((row,index)=><tr key={String(row.id)+"-"+row.currency+"-"+row.timezone+"-"+index}>
  {selection&&<td className="selection-column"><input type="checkbox" aria-label={"Выбрать "+row.name} checked={selection.selected(row)} disabled={selection.disabled(row)} onChange={e=>selection.toggle(row,e.target.checked)}/></td>}
  {config.columns.map(col=><td key={col.key} data-column={col.key} className={col.key==="name"?"identity-column":metricRegistry[col.key].unit==="text"?"text-column":"numeric-column"} style={{left:col.key==="name"&&selection?52:undefined}}>
- {col.key==="name"?<><button className="rowlink" onClick={()=>onName?.(row)} title={String(row.name??row.account_name??"—")}>
+ {col.key==="name"?<><div className={nameControl?"identity-with-control":undefined}>{nameControl?.(row)}<button className="rowlink" onClick={()=>onName?.(row)} title={String(row.name??row.account_name??"—")}>
  {typeof row.thumbnail_url==="string"&&/^https?:\/\//.test(row.thumbnail_url)&&<img src={row.thumbnail_url} alt="" className="thumb" loading="lazy" referrerPolicy="no-referrer"/>}{String(row.name??row.account_name??"—")}
- </button><small>{scope==="tracker"?[row.account_name,row.date].filter(Boolean).join(" · "):row.timezone}</small>
+ </button></div><small>{scope==="tracker"?[row.account_name,row.date].filter(Boolean).join(" · "):row.timezone}</small>
 {scope==="account"&&<><small>{String(row.external_id??"")} · {String(row.currency??"")} · {row.status==="ACTIVE"?"Активен":row.status==="PAUSED"?"Остановлен":String(row.status??"Статус неизвестен")} · {row.source_provider==="meta"?"Meta":"MetricFlow"}</small>{row.has_facts===false&&<small className="missing-data">{row.data_status==="not_started"?"Выбранная дата ещё не началась в timezone кабинета":row.data_status==="not_synced"?"Нет подтверждённой синхронизации периода":"Нет данных за выбранный период"}</small>}</>}
 </>:<span title={formatMetric(row[col.key],col.key,row.currency)}>{formatMetric(row[col.key],col.key,row.currency)}</span>}
  </td>)}{rowActions&&<td>{rowActions(row)}</td>}

@@ -456,6 +456,13 @@ export default function ManualControl({
               change={columns.change}
               commit={() => void columns.persist().catch(() => {})}
               disabled={!columns.ready || columns.busy}
+              nameControl={r => (
+                <input type="checkbox"
+                  aria-label={"Выбрать объявление " + r.name + " · " + r.meta_ad_id}
+                  checked={selected?.id === r.id}
+                  onChange={e => e.target.checked ? selectAd(String(r.id)) : clearSelection()}
+                />
+              )}
               rowActions={(r) => (
                 <button
                   onClick={() =>
@@ -471,7 +478,7 @@ export default function ManualControl({
             />
             <p>
               Всего объявлений: {table?.total ?? "…"} · на странице:{" "}
-              {rows.length}. Нажмите название для подготовки команды.
+              {rows.length}. Выберите одно объявление флажком рядом с названием для подготовки команды.
             </p>
             <button
               disabled={offset === 0 || busy}

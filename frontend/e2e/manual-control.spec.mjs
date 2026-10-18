@@ -468,6 +468,10 @@ test("AD dropdown browses without search, paginates and discards stale account s
 });
 
 test("pilot review is local GET only, preserves commands and ignores stale operation responses", async ({ page, accounts }) => {
+  const mutations = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname.startsWith("/api/manual-control") && request.method() !== "GET") mutations.push(request.method());
+  });
   await restoreAdmin(page, accounts.users[0]);
   await open(page);
   await choose(page, freshAd);
@@ -481,6 +485,27 @@ test("pilot review is local GET only, preserves commands and ignores stale opera
   const fullRows = await (await fullCatalog).json();
   await expect(page.locator("tbody tr")).toHaveCount(fullRows.rows.length);
   const selectedRow = page.locator("tbody tr").filter({hasText:freshAd.meta_ad_id});
+  const checkbox = selectedRow.locator('td[data-column="name"]').getByRole("checkbox");
+  await expect(checkbox).toBeChecked();
+  await checkbox.uncheck();
+  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toHaveCount(0);
+  await checkbox.check();
+  await expect(checkbox).toBeChecked();
+  const otherAd = fullRows.rows.find(row => row.id !== freshAd.id);
+  expect(otherAd, "Single AD selection needs a second row to verify exclusivity").toBeTruthy();
+  const otherCheckbox = page.locator("tbody tr").filter({hasText:otherAd.meta_ad_id}).locator('td[data-column="name"]').getByRole("checkbox");
+  await otherCheckbox.check();
+  await expect(checkbox).not.toBeChecked();
+  await expect(otherCheckbox).toBeChecked();
+  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toContainText(otherAd.meta_ad_id);
+  await checkbox.check();
+  await expect(otherCheckbox).not.toBeChecked();
+  await expect(page.locator('tbody td[data-column="name"] input:checked')).toHaveCount(1);
+  // The choice remains available in the sticky name column after horizontal scrolling.
+  await page.locator(".customizable-table-wrap").evaluate(element => {element.scrollLeft=element.scrollWidth;});
+  await checkbox.scrollIntoViewIfNeeded();
+  expect(await page.locator(".customizable-table-wrap").evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+  await expect(checkbox).toBeInViewport();
   await selectedRow.locator(".rowlink").click();
   await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toBeFocused();
   await expect(page.getByRole("button", {name:"Подготовить ручную проверку пилота", exact:true})).toBeInViewport();
@@ -515,4 +540,5 @@ test("pilot review is local GET only, preserves commands and ignores stale opera
   expect(reviews.every(method=>method==="GET")).toBe(true);
   const after=await (await page.request.get("/api/manual-control/requests")).json();
   expect(after.requests).toEqual(before.requests);
+  expect(mutations).toEqual([]);
 });
