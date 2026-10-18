@@ -109,3 +109,11 @@ POST -> correlated job success -> максимум 3 READ insights pages, без
 приёмку пункта 4. Авторитетность READ, object permission и namespace WRITE ID
 не подменены предположениями. LIVE permit/dispatcher по пункту 3 по-прежнему
 ожидают обязательного evidence. Уже пройденные ручные DRY_RUN повторять не требуется.
+## Ручная ветка без письма провайдеру — 18.10.2026
+
+[Карточка сверки](METRICFLOW_MANUAL_PILOT_REVIEW.md) готова и доступна в локальном UI.
+Письмо не требуется для следующего шага: пользователь сверяет identity, собственный
+статус AD и родителей в MetricFlow/Ads Manager, ничего не изменяя. Текущий READ
+сообщает CAMPAIGN_PAUSED, поэтому прежняя предпосылка ACTIVE больше не принимается.
+Эта ручная сверка не подтверждает WRITE namespace/asset permission автоматически.
+Production permit/dispatcher остаются BLOCKED до принятия обязательных сведений.

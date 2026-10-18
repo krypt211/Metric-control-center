@@ -82,3 +82,7 @@ READ readback diagnostics: [acceptance and LIVE boundaries](docs/integrations/ME
 The isolated mock path now covers POST -> correlated job -> bounded account-filtered
 READ, including process races and crash recovery. Reported status matches remain
 non-authoritative; production WRITE and automatic re-enabling stay blocked.
+Manual pilot review without provider correspondence: [read-only UI acceptance](docs/integrations/METRICFLOW_MANUAL_PILOT_REVIEW.md).
+The selected-AD screen now provides a local review card with exact identity,
+status freshness and credential revisions. It sends no provider requests and
+cannot authorize execution. LIVE WRITE remains blocked pending required evidence.

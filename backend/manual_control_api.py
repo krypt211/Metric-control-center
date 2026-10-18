@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Path, Query, Request, Response
 from sqlalchemy import select
 
 from backend.auth import csrf_check, factory, identity
@@ -131,6 +132,25 @@ def ads(
         return catalog(
             s, a["workspace"], utc_now(), account_id, offset, q, campaign, adset
         )
+
+
+@router.get("/pilot-review/{entity_id}")
+def pilot_review(
+    request: Request,
+    response: Response,
+    entity_id: str = Path(min_length=1, max_length=36),
+    operation: Literal["PAUSE_AD", "ENABLE_AD"] = "PAUSE_AD",
+) -> dict:
+    from services.actions.pilot_review import build_review
+
+    a = actor(request)
+    with factory()() as session:
+        result = build_review(
+            session, a, entity_id, operation, utc_now(),
+            max_status_age_seconds=policy_from_environment().max_state_age_seconds,
+        )
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.get("/requests")

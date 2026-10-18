@@ -44,9 +44,9 @@ from services.storage.models import (
 ACTOR = {"id": "admin", "workspace": "default", "role": "admin"}
 
 
-def seed(factory):
+def seed(factory, *, include_users=True):
     with factory.begin() as s:
-        for role in ("admin", "operator", "viewer"):
+        for role in ("admin", "operator", "viewer") if include_users else ():
             if not s.get(User, role):
                 s.add(User(id=role, email=role, workspace_id="default", role=role))
         s.add(

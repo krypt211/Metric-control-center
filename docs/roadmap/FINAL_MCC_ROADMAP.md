@@ -78,3 +78,10 @@ three-page budget, quota/identity guards and original deadline survive restart.
 A reported match remains UNKNOWN / authoritative=false; it cannot create pause
 ownership. Production dispatch still requires the unresolved mandatory contract.
 Next external step: targeted provider evidence; repeat DRY_RUN clicks are unnecessary.
+## Manual pilot review available locally (2026-10-18)
+
+[Read-only review card](../integrations/METRICFLOW_MANUAL_PILOT_REVIEW.md) is deployed
+in the selected-AD screen. No provider calls, new permits or execution routes are
+introduced. A provider letter is optional; the next step is manual identity/status
+review. Latest READ reports CAMPAIGN_PAUSED for the selected AD, so its own baseline
+and parent states must be checked before preparing any one-operation LIVE permit.

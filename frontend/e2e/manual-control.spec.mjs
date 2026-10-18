@@ -408,3 +408,40 @@ test("browser-only mock verifies WOULD_PAUSE prepare button and draft navigation
   expect((await (await page.request.get("/api/manual-control/requests")).json())
     .requests.some((request) => request.id === id)).toBe(false);
 });
+
+test("pilot review is local GET only, preserves commands and ignores stale operation responses", async ({ page, accounts }) => {
+  await restoreAdmin(page, accounts.users[0]);
+  await open(page);
+  await choose(page, freshAd);
+  const before = await (await page.request.get("/api/manual-control/requests")).json();
+  const reviews = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname.includes("/api/manual-control/pilot-review/")) reviews.push(request.method());
+  });
+  await page.getByRole("button", {name:"Подготовить ручную проверку пилота", exact:true}).click();
+  const card = page.getByRole("region", {name:"Карточка ручной сверки пилота", exact:true});
+  await expect(card).toContainText(freshAd.meta_ad_id);
+  await expect(card).toContainText("LIVE заблокирован. Разрешение на запуск не предоставлено.");
+  await expect(card.getByRole("list", {name:"Локальные условия пилота"})).toBeVisible();
+  await expect(card.getByRole("button", {name:/Выполнить|Запустить|Разрешить/})).toHaveCount(0);
+  let releaseOld, oldReady;
+  const released = new Promise(resolve => {releaseOld=resolve;});
+  const ready = new Promise(resolve => {oldReady=resolve;});
+  const oldUrl = url => url.pathname.includes("/api/manual-control/pilot-review/") && url.searchParams.get("operation")==="ENABLE_AD";
+  await page.route(oldUrl, async route => {
+    const response=await route.fetch();oldReady();await released;await route.fulfill({response});
+  });
+  await card.getByLabel("Операция для сверки").selectOption("ENABLE_AD");
+  await ready;
+  await card.getByLabel("Операция для сверки").selectOption("PAUSE_AD");
+  await expect(card.locator("dt").filter({hasText:"Целевой статус"}).locator("..")).toContainText("PAUSED");
+  const returned = page.waitForResponse(response => oldUrl(new URL(response.url())));
+  releaseOld();await returned;
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(card.locator("dt").filter({hasText:"Целевой статус"}).locator("..")).toContainText("PAUSED");
+  await page.unroute(oldUrl);
+  expect(reviews.length).toBeGreaterThanOrEqual(3);
+  expect(reviews.every(method=>method==="GET")).toBe(true);
+  const after=await (await page.request.get("/api/manual-control/requests")).json();
+  expect(after.requests).toEqual(before.requests);
+});

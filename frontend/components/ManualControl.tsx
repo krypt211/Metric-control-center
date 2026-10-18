@@ -1,5 +1,6 @@
 "use client";
 import SearchableSelect from "./SearchableSelect";
+import PilotReview from "./PilotReview";
 
 import { useEffect, useState } from "react";
 import SessionBar from "./SessionBar";
@@ -446,6 +447,9 @@ export default function ManualControl({
                   {selected.provider} · обновлён:{" "}
                   {time(selected.status_refreshed_at as string | null)}
                 </p>
+                {settings?.can_control && selected.provider === "metricflow" && (
+                  <PilotReview key={selected.id} entityId={selected.id} />
+                )}
                 <label>
                   Причина ручной команды
                   <textarea
