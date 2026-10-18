@@ -413,6 +413,19 @@ test("pilot review is local GET only, preserves commands and ignores stale opera
   await restoreAdmin(page, accounts.users[0]);
   await open(page);
   await choose(page, freshAd);
+  // A repeated selection in the full account table must reveal the panel,
+  // even if this AD was already selected during the initial search.
+  const fullCatalog = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/manual-control/ads" && url.searchParams.get("account_id") === freshAd.account_id && url.searchParams.get("q") === "";
+  });
+  await page.getByLabel("Поиск объявления", {exact:true}).fill("");
+  const fullRows = await (await fullCatalog).json();
+  await expect(page.locator("tbody tr")).toHaveCount(fullRows.rows.length);
+  const selectedRow = page.locator("tbody tr").filter({hasText:freshAd.meta_ad_id});
+  await selectedRow.locator(".rowlink").click();
+  await expect(page.getByRole("article", {name:"Выбранное объявление", exact:true})).toBeFocused();
+  await expect(page.getByRole("button", {name:"Подготовить ручную проверку пилота", exact:true})).toBeInViewport();
   const before = await (await page.request.get("/api/manual-control/requests")).json();
   const reviews = [];
   page.on("request", request => {

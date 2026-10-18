@@ -2,7 +2,7 @@
 import SearchableSelect from "./SearchableSelect";
 import PilotReview from "./PilotReview";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SessionBar from "./SessionBar";
 import StatisticsTable, { type StatisticsRow } from "./StatisticsTable";
 import ColumnManager from "./ColumnManager";
@@ -100,6 +100,18 @@ export default function ManualControl({
     [offset, setOffset] = useState(0),
     [catalogRevision, setCatalogRevision] = useState(0);
   const columns = useColumnPreferences("manual_ad");
+  const selectedPanel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!selected) return;
+    selectedPanel.current?.scrollIntoView({ block: "start" });
+    selectedPanel.current?.focus({ preventScroll: true });
+  }, [selected]);
+  function selectAd(id: string) {
+    const ad = table?.rows.find(value => value.id === id);
+    // Reselecting the same row must also bring its panel back into view.
+    setSelected(ad ? { ...ad } : null);
+  }
+
   useEffect(() => {
     void Promise.all([
       manualRead<Settings>("/settings"),
@@ -411,14 +423,14 @@ export default function ManualControl({
               rowActions={(r) => (
                 <button
                   onClick={() =>
-                    setSelected(table?.rows.find((a) => a.id === r.id) ?? null)
+                    selectAd(String(r.id))
                   }
                 >
                   Подготовить команду
                 </button>
               )}
               onName={(r) =>
-                setSelected(table?.rows.find((a) => a.id === r.id) ?? null)
+                selectAd(String(r.id))
               }
             />
             <p>
@@ -438,7 +450,7 @@ export default function ManualControl({
               Следующие
             </button>
             {selected && (
-              <article aria-label="Выбранное объявление">
+              <article aria-label="Выбранное объявление" ref={selectedPanel} tabIndex={-1} style={{ scrollMarginTop: "6rem" }}>
                 <h3>{String(selected.name)}</h3>
                 <p>
                   Ad ID: {selected.meta_ad_id} · кабинет:{" "}
