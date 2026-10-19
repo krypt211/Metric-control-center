@@ -123,7 +123,7 @@ SHA256 f52bc8ca0691fa0e2f2b5a5de06aa74a897546b88705ee16851859138a2f3327.
 для async-параметра, EntityActionResponse. Здесь использован уже проверенный контракт;
 проверочный код этапа не отправлял запросов к MetricFlow или Meta. Штатный MetricFlow READ сохраняет своё расписание после запуска Docker.
 
-Остаются обязательными:
+Блокеры на момент снимка 19.10.2026 (обновление о правах от 20.10.2026 — ниже):
 
 1. Подтверждение, что WRITE entity_id принимает именно provider AD ID из READ.
    Тип string в OpenAPI сам по себе namespace не доказывает.
@@ -167,3 +167,39 @@ runtime.json, baseline/current Ruff JSON). Секреты в отчёт не в�
 META LIVE REQUESTS INITIATED BY THIS STAGE: 0.
 ADVERTISING WRITE REQUESTS: 0.
 LIVE STATUS: BLOCKED — separate authorization not requested until evidence is accepted.
+
+## Обновление 20.10.2026: подтверждение прав пользователем
+
+Источник: прямое сообщение пользователя в текущей рабочей сессии:
+«Jacquelin Guadalupe Trejo Tovilla это основной соц с которого управляются все рекламные кабинеты. права есть».
+
+Принято как USER_ATTESTED: пользователь подтверждает, что этот профиль основной,
+управляет рекламными кабинетами и имеет право управления, включая уже выбранный
+act_1047962734516123 / Valya Sergeeva. Общий вопрос «есть ли права у этого профиля»
+повторять не требуется. Не требуется повторная локальная симуляция.
+
+Это подтверждение пользователя, не результат независимой проверки Meta API.
+Название роли MANAGE_CAMPAIGNS/FULL_CONTROL, Meta user ID и новая инструментальная
+проверка доступа этим сообщением не установлены. Предыдущий READ mapping profile_id=16192
+остаётся историческим MetricFlow mapping. Реальные scope/revision/status в этом шаге
+запросами к провайдеру не обновлялись.
+
+Подтверждение сохранено в документации. Оно не превращено в
+pilot_external_evidence_accepted: такой комбинированный объект также требует namespace
+WRITE ID, актуальных привязок/revisions, операции и свежих own/effective status.
+MANUAL_META_ACCESS_REVIEW в серверном аудите не подставляется вместо USER_ATTESTED.
+Пользователь не предоставил разрешение на рекламный POST или изменение флагов.
+
+Актуальные следующие условия:
+
+1. Технически подтвердить namespace WRITE entity_id для AD 120247747556780571.
+2. Перед конкретным пилотом получить свежие READ/WRITE checks и own/effective status,
+   оформить объектную карточку и корректно принять доступные evidence серверной процедурой.
+3. Проверить и развернуть закрытый single-use путь; серверные gates не обходить.
+4. Получить отдельное разрешение пользователя на один конкретный PAUSE_AD после карточки.
+
+Права профиля: USER_ATTESTED. Контракт ID: UNVERIFIED. LIVE: BLOCKED.
+ACTIONS_ENABLED=false; LOCAL_READ_ONLY=true; AI_ENABLED=false; AI_AUTOPILOT_ALLOWED=false
+подтверждены чтением .env; код и конфигурация не менялись. Новые тесты не запускались:
+изменение только документационное, прежние результаты выше относятся к этапу 19.10.2026.
+Provider API requests в этом шаге: 0. Advertising WRITE requests в этом шаге: 0.
