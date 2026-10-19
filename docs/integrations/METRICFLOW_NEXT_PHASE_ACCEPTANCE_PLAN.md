@@ -158,3 +158,12 @@ Production dispatcher пока не реализован, LIVE остаётся 
 Formal 202 обязателен только для async: возможный первый synchronous-200 пилот
 не требует этой схемы. Отсутствие provider idempotency не отменяет принятую
 локальную no-resend стратегию и не является основанием послать второй POST.
+
+## Checkpoint 19.10.2026 — synchronous first-pilot path
+
+[SYNC_200 acceptance](METRICFLOW_SYNCHRONOUS_PILOT_ACCEPTANCE.md) реализован в том же
+изолированном ActionEngine для всех шести статусных операций. Один durable claim,
+один synchronous POST, без job GET и resend. Это закрывает локальную реализацию
+синхронной стратегии; production permit/dispatcher по-прежнему не реализован.
+LIVE gate и четыре защитных флага не изменены. Следующий ручной шаг — профиль и
+управляющее право на выбранный кабинет; повторная SIMULATED-проверка не нужна.

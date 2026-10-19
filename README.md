@@ -99,3 +99,8 @@ the existing bounded READ sync. Freshness checks and LIVE gates remain unchanged
 Controlled WRITE safety: [POST deadline, late ACK acceptance and current LIVE blockers](docs/integrations/METRICFLOW_CONTROLLED_WRITE_READINESS_2026-10-19.md).
 The existing mock-only executor holds timeout/late acknowledgements in UNKNOWN without
 resend. Production dispatch remains blocked pending ID, asset rights and readback evidence.
+
+Synchronous first-pilot path: [local/PostgreSQL acceptance](docs/integrations/METRICFLOW_SYNCHRONOUS_PILOT_ACCEPTANCE.md).
+The existing isolated executor now covers one encrypted synchronous-200 POST for
+all six status operations without async jobs or resend. ACK still requires separate
+verification; production authorization and dispatch remain blocked.

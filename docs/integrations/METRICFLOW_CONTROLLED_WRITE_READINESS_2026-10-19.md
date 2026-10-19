@@ -145,3 +145,11 @@ SIMULATED request не повышается до LIVE; ENABLE restoration раз
 Новых пользовательских кругов локальной симуляции не требуется. Ближайший
 переход к LIVE блокируется перечисленными фактами и незавершённым production
 dispatcher, а не повторением уже принятого manual UI теста.
+
+## Synchronous-path checkpoint, 19.10.2026
+
+[Синхронный путь](METRICFLOW_SYNCHRONOUS_PILOT_ACCEPTANCE.md) теперь проверен через
+существующий encrypted/durable executor для шести операций, только MOCK_ONLY.
+Он не требует async ACK/job observer для первого пилота. ACK не подтверждает
+изменение статуса. Production permit/dispatcher остаётся отдельной незавершённой
+задачей; ограничения namespace/asset access не отменены. Рабочие флаги не изменены.

@@ -334,6 +334,135 @@ def post_deadline_cases(sf, vault):
     }
 
 
+def synchronous_cases(sf, vault):
+    """All six documented synchronous operations; no production namespace/transport."""
+    total = 0
+    for index, (level, operation) in enumerate(
+        (level, operation)
+        for level in ("campaign", "adset", "ad")
+        for operation in ("PAUSE", "ENABLE")
+    ):
+        entity_id, external = f"sync-{index}", str(1080 + index)
+        baseline = "ACTIVE" if operation == "PAUSE" else "PAUSED"
+        with sf.begin() as session:
+            session.add(
+                Entity(
+                    id=entity_id,
+                    account_id="account",
+                    kind=level,
+                    external_id=external,
+                    name="Synthetic sync entity",
+                )
+            )
+            session.flush()
+            if level == "campaign":
+                session.add(Campaign(entity_id=entity_id))
+            elif level == "adset":
+                session.add(AdSet(entity_id=entity_id, campaign_id="campaign"))
+            else:
+                session.add(Ad(entity_id=entity_id, adset_id="adset"))
+            session.add(
+                EntityCurrentState(
+                    entity_id=entity_id,
+                    status=baseline,
+                    observed_at=NOW,
+                    raw={},
+                )
+            )
+        clock = [NOW]
+        engine = ActionEngine(
+            sf, ActionPolicy(enabled=True), clock=lambda clock=clock: clock[0]
+        )
+        row = engine.prepare_manual(
+            ACTOR,
+            ManualDraftInput(
+                entity_id=entity_id,
+                entity_level=level,
+                meta_ad_id=external,
+                account_id="account",
+                provider="metricflow",
+                operation=f"{operation}_{level.upper()}",
+                expected_status=baseline,
+                reason="Isolated synchronous contract acceptance",
+            ),
+            f"sync-{index}",
+        )
+        for event in ("preflight", "confirm"):
+            row = engine.transition_manual(ACTOR, row["id"], event, row["revision"])
+        permit = engine.prepare_rehearsal(
+            ACTOR,
+            row["id"],
+            row["revision"],
+            1,
+            NOW + timedelta(minutes=5),
+            asynchronous=False,
+        )
+        calls = []
+
+        def respond(
+            request,
+            *,
+            expected_id=external,
+            expected_level=level,
+            expected_operation=operation,
+            calls=calls,
+        ):
+            calls.append(request)
+            assert request.method == "POST"
+            assert (
+                request.url.path
+                == f"/api/v1/entities/{expected_id}/{expected_operation.lower()}"
+            )
+            assert not request.url.params
+            assert json.loads(request.content) == {"level": expected_level}
+            return httpx.Response(
+                200,
+                json={
+                    "success": True,
+                    "entity_id": expected_id,
+                    "message": "synthetic sync",
+                },
+            )
+
+        async def execute(engine=engine, permit=permit, respond=respond):
+            return await engine.execute_rehearsal(
+                ACTOR,
+                permit["id"],
+                permit["revision"],
+                vault=vault,
+                transport=httpx.MockTransport(respond),
+            )
+
+        with (
+            patch.dict(
+                os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
+            ),
+            patch.object(ActionSafetyGate, "require_verified_contract"),
+        ):
+            assert asyncio.run(execute()) == permit["id"]
+            assert asyncio.run(execute()) is None
+        with sf() as session:
+            stored = session.get(ActionRequest, permit["id"])
+            assert stored.status == "verifying"
+            control = stored.provenance["controlled"]
+            assert control["state"] == "SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK"
+            assert control["job_id"] is None and control["attempts"] == 1
+            assert control["observation"]["state"] == "NOT_APPLICABLE"
+        clock[0] += timedelta(minutes=6)
+        assert engine.verify_pending() == 0
+        with sf() as session:
+            assert session.get(ActionRequest, permit["id"]).status == "unknown"
+        assert len(calls) == 1
+        total += len(calls)
+    return {
+        "cases": 6,
+        "physical_mock_attempts": total,
+        "resend": "NONE",
+        "job_gets": 0,
+        "verified_ownership": 0,
+    }
+
+
 def main():
     if not (database_url().database or "").startswith("mcc_integrations_"):
         raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
@@ -427,6 +556,7 @@ def main():
         assert second_row.provenance["controlled"]["attempts"] == 1
         assert second_row.provenance["controlled"]["job_id"] is None
     deadlines = post_deadline_cases(sf, vault)
+    synchronous = synchronous_cases(sf, vault)
     print(
         json.dumps(
             {
@@ -439,8 +569,11 @@ def main():
                 "restart": "NO_RESEND",
                 "abrupt_exit": 17,
                 "crash_recovery": "UNKNOWN_NO_RESEND",
-                "total_physical_mock_attempts": 2 + deadlines["physical_mock_attempts"],
+                "total_physical_mock_attempts": 2
+                + deadlines["physical_mock_attempts"]
+                + synchronous["physical_mock_attempts"],
                 "post_deadline_cases": deadlines,
+                "synchronous_cases": synchronous,
                 "live_provider_requests": 0,
                 "advertising_write_requests": 0,
                 "result": "PASS",

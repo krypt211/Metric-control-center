@@ -327,18 +327,21 @@ class ActionEngine:
             raise ActionRejected("CONFIRMED_MANUAL_REHEARSAL_REQUIRED")
         return row
 
-    def _rehearsal_binding(self, session, row, actor: dict) -> dict:
+    def _rehearsal_binding(
+        self, session, row, actor: dict, *, asynchronous: bool = True
+    ) -> dict:
         from services.actions.manual import preflight, snapshot
+        from services.actions.manual_schema import STATUS_OPERATIONS
 
         entity = session.get(Entity, row.entity_id)
         account = session.get(AdAccount, entity.account_id) if entity else None
         if (
             not entity
-            or entity.kind != "ad"
+            or STATUS_OPERATIONS.get(row.action) != entity.kind
+            or (asynchronous and entity.kind != "ad")
             or not account
             or account.provider != "metricflow"
             or account.workspace_id != actor["workspace"]
-            or row.action not in ("PAUSE_AD", "ENABLE_AD")
             or row.value is not None
         ):
             raise ActionRejected("SINGLE_METRICFLOW_AD_REQUIRED")
@@ -346,7 +349,7 @@ class ActionEngine:
             raise ActionRejected("REHEARSAL_PREFLIGHT_HELD")
         if row.provenance.get("confirmation_actor") != actor["id"]:
             raise ActionRejected("LOCAL_CONFIRMATION_REQUIRED")
-        return {
+        binding = {
             "workspace": actor["workspace"],
             "actor_id": actor["id"],
             "request_id": row.id,
@@ -357,6 +360,11 @@ class ActionEngine:
             "confirmation_at": row.provenance.get("confirmation_at"),
             "snapshot": snapshot(session, entity, account),
         }
+        if not asynchronous:
+            binding.update(
+                entity_id=entity.id, entity_level=entity.kind, response_mode="SYNC_200"
+            )
+        return binding
 
     def prepare_rehearsal(
         self,
@@ -365,8 +373,10 @@ class ActionEngine:
         revision: int,
         credential_revision: int,
         expires_at: datetime,
+        *,
+        asynchronous: bool = True,
     ) -> dict:
-        """Prepare a MOCK_ONLY single-AD permit in an isolated fixture namespace.
+        """Prepare a MOCK_ONLY single-object permit in an isolated fixture namespace.
 
         A local manual confirmation is not LIVE authorization. No public endpoint,
         worker dispatch or working-database permit creation is provided here.
@@ -378,6 +388,7 @@ class ActionEngine:
         if (
             type(revision) is not int
             or revision < 1
+            or type(asynchronous) is not bool
             or not isinstance(expires_at, datetime)
             or expires_at.tzinfo is None
             or not now < expires_at <= now + timedelta(minutes=10)
@@ -403,8 +414,15 @@ class ActionEngine:
                 "job_id": None,
                 "credential_revision": credential_revision,
                 "credential_digest": credential_digest(state),
-                "binding": self._rehearsal_binding(session, row, actor),
+                "binding": self._rehearsal_binding(
+                    session, row, actor, asynchronous=asynchronous
+                ),
             }
+            if not asynchronous:
+                control["response_mode"] = "SYNC_200"
+                control["observation"] = {
+                    **control["observation"], "state": "NOT_APPLICABLE"
+                }
             row.provenance = {**row.provenance, "controlled": control}
             row.revision += 1
             log(
@@ -458,13 +476,19 @@ class ActionEngine:
             control = dict(row.provenance.get("controlled") or {})
             if control.get("mode") != "MOCK_ONLY":
                 raise ActionRejected("MOCK_ONLY_PERMIT_REQUIRED")
+            response_mode = control.get("response_mode", "ASYNC_JOB")
+            if response_mode not in ("ASYNC_JOB", "SYNC_200"):
+                raise ActionRejected("REHEARSAL_RESPONSE_MODE_INVALID")
+            asynchronous = response_mode == "ASYNC_JOB"
             if control.get("attempts") or row.status != "CONFIRMED":
                 return None
             if row.revision != revision:
                 raise ActionRejected("ACTION_REVISION_CONFLICT")
             if now >= datetime.fromisoformat(control["expires_at"]):
                 raise ActionRejected("REHEARSAL_PERMIT_EXPIRED")
-            if control["binding"] != self._rehearsal_binding(session, row, actor):
+            if control["binding"] != self._rehearsal_binding(
+                session, row, actor, asynchronous=asynchronous
+            ):
                 raise ActionRejected("REHEARSAL_BINDING_CHANGED")
             state = checked_write_state(
                 session, actor["workspace"], control["credential_revision"], now
@@ -508,9 +532,12 @@ class ActionEngine:
                     current.status != "executing"
                     or permit.get("claim_id") != claim_id
                     or permit.get("http_started")
+                    or permit.get("response_mode", "ASYNC_JOB") != response_mode
                     or self.clock() >= datetime.fromisoformat(permit["expires_at"])
                     or permit["binding"]
-                    != self._rehearsal_binding(session, current, actor)
+                    != self._rehearsal_binding(
+                        session, current, actor, asynchronous=asynchronous
+                    )
                 ):
                     raise ActionRejected("REHEARSAL_FINAL_GUARD_HELD")
                 permit["http_started"] = True
@@ -549,11 +576,13 @@ class ActionEngine:
                 ) as connector:
                     operation = (
                         connector.pause_entity
-                        if control["binding"]["action"] == "PAUSE_AD"
+                        if control["binding"]["action"].startswith("PAUSE_")
                         else connector.enable_entity
                     )
                     result = await operation(
-                        control["binding"]["external_id"], asynchronous=True
+                        control["binding"]["external_id"],
+                        asynchronous=asynchronous,
+                        level=control["binding"].get("entity_level", "ad"),
                     )
         except Exception as caught:  # noqa: BLE001 - sanitize every unknown boundary error
             error = type(
@@ -595,10 +624,17 @@ class ActionEngine:
                     error = "POST_OUTCOME_ALREADY_CLOSED"
             acknowledged = bool(result and not error and not closed)
             saved.update(
-                state="ACKNOWLEDGED_NEEDS_READBACK" if acknowledged else "OUTCOME_UNKNOWN",
+                state=(
+                    (
+                        "ACKNOWLEDGED_NEEDS_READBACK"
+                        if asynchronous
+                        else "SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK"
+                    )
+                    if acknowledged else "OUTCOME_UNKNOWN"
+                ),
                 job_id=result["job_id"] if result else saved.get("job_id"),
             )
-            if acknowledged:
+            if acknowledged and asynchronous:
                 from services.actions.job_observation import arm_observation
 
                 arm_observation(saved, self.clock())
@@ -665,6 +701,25 @@ class ActionEngine:
                 if controlled:
                     from services.actions.job_observation import recover_observation
                     from services.actions.readback import recover_readback
+
+                    # Synchronous ACK is not authoritative state evidence. No job
+                    # observer or legacy status match may certify it as succeeded.
+                    if (
+                        controlled.get("response_mode") == "SYNC_200"
+                        and controlled.get("state") == "SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK"
+                        and now >= datetime.fromisoformat(controlled["expires_at"])
+                    ):
+                        controlled["state"] = "OUTCOME_UNKNOWN"
+                        request.provenance = {**request.provenance, "controlled": controlled}
+                        request.status, request.revision = "unknown", request.revision + 1
+                        execution.outcome, execution.error_code = (
+                            "mock_unknown", "MANUAL_READBACK_DEADLINE"
+                        )
+                        log(
+                            session, request.id, "controlled_mock_manual_readback_expired",
+                            now, claim_id=controlled.get("claim_id"), mode="MOCK_ONLY"
+                        )
+                        continue
 
                     if recover_readback(session, request, now):
                         continue
