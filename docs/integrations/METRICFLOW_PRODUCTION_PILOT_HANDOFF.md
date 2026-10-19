@@ -203,3 +203,13 @@ ACTIONS_ENABLED=false; LOCAL_READ_ONLY=true; AI_ENABLED=false; AI_AUTOPILOT_ALLO
 подтверждены чтением .env; код и конфигурация не менялись. Новые тесты не запускались:
 изменение только документационное, прежние результаты выше относятся к этапу 19.10.2026.
 Provider API requests в этом шаге: 0. Advertising WRITE requests в этом шаге: 0.
+
+## Обновление 20.10.2026: окончание проверки опубликованного WRITE ID контракта
+
+[WRITE ID decision](METRICFLOW_WRITE_ID_DECISION_2026-10-20.md): свежий OpenAPI имеет тот же
+SHA; проверены связанные READ/WRITE schemas и официальное руководство. Явное равенство
+Facebook Ad ID и WRITE entity_id не установлено; документированного неизменяющего
+validate/dry-run для этого ID не найдено. Осталось внешнее уточнение, сформулированное
+одним вопросом в отчёте. Провайдеру ничего не отправлялось. До ответа не нужно повторять
+симуляцию или общий вопрос о правах. Неподтверждённый контракт не реализован и gates
+не изменены; authenticated API requests=0, Advertising WRITE requests=0 за этот шаг.
