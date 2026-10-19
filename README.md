@@ -91,3 +91,7 @@ Multilevel manual status preparation: [campaign / adset / ad local acceptance](d
 All six PAUSE/ENABLE intentions support local preparation and simulation; backend/frontend
 are deployed for manual LOCAL acceptance. LIVE dispatch and authoritative parent readback
 remain blocked. No advertising WRITE was sent.
+
+Manual parent freshness: [targeted READ-sync recovery and next local test](docs/integrations/MANUAL_PARENT_FRESHNESS_FIX.md).
+A valid STATUS_STALE-blocked parent draft can refresh its referenced catalog through
+the existing bounded READ sync. Freshness checks and LIVE gates remain unchanged.

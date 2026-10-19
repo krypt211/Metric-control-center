@@ -97,8 +97,49 @@ class SyncEngine:
                 ApiQuota.utc_day == now.date(),
             ).values(blocked_until=blocked))
 
+    def _blocked_parent_refresh(self, session, now, cached) -> set[tuple[str, str, str]]:
+        """Honor stale manual drafts once through the existing READ sync."""
+        from services.storage.models import ActionRequest, Entity
+
+        requests = session.execute(
+            select(ActionRequest, AdAccount.external_id, Entity.kind, Entity.external_id)
+            .join(Entity, Entity.id == ActionRequest.entity_id)
+            .join(AdAccount, AdAccount.id == Entity.account_id)
+            .where(
+                ActionRequest.workspace_id == self.workspace,
+                ActionRequest.status == "BLOCKED",
+                AdAccount.workspace_id == self.workspace,
+                AdAccount.provider == "metricflow",
+                Entity.kind.in_(("campaign", "adset")),
+            )
+        ).all()
+        refresh = set()
+        for request, account_id, kind, entity_id in requests:
+            meta = request.provenance
+            if (
+                meta.get("phase") != "4A"
+                or meta.get("source") != "manual"
+                or meta.get("provider") != "metricflow"
+                or meta.get("entity_level") != kind
+                or meta.get("entity_id") != request.entity_id
+                or request.action not in (f"PAUSE_{kind.upper()}", f"ENABLE_{kind.upper()}")
+                or "STATUS_STALE" not in (meta.get("preflight") or {}).get("blocking_reasons", [])
+            ):
+                continue
+            try:
+                expires = datetime.fromisoformat(meta.get("expires_at", ""))
+            except (ValueError, TypeError):
+                continue  # Malformed metadata cannot authorize a cache bypass.
+            created = aware(request.created_at)
+            if expires.tzinfo is None or not created <= now < expires:
+                continue
+            observed = cached.get((account_id, kind, entity_id))
+            if observed is None or aware(observed) < created:
+                refresh.add((account_id, kind, entity_id))
+        return refresh
+
     async def parent_states(self, rows, connector, now, page_number, run_id):
-        """Refresh referenced parents; reuse known statuses for up to one hour."""
+        """Cache parents for one hour; honor blocked manual drafts on the next sync."""
         from dataclasses import replace
         from services.storage.models import Entity, EntityCurrentState
         config = self.schema.config.get("state_catalog")
@@ -117,9 +158,11 @@ class SyncEngine:
                 EntityCurrentState, EntityCurrentState.entity_id == Entity.id,
             ).where(AdAccount.workspace_id == self.workspace, AdAccount.provider == "metricflow",
                     Entity.kind.in_(kinds), EntityCurrentState.status.is_not(None))).all()
-        cached = {(aid, kind, eid): at for aid, kind, eid, at in observations}
+            cached = {(aid, kind, eid): at for aid, kind, eid, at in observations}
+            requested = self._blocked_parent_refresh(session, now, cached)
         refresh = {(row.account_id, parent.kind) for row in rows for parent in row.parents
-                   if (row.account_id, parent.kind, parent.external_id) not in cached or
+                   if (row.account_id, parent.kind, parent.external_id) in requested or
+                   (row.account_id, parent.kind, parent.external_id) not in cached or
                    (now - aware(cached[(row.account_id, parent.kind, parent.external_id)])).total_seconds() >= ttl}
         found = {}
         for aid, kind in sorted(refresh):

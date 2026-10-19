@@ -4,6 +4,12 @@
 LOCAL MULTILEVEL STATUS CONTROL: READY FOR MANUAL LOCAL ACCEPTANCE; backend/frontend установлены.
 LIVE WRITE: BLOCKED. Этот документ не разрешает рекламные операции.
 
+Актуализация 19.10.2026: [исправление parent freshness и результат ручного теста](MANUAL_PARENT_FRESHNESS_FIX.md).
+Первая ручная проверка остановилась на STATUS_STALE. Адресное обновление через
+штатный READ-sync установлено; выбранная кампания теперь PAUSED, группа —
+CAMPAIGN_PAUSED. Следующий ручной шаг — только локальная симуляция кампании;
+прежняя инструкция повторить группу не применима к её текущему effective status.
+
 ## Подтверждённый контракт
 
 Официальный OpenAPI повторно получен без credentials, с обычным browser
