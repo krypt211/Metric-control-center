@@ -1,7 +1,7 @@
 # Manual parent freshness — исправление и повторная приёмка
 
 Дата: 19.10.2026, Europe/Moscow.
-Статус кода: DEPLOYED / LOCAL-MOCK VERIFIED.
+Статус кода: DEPLOYED / LOCAL-MOCK + SCHEDULED READ VERIFIED.
 Ручная симуляция кампании: PENDING USER TEST.
 Ручная симуляция выбранной группы: BLOCKED BY EFFECTIVE STATUS.
 LIVE ADVERTISING WRITE: BLOCKED. Advertising WRITE requests = 0.
@@ -142,3 +142,26 @@ AI_AUTOPILOT_ALLOWED=false. Meta disabled/disconnected revision 4.
 ActionExecution=0; Advertising WRITE requests=0; Meta LIVE requests=0.
 WRITE ID namespace, per-object permissions, ACK/UNKNOWN/authoritative readback
 и одноразовый production dispatcher по-прежнему блокируют LIVE.
+
+## Checkpoint 19.10.2026 16:41 МСК — адресный refresh подтверждён
+
+Пользователь создал ENABLE_CAMPAIGN request
+c3f77c65-f40e-47d9-a7ef-8df2a8d851b1 в 16:36:18, expiry 16:51:18 МСК.
+Первый preflight в 16:36:25 корректно вернул STATUS_STALE: наблюдение 16:03.
+Установленный worker read-only проверкой подтвердил refresh demand именно
+для act_1047962734516123 / campaign / 120247747556760571.
+
+Агент дождался существующего scheduled today-sync в 16:40; внеочередной
+provider GET не запускался. Sync 779d9d07-8b5c-4616-ae83-a5395cb1c2ff:
+16:40:00–16:40:08 МСК, succeeded, 3 физических READ attempts вместо прежних
+двух. Campaign PAUSED, observed_at 16:40:00; quota 226 -> 229/800, cooldown нет.
+Это подтверждает адресную ветку на реальном штатном READ; рекламных WRITE нет.
+
+В 16:41:03 чистая read-only функция preflight дала local_allowed=true,
+blocking_reasons=[], live_allowed=false. Остались только WRITE_DISABLED,
+WRITE_CONTRACT_UNVERIFIED и WRITE_PERMISSION_UNVERIFIED для LIVE.
+Request revision=4 и сохранённый прежний preflight не изменялись; переход,
+подтверждение и симуляция агентом не выполнялись, provider HTTP этой проверки=0.
+ActionExecution=0. Пользователю нужно повторно нажать «Проверить команду» для
+сохранения новой проверки и затем подтвердить/выполнить только локальную симуляцию
+до expiry. Ручной результат SIMULATED пока не подтверждён.
