@@ -2,7 +2,7 @@
 
 Дата: 19.10.2026, Europe/Moscow.
 Статус кода: DEPLOYED / LOCAL-MOCK + SCHEDULED READ VERIFIED.
-Ручная симуляция кампании: PENDING USER TEST.
+Ручная симуляция кампании: ACCEPTED — ENABLE_CAMPAIGN / SIMULATED.
 Ручная симуляция выбранной группы: BLOCKED BY EFFECTIVE STATUS.
 LIVE ADVERTISING WRITE: BLOCKED. Advertising WRITE requests = 0.
 
@@ -165,3 +165,29 @@ Request revision=4 и сохранённый прежний preflight не из�
 ActionExecution=0. Пользователю нужно повторно нажать «Проверить команду» для
 сохранения новой проверки и затем подтвердить/выполнить только локальную симуляцию
 до expiry. Ручной результат SIMULATED пока не подтверждён.
+
+## Ручная приёмка 19.10.2026 16:42 МСК — ENABLE_CAMPAIGN ACCEPTED
+
+Пользователь повторил preflight в 16:42:02, подтвердил локальное намерение в
+16:42:19 и выполнил симуляцию в 16:42:20. PostgreSQL проверена агентом в 16:43:27:
+
+- Request c3f77c65-f40e-47d9-a7ef-8df2a8d851b1, operation ENABLE_CAMPAIGN,
+  terminal status SIMULATED, revision=10, result=LOCAL_SIMULATION_ONLY.
+- Final preflight checked_at 16:42:20: local_allowed=true,
+  blocking_reasons=[], live_allowed=false.
+- Сохранённый READ-статус кампании 120247747556760571 остался PAUSED,
+  observed_at 16:40:00. В audit есть CONFIRMED и SIMULATED; всего 10 событий.
+- ActionExecution=0. Проверка агентом использовала только локальную БД;
+  provider GET/WRITE для приёмки не запускались.
+
+Сценарий пользовательской подготовки ENABLE_CAMPAIGN, восстановления freshness,
+повторного preflight, подтверждения и локальной симуляции принят. Повторять этот
+ручной сценарий не требуется. Это не ручная приёмка реального ENABLE или всех
+остальных операций. Исходное 16:03 в captured card является историческим снимком
+черновика; актуальная freshness проверялась по EntityCurrentState в 16:42.
+
+Группа с CAMPAIGN_PAUSED остаётся BLOCKED по пригодности исходного состояния.
+LIVE остаётся BLOCKED: точный WRITE ID binding, права на конкретный объект,
+подтверждённая семантика ACK/UNKNOWN/authoritative readback и одноразовый
+production dispatcher ещё не приняты. Подтверждение симуляции не разрешает
+рекламный WRITE. Advertising WRITE requests=0.
