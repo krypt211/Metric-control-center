@@ -127,3 +127,25 @@ AI_AUTOPILOT_ALLOWED=false
 
 META LIVE REQUESTS THIS STAGE: 0
 ADVERTISING WRITE REQUESTS THIS STAGE: 0
+
+## Уточнение профиля — 19.10.2026, 17:31:58 МСК
+
+После сообщения пользователя `739978 / Valya Sergeeva / act_1047962734516123`
+выполнен ровно один документированный GET /api/v1/ad-accounts через действующее
+READ-подключение revision 1. Использован существующий READ Credential Manager /
+ProviderManager quota reserve, read_retries=0. WRITE vault не использовался.
+
+Для exact account ID API подтвердил:
+
+- internal_id: 739978 — внутренний ID строки кабинета MetricFlow;
+- profile_id: 16192 — ID профиля в ответе MetricFlow, не доказательство Meta user ID;
+- profile_name: Jacquelin Guadalupe Trejo Tovilla;
+- is_active: true — признак аккаунта, не подтверждение управляющего права профиля.
+
+Поиск имени профиля вручную больше не требуется. Следующий ручной шаг — посмотреть
+доступ именно этого профиля к act_1047962734516123 в Meta. Нужны отображаемое право
+управления/роль и время сверки, без изменения настроек доступа или рекламы.
+Этот READ не подтверждает asset management permission, WRITE entity_id namespace
+или авторитетность status readback; существующие LIVE blockers остаются.
+Санитизированный результат: .tools/sync-pilot/account-profile-check.json (ignored).
+За этот шаг: authenticated READ attempts = 1; advertising WRITE requests = 0.
