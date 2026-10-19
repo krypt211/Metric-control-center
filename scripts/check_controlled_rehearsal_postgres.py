@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import subprocess
@@ -163,10 +164,22 @@ def prepared(engine, entity_id="ad", external_id="1003"):
     )
 
 
+def verify_runtime_source():
+    """Refuse an installed stale package instead of the candidate under test."""
+    expected = Path(__file__).resolve().parents[1] / "services/actions/engine.py"
+    loaded = Path(sys.modules[ActionEngine.__module__].__file__)
+    if (
+        hashlib.sha256(expected.read_bytes()).digest()
+        != hashlib.sha256(loaded.read_bytes()).digest()
+    ):
+        raise RuntimeError("CANDIDATE_SOURCE_MISMATCH")
+
+
 def fixture():
     """Refuse the working database before opening a connection."""
     if not (database_url().database or "").startswith("mcc_integrations_"):
         raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
+    verify_runtime_source()
     schema = os.environ["REHEARSAL_SCHEMA"]
     if (
         not schema.startswith("controlled_rehearsal_")
@@ -234,9 +247,97 @@ def child(mode, request_id, revision):
     print(json.dumps({"claimed": result is not None}))
 
 
+def _post_deadline_case(sf, vault, scenario, index):
+    calls = []
+    entity_id, external_id = "ad_" + scenario, str(1000 + index)
+    with sf.begin() as session:
+        session.add(
+            Entity(
+                id=entity_id,
+                account_id="account",
+                kind="ad",
+                external_id=external_id,
+                name="Synthetic " + scenario,
+            )
+        )
+        session.flush()
+        session.add(Ad(entity_id=entity_id, adset_id="adset"))
+        session.add(
+            EntityCurrentState(
+                entity_id=entity_id, status="ACTIVE", observed_at=NOW, raw={}
+            )
+        )
+    clock = [NOW]
+    engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: clock[0])
+    permit = prepared(engine, entity_id=entity_id, external_id=external_id)
+
+    async def respond(request):
+        assert request.method == "POST"
+        assert request.url.path == f"/api/v1/entities/{external_id}/pause"
+        calls.append(scenario)
+        if scenario == "timeout":
+            await asyncio.Event().wait()
+        clock[0] += (
+            timedelta(minutes=6) if scenario == "deadline" else timedelta(seconds=121)
+        )
+        if scenario == "recovery":
+            engine.verify_pending()
+        return httpx.Response(
+            202,
+            json={
+                "success": True,
+                "entity_id": external_id,
+                "message": "synthetic",
+                "job_id": 40 + index,
+            },
+        )
+
+    async def execute():
+        async with asyncio.timeout(10):
+            return await engine.execute_rehearsal(
+                ACTOR,
+                permit["id"],
+                permit["revision"],
+                vault=vault,
+                transport=httpx.MockTransport(respond),
+            )
+
+    with (
+        patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}),
+        patch.object(ActionSafetyGate, "require_verified_contract"),
+        patch("services.actions.engine.CONTROLLED_POST_TIMEOUT_SECONDS", 0.5),
+    ):
+        assert asyncio.run(execute()) == permit["id"]
+        with sf() as session:
+            row = session.get(ActionRequest, permit["id"])
+            control = row.provenance["controlled"]
+            assert row.status == "unknown" and control["attempts"] == 1
+            assert control["observation"]["state"] == "UNARMED"
+            assert control["job_id"] == (None if scenario == "timeout" else 40 + index)
+        assert asyncio.run(execute()) is None
+    assert len(calls) == 1
+    return len(calls)
+
+
+def post_deadline_cases(sf, vault):
+    """Exercise late ACK/recovery/timeout using only a restored fixture schema."""
+    attempts = sum(
+        _post_deadline_case(sf, vault, scenario, index)
+        for index, scenario in enumerate(("deadline", "recovery", "timeout"), start=5)
+    )
+    return {
+        "cases": 3,
+        "physical_mock_attempts": attempts,
+        "late_ack": "UNKNOWN_WITH_JOB_ID",
+        "recovery": "NOT_REOPENED",
+        "timeout": "UNKNOWN_NO_RESEND",
+    }
+
+
 def main():
     if not (database_url().database or "").startswith("mcc_integrations_"):
         raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
+    verify_runtime_source()
     admin = make_engine()
     schema = "controlled_rehearsal_" + uuid4().hex
     with admin.begin() as c:
@@ -325,6 +426,7 @@ def main():
         assert second_row.status == "unknown"
         assert second_row.provenance["controlled"]["attempts"] == 1
         assert second_row.provenance["controlled"]["job_id"] is None
+    deadlines = post_deadline_cases(sf, vault)
     print(
         json.dumps(
             {
@@ -337,7 +439,8 @@ def main():
                 "restart": "NO_RESEND",
                 "abrupt_exit": 17,
                 "crash_recovery": "UNKNOWN_NO_RESEND",
-                "total_physical_mock_attempts": 2,
+                "total_physical_mock_attempts": 2 + deadlines["physical_mock_attempts"],
+                "post_deadline_cases": deadlines,
                 "live_provider_requests": 0,
                 "advertising_write_requests": 0,
                 "result": "PASS",

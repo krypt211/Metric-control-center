@@ -95,3 +95,7 @@ remain blocked. No advertising WRITE was sent.
 Manual parent freshness: [targeted READ-sync recovery and next local test](docs/integrations/MANUAL_PARENT_FRESHNESS_FIX.md).
 A valid STATUS_STALE-blocked parent draft can refresh its referenced catalog through
 the existing bounded READ sync. Freshness checks and LIVE gates remain unchanged.
+
+Controlled WRITE safety: [POST deadline, late ACK acceptance and current LIVE blockers](docs/integrations/METRICFLOW_CONTROLLED_WRITE_READINESS_2026-10-19.md).
+The existing mock-only executor holds timeout/late acknowledgements in UNKNOWN without
+resend. Production dispatch remains blocked pending ID, asset rights and readback evidence.

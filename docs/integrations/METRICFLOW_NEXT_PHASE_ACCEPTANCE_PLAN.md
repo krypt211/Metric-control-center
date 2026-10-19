@@ -143,3 +143,18 @@ READ healthy подтверждён локально на 19:14 UTC. Истор�
 ACK/UNKNOWN/authoritative readback и одноразовый production dispatcher остаются
 обязательными условиями перед отдельным разрешением на каждый LIVE запуск.
 Расширение локальных уровней не закрывает эти блокеры и не активирует правила.
+
+## Checkpoint 19.10.2026 — POST deadline и late ACK
+
+[Актуальный разбор готовности](METRICFLOW_CONTROLLED_WRITE_READINESS_2026-10-19.md):
+169 backend tests PASS; PostgreSQL race/crash и deadline cases PASS.
+Исправлены таймаут однократного POST и повторное открытие UNKNOWN поздним ACK.
+Backend/READ-worker обновлены с прежним закрытым hard gate и четырьмя флагами.
+Ручной ENABLE_CAMPAIGN / SIMULATED уже принят; повторять его не требуется.
+
+Перед production dispatcher нужны три внешних факта: WRITE ID binding,
+управляющее право на конкретный объект и авторитетный configured/effective readback.
+Production dispatcher пока не реализован, LIVE остаётся BLOCKED.
+Formal 202 обязателен только для async: возможный первый synchronous-200 пилот
+не требует этой схемы. Отсутствие provider idempotency не отменяет принятую
+локальную no-resend стратегию и не является основанием послать второй POST.

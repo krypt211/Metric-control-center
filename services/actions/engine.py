@@ -19,6 +19,9 @@ from services.sync.engine import aware, utc_now
 from .providers import supports
 
 
+CONTROLLED_POST_TIMEOUT_SECONDS = 30.0
+
+
 class ActionRejected(ValueError):
     pass
 
@@ -524,25 +527,34 @@ class ActionEngine:
             await asyncio.to_thread(guard_before_http)
 
         result, error, unexpected = None, None, False
+        post_timeout = None
         try:
             self.reserve_api_request(actor["workspace"])
-            async with create_action_connector(
-                workspace=actor["workspace"],
-                credential_revision=control["credential_revision"],
-                session_factory=self.sessions,
-                vault=vault,
-                transport=transport,
-                before_request=before_http,
-                clock=self.clock,
-            ) as connector:
-                operation = (
-                    connector.pause_entity
-                    if control["binding"]["action"] == "PAUSE_AD"
-                    else connector.enable_entity
-                )
-                result = await operation(
-                    control["binding"]["external_id"], asynchronous=True
-                )
+            remaining = (
+                datetime.fromisoformat(control["expires_at"]) - self.clock()
+            ).total_seconds()
+            if remaining <= 0:
+                raise ActionRejected("REHEARSAL_PERMIT_EXPIRED")
+            async with asyncio.timeout(
+                min(CONTROLLED_POST_TIMEOUT_SECONDS, remaining)
+            ) as post_timeout:
+                async with create_action_connector(
+                    workspace=actor["workspace"],
+                    credential_revision=control["credential_revision"],
+                    session_factory=self.sessions,
+                    vault=vault,
+                    transport=transport,
+                    before_request=before_http,
+                    clock=self.clock,
+                ) as connector:
+                    operation = (
+                        connector.pause_entity
+                        if control["binding"]["action"] == "PAUSE_AD"
+                        else connector.enable_entity
+                    )
+                    result = await operation(
+                        control["binding"]["external_id"], asynchronous=True
+                    )
         except Exception as caught:  # noqa: BLE001 - sanitize every unknown boundary error
             error = type(
                 caught
@@ -555,6 +567,7 @@ class ActionEngine:
                     MetricFlowError,
                     WriteDisabled,
                     HTTPException,
+                    TimeoutError,
                 ),
             ):
                 unexpected = True
@@ -569,17 +582,29 @@ class ActionEngine:
             saved = dict(row.provenance["controlled"])
             if saved.get("claim_id") != claim_id:
                 raise ActionRejected("REHEARSAL_CLAIM_CHANGED")
+            # A late ACK is correlation evidence, never permission to reopen a
+            # closed attempt or start observation after the original deadline.
+            closed = row.status != "executing" or saved.get("state") != "CLAIMED"
+            if result and not error:
+                if (
+                    self.clock() >= datetime.fromisoformat(saved["expires_at"])
+                    or (post_timeout is not None and post_timeout.expired())
+                ):
+                    error = "POST_DEADLINE"
+                elif closed:
+                    error = "POST_OUTCOME_ALREADY_CLOSED"
+            acknowledged = bool(result and not error and not closed)
             saved.update(
-                state="ACKNOWLEDGED_NEEDS_READBACK" if result else "OUTCOME_UNKNOWN",
-                job_id=result["job_id"] if result else None,
+                state="ACKNOWLEDGED_NEEDS_READBACK" if acknowledged else "OUTCOME_UNKNOWN",
+                job_id=result["job_id"] if result else saved.get("job_id"),
             )
-            if result:
+            if acknowledged:
                 from services.actions.job_observation import arm_observation
 
                 arm_observation(saved, self.clock())
             row.provenance = {**row.provenance, "controlled": saved}
             row.status, row.revision = (
-                ("verifying" if result else "unknown"),
+                ("verifying" if acknowledged else "unknown"),
                 row.revision + 1,
             )
             execution = session.scalar(
@@ -587,13 +612,13 @@ class ActionEngine:
             )
             execution.completed_at = self.clock()
             execution.outcome, execution.error_code = (
-                ("mock_acknowledged" if result else "mock_unknown"),
+                ("mock_acknowledged" if acknowledged else "mock_unknown"),
                 error,
             )
             log(
                 session,
                 row.id,
-                "controlled_mock_acknowledged" if result else "controlled_mock_unknown",
+                "controlled_mock_acknowledged" if acknowledged else "controlled_mock_unknown",
                 self.clock(),
                 claim_id=claim_id,
                 job_id=saved["job_id"],
