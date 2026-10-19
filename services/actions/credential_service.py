@@ -1,4 +1,4 @@
-"""Private credential-management API. GET-only provider verification, no dispatcher."""
+"""Private credentials and closed single-operation pilot; no public WRITE proxy."""
 
 from __future__ import annotations
 
@@ -16,6 +16,16 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictBool, StrictInt
 
 from backend.auth import csrf_check
+from services.actions.engine import ActionEngine, ActionRejected
+from services.actions.pilot import (
+    PilotAuthorizationInput,
+    PilotExecuteInput,
+    PilotReadbackInput,
+    authorize_pilot,
+    execute_pilot,
+    record_manual_readback,
+)
+from services.actions.settings import policy_from_environment
 from services.actions.write_credentials import (
     WriteCredentialError,
     WriteCredentialVault,
@@ -32,7 +42,7 @@ from services.metricflow.errors import (
 )
 from services.metricflow.reader import MetricFlowConnector
 from services.metricflow.writer import ENTITY_WRITE_SCOPE
-from services.providers.contracts import ProviderError
+from services.providers.contracts import ProviderError, WriteDisabled
 from services.providers.integration_models import (
     WriteCredentialAudit,
     WriteCredentialState,
@@ -252,3 +262,50 @@ async def mutate(operation: str, body: Command, request: Request):
     return await asyncio.to_thread(
         persist_check, a, body.revision, status, scopes, access
     )
+
+
+@app.exception_handler(WriteDisabled)
+async def write_disabled(request, error):
+    return JSONResponse({"detail": error.code}, status_code=409)
+
+
+@app.exception_handler(ActionRejected)
+async def pilot_rejected(request, error):
+    return JSONResponse({"detail": str(error)}, status_code=409)
+
+
+@app.post("/controlled-pilot/{request_id}/authorize")
+async def pilot_authorize(
+    request_id: str, body: PilotAuthorizationInput, request: Request
+):
+    a = await asyncio.to_thread(actor, request, True)
+    engine = ActionEngine(factory(), policy_from_environment())
+    return await asyncio.to_thread(authorize_pilot, engine, a, request_id, body)
+
+
+@app.post("/controlled-pilot/{request_id}/execute")
+async def pilot_execute(request_id: str, body: PilotExecuteInput, request: Request):
+    a = await asyncio.to_thread(actor, request, True)
+
+    # Do not open the private vault until every durable guard has passed.
+    class PrivateVault:
+        def unseal(self, *args):
+            return vault().unseal(*args)
+
+    engine = ActionEngine(factory(), policy_from_environment())
+    result = await execute_pilot(
+        engine, a, request_id, body.revision, vault=PrivateVault()
+    )
+    return {
+        "id": result,
+        "dispatch": "ATTEMPT_CONSUMED_NEEDS_RECONCILIATION"
+        if result
+        else "NO_NEW_ATTEMPT",
+    }
+
+
+@app.post("/controlled-pilot/{request_id}/readback")
+async def pilot_readback(request_id: str, body: PilotReadbackInput, request: Request):
+    a = await asyncio.to_thread(actor, request, True)
+    engine = ActionEngine(factory(), policy_from_environment())
+    return await asyncio.to_thread(record_manual_readback, engine, a, request_id, body)

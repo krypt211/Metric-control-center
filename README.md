@@ -104,3 +104,8 @@ Synchronous first-pilot path: [local/PostgreSQL acceptance](docs/integrations/ME
 The existing isolated executor now covers one encrypted synchronous-200 POST for
 all six status operations without async jobs or resend. ACK still requires separate
 verification; production authorization and dispatch remain blocked.
+
+Production-shaped single-operation handoff: [private pilot acceptance and remaining gates](docs/integrations/METRICFLOW_PRODUCTION_PILOT_HANDOFF.md).
+The private Credential Manager now has a locally tested single-use AD permit/dispatcher
+and a separate manual result record. Contract and asset-permission gates remain closed;
+this code is not deployed or authorized for LIVE. Rules gain no verified pause ownership.

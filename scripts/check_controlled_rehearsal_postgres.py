@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
@@ -17,8 +18,17 @@ import httpx
 from cryptography.fernet import Fernet
 from sqlalchemy import func, select, text
 
+from services.actions.capabilities import ActionCapabilityRegistry
 from services.actions.engine import ActionEngine, ActionPolicy
 from services.actions.manual_schema import ManualDraftInput
+from services.actions.pilot import (
+    EVIDENCE_EVENT,
+    PilotAuthorizationInput,
+    PilotReadbackInput,
+    authorize_pilot,
+    execute_pilot,
+    record_manual_readback,
+)
 from services.actions.safety import ActionSafetyGate
 from services.actions.write_credentials import WriteCredentialVault
 from services.providers.integration_models import WriteCredentialState
@@ -165,14 +175,18 @@ def prepared(engine, entity_id="ad", external_id="1003"):
 
 
 def verify_runtime_source():
-    """Refuse an installed stale package instead of the candidate under test."""
-    expected = Path(__file__).resolve().parents[1] / "services/actions/engine.py"
-    loaded = Path(sys.modules[ActionEngine.__module__].__file__)
-    if (
-        hashlib.sha256(expected.read_bytes()).digest()
-        != hashlib.sha256(loaded.read_bytes()).digest()
+    """Refuse installed stale packages instead of candidate source overlays."""
+    for name, module in (
+        ("engine", ActionEngine.__module__),
+        ("pilot", authorize_pilot.__module__),
     ):
-        raise RuntimeError("CANDIDATE_SOURCE_MISMATCH")
+        expected = Path(__file__).resolve().parents[1] / f"services/actions/{name}.py"
+        loaded = Path(sys.modules[module].__file__)
+        if (
+            hashlib.sha256(expected.read_bytes()).digest()
+            != hashlib.sha256(loaded.read_bytes()).digest()
+        ):
+            raise RuntimeError("CANDIDATE_SOURCE_MISMATCH")
 
 
 def fixture():
@@ -463,6 +477,237 @@ def synchronous_cases(sf, vault):
     }
 
 
+@contextmanager
+def synthetic_pilot_gates():
+    """Fixture evidence only; never change the working registry or flags."""
+    original = ActionCapabilityRegistry.inspect
+
+    def verified(*args):
+        return {
+            **original(*args),
+            "write_permission": True,
+            "operations": {"PAUSE_AD": "VERIFIED", "ENABLE_AD": "VERIFIED"},
+        }
+
+    with (
+        patch.dict(os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}),
+        patch.object(ActionSafetyGate, "require_verified_contract"),
+        patch.object(ActionCapabilityRegistry, "inspect", side_effect=verified),
+    ):
+        yield
+
+
+def production_child(mode, request_id, revision):
+    db, sf, vault = fixture()
+    clock = NOW + timedelta(seconds=121) if mode == "pilot-recover" else NOW
+    engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: clock)
+
+    def respond(request):
+        assert request.method == "POST" and not request.url.params
+        assert json.loads(request.content) == {"level": "ad"}
+        external = request.url.path.split("/")[-2]
+        assert external in ("1101", "1102")
+        with sf.begin() as session:
+            session.add(
+                ActionLog(
+                    id=str(uuid4()),
+                    request_id=request_id,
+                    created_at=NOW,
+                    event="pilot_mock_physical_http",
+                    details={"transport": "MOCK_ONLY"},
+                )
+            )
+        if mode == "pilot-crash":
+            os._exit(17)
+        return httpx.Response(
+            200, json={"success": True, "entity_id": external, "message": "fixture"}
+        )
+
+    if mode == "pilot-recover":
+        engine.verify_pending()
+    with synthetic_pilot_gates():
+        result = asyncio.run(
+            execute_pilot(
+                engine,
+                ACTOR,
+                request_id,
+                int(revision),
+                vault=vault,
+                transport=httpx.MockTransport(respond),
+            )
+        )
+    db.dispose()
+    print(json.dumps({"claimed": result is not None}))
+
+
+def seed_pilot(sf, vault, index):
+    entity_id, external = f"pilot-ad-{index}", str(1100 + index)
+    with sf.begin() as session:
+        session.add(
+            Entity(
+                id=entity_id,
+                account_id="account",
+                kind="ad",
+                external_id=external,
+                name="Synthetic pilot AD",
+            )
+        )
+        session.flush()
+        session.add(Ad(entity_id=entity_id, adset_id="adset"))
+        session.add(
+            EntityCurrentState(
+                entity_id=entity_id, status="ACTIVE", observed_at=NOW, raw={}
+            )
+        )
+    engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: NOW)
+    row = engine.prepare_manual(
+        ACTOR,
+        ManualDraftInput(
+            entity_id=entity_id,
+            entity_level="ad",
+            meta_ad_id=external,
+            account_id="account",
+            provider="metricflow",
+            operation="PAUSE_AD",
+            expected_status="ACTIVE",
+            reason="Isolated production-shaped pilot fixture",
+        ),
+        f"pilot-{index}",
+    )
+    for event in ("preflight", "confirm"):
+        row = engine.transition_manual(ACTOR, row["id"], event, row["revision"])
+    with sf.begin() as session:
+        session.add(
+            ActionLog(
+                id=str(uuid4()),
+                request_id=row["id"],
+                event=EVIDENCE_EVENT,
+                created_at=NOW,
+                details={
+                    "actor_id": ACTOR["id"],
+                    "account_id": "act_100",
+                    "entity_id": external,
+                    "operation": "PAUSE_AD",
+                    "credential_revision": 1,
+                    "read_revision": 1,
+                    "entity_id_namespace": "PROVIDER_AD_ID",
+                    "configured_status": "ACTIVE",
+                    "effective_status": "ACTIVE",
+                    "permission": "MANAGE_CAMPAIGNS",
+                    "permission_source": "MANUAL_META_ACCESS_REVIEW",
+                    "profile_id": 123,
+                    "namespace_source": "synthetic fixture only",
+                },
+            )
+        )
+    with synthetic_pilot_gates():
+        return authorize_pilot(
+            engine,
+            ACTOR,
+            row["id"],
+            PilotAuthorizationInput(
+                revision=row["revision"],
+                credential_revision=1,
+                account_id="act_100",
+                entity_id=external,
+                operation="PAUSE_AD",
+                expected_status="ACTIVE",
+                statement="AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST",
+            ),
+        )
+
+
+def production_cases(sf, vault):
+    permit = seed_pilot(sf, vault, 1)
+    args = [
+        sys.executable,
+        __file__,
+        "pilot-send",
+        permit["id"],
+        str(permit["revision"]),
+    ]
+    children = [
+        subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        for _ in range(8)
+    ]
+    claims = []
+    for process in children:
+        out, _err = process.communicate(timeout=120)
+        if process.returncode:
+            raise RuntimeError("PILOT_MOCK_RACE_CHILD_FAILED")
+        claims.append(json.loads(out)["claimed"])
+    assert sum(claims) == 1
+    again = subprocess.run(args, capture_output=True, timeout=120, check=False)
+    assert again.returncode == 0 and not json.loads(again.stdout)["claimed"]
+    with sf() as session:
+        saved = session.get(ActionRequest, permit["id"])
+        assert saved.status == "verifying"
+        revision = saved.revision
+    engine = ActionEngine(
+        sf, ActionPolicy(enabled=True), clock=lambda: NOW + timedelta(seconds=10)
+    )
+    result = record_manual_readback(
+        engine,
+        ACTOR,
+        permit["id"],
+        PilotReadbackInput(
+            revision=revision,
+            account_id="act_100",
+            entity_id="1101",
+            configured_status="PAUSED",
+            effective_status="PAUSED",
+            observed_at=(NOW + timedelta(seconds=10)).isoformat(),
+            statement="RECORD_MANUAL_META_READBACK",
+        ),
+    )
+    assert result["status"] == "MANUALLY_REVIEWED" and not result["authoritative_api"]
+    second = seed_pilot(sf, vault, 2)
+    crashed = subprocess.run(
+        [
+            sys.executable,
+            __file__,
+            "pilot-crash",
+            second["id"],
+            str(second["revision"]),
+        ],
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert crashed.returncode == 17
+    recovered = subprocess.run(
+        [
+            sys.executable,
+            __file__,
+            "pilot-recover",
+            second["id"],
+            str(second["revision"]),
+        ],
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert recovered.returncode == 0 and not json.loads(recovered.stdout)["claimed"]
+    with sf() as session:
+        assert session.get(ActionRequest, second["id"]).status == "unknown"
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(ActionLog)
+                .where(ActionLog.event == "pilot_mock_physical_http")
+            )
+            == 2
+        )
+    return {
+        "concurrent_processes": 8,
+        "race_claims": 1,
+        "physical_mock_attempts": 2,
+        "restart": "NO_RESEND",
+        "crash_recovery": "UNKNOWN_NO_RESEND",
+        "manual_record": "RECORDED_WITHOUT_API_AUTHORITY",
+    }
+
+
 def main():
     if not (database_url().database or "").startswith("mcc_integrations_"):
         raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
@@ -557,6 +802,7 @@ def main():
         assert second_row.provenance["controlled"]["job_id"] is None
     deadlines = post_deadline_cases(sf, vault)
     synchronous = synchronous_cases(sf, vault)
+    production = production_cases(sf, vault)
     print(
         json.dumps(
             {
@@ -571,9 +817,11 @@ def main():
                 "crash_recovery": "UNKNOWN_NO_RESEND",
                 "total_physical_mock_attempts": 2
                 + deadlines["physical_mock_attempts"]
-                + synchronous["physical_mock_attempts"],
+                + synchronous["physical_mock_attempts"]
+                + production["physical_mock_attempts"],
                 "post_deadline_cases": deadlines,
                 "synchronous_cases": synchronous,
+                "production_shaped_mock_cases": production,
                 "live_provider_requests": 0,
                 "advertising_write_requests": 0,
                 "result": "PASS",
@@ -586,6 +834,9 @@ def main():
 
 if __name__ == "__main__":
     if len(sys.argv) == 4:
-        child(*sys.argv[1:])
+        if sys.argv[1].startswith("pilot-"):
+            production_child(*sys.argv[1:])
+        else:
+            child(*sys.argv[1:])
     else:
         main()

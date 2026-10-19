@@ -295,9 +295,6 @@ class ActionEngine:
 
     def _rehearsal_row(self, session, actor: dict, request_id: str):
         """Use the manual lock order; never admit the working DB/workspace."""
-        from services.actions.manual import require_permission
-        from services.economics.store import lock
-
         url = session.bind.url
         isolated = session.bind.dialect.name == "sqlite" or (
             session.bind.dialect.name == "postgresql"
@@ -305,6 +302,12 @@ class ActionEngine:
         )
         if not isolated or not actor["workspace"].startswith("write-rehearsal-"):
             raise ActionRejected("ISOLATED_REHEARSAL_REQUIRED")
+        return self._locked_manual_row(session, actor, request_id)
+
+    def _locked_manual_row(self, session, actor: dict, request_id: str):
+        from services.actions.manual import require_permission
+        from services.economics.store import lock
+
         lock(session, actor["workspace"])
         require_permission(session, actor)
         entity_id = session.scalar(
@@ -325,6 +328,19 @@ class ActionEngine:
             raise ActionRejected("REHEARSAL_ACTOR_MISMATCH")
         if row.provenance.get("phase") != "4A":
             raise ActionRejected("CONFIRMED_MANUAL_REHEARSAL_REQUIRED")
+        return row
+
+    def _controlled_row(self, session, actor: dict, request_id: str, mode: str):
+        if mode == "MOCK_ONLY":
+            return self._rehearsal_row(session, actor, request_id)
+        if mode != "LIVE_SINGLE_OPERATION":
+            raise ActionRejected("CONTROLLED_MODE_INVALID")
+        from services.actions.pilot import require_ready
+        from services.actions.safety import ActionSafetyGate
+
+        ActionSafetyGate.require_write()
+        row = self._locked_manual_row(session, actor, request_id)
+        require_ready(session, actor, row, self.clock())
         return row
 
     def _rehearsal_binding(
@@ -381,6 +397,15 @@ class ActionEngine:
         A local manual confirmation is not LIVE authorization. No public endpoint,
         worker dispatch or working-database permit creation is provided here.
         """
+        return self._prepare_controlled(
+            actor, request_id, revision, credential_revision, expires_at,
+            asynchronous=asynchronous, mode="MOCK_ONLY",
+        )
+
+    def _prepare_controlled(
+        self, actor, request_id, revision, credential_revision, expires_at,
+        *, asynchronous: bool, mode: str, authorization: dict | None = None,
+    ) -> dict:
         from services.actions.factory import checked_write_state, credential_digest
         from services.actions.job_observation import new_observation
 
@@ -395,18 +420,34 @@ class ActionEngine:
         ):
             raise ActionRejected("INVALID_REHEARSAL_WINDOW_OR_REVISION")
         with self.sessions.begin() as session:
-            row = self._rehearsal_row(session, actor, request_id)
+            row = self._controlled_row(session, actor, request_id, mode)
             if row.status != "CONFIRMED" or row.revision != revision:
                 raise ActionRejected("CONFIRMED_REVISION_REQUIRED")
             if row.provenance.get("controlled"):
                 raise ActionRejected("REHEARSAL_ALREADY_PREPARED")
+            if mode == "LIVE_SINGLE_OPERATION":
+                from services.actions.manual import IN_FLIGHT
+                from services.actions.pilot import require_ready
+
+                others = session.scalars(select(ActionRequest).where(
+                    ActionRequest.workspace_id == actor["workspace"],
+                    ActionRequest.id != row.id,
+                    ActionRequest.status.in_(("CONFIRMED", *IN_FLIGHT)),
+                )).all()
+                for other in others:
+                    other_mode = (other.provenance.get("controlled") or {}).get("mode")
+                    if other_mode == "MOCK_ONLY":
+                        continue  # Isolated synthetic rehearsals cannot dispatch LIVE.
+                    if other.status in IN_FLIGHT or other_mode == mode:
+                        raise ActionRejected("PILOT_WORKSPACE_CONFLICT")
+                evidence_id = require_ready(session, actor, row, now)
             if expires_at > datetime.fromisoformat(row.provenance["expires_at"]):
                 raise ActionRejected("REHEARSAL_EXCEEDS_DRAFT_WINDOW")
             state = checked_write_state(
                 session, actor["workspace"], credential_revision, now
             )
             control = {
-                "mode": "MOCK_ONLY",
+                "mode": mode,
                 "observation": new_observation(),
                 "state": "PREPARED",
                 "attempts": 0,
@@ -423,23 +464,33 @@ class ActionEngine:
                 control["observation"] = {
                     **control["observation"], "state": "NOT_APPLICABLE"
                 }
+            if mode == "LIVE_SINGLE_OPERATION":
+                from services.actions.pilot import bind_authorization
+
+                if asynchronous or not self.policy.enabled:
+                    raise ActionRejected("SYNCHRONOUS_ENABLED_PILOT_REQUIRED")
+                control["evidence_id"] = evidence_id
+                control["authorization"] = bind_authorization(
+                    authorization, control["binding"], actor, now,
+                    revision, credential_revision,
+                )
             row.provenance = {**row.provenance, "controlled": control}
             row.revision += 1
             log(
                 session,
                 row.id,
-                "controlled_mock_prepared",
+                "controlled_live_authorized" if mode == "LIVE_SINGLE_OPERATION" else "controlled_mock_prepared",
                 now,
                 actor_id=actor["id"],
                 credential_revision=credential_revision,
                 expires_at=control["expires_at"],
                 max_attempts=1,
-                mode="MOCK_ONLY",
+                mode=mode,
             )
             return {
                 "id": row.id,
                 "revision": row.revision,
-                "mode": "MOCK_ONLY",
+                "mode": mode,
                 "expires_at": control["expires_at"],
                 "max_attempts": 1,
             }
@@ -448,6 +499,13 @@ class ActionEngine:
         self, actor: dict, request_id: str, revision: int, *, vault, transport
     ) -> str | None:
         """Spend one durable permit before one MockTransport POST; never resend."""
+        return await self._execute_controlled(
+            actor, request_id, revision, vault=vault, transport=transport, mode="MOCK_ONLY"
+        )
+
+    async def _execute_controlled(
+        self, actor, request_id, revision, *, vault, transport, mode: str
+    ) -> str | None:
         import asyncio
 
         import httpx
@@ -463,7 +521,10 @@ class ActionEngine:
         from services.metricflow.errors import MetricFlowError
         from services.providers.contracts import WriteDisabled
 
-        if not isinstance(transport, httpx.MockTransport):
+        if mode not in ("MOCK_ONLY", "LIVE_SINGLE_OPERATION"):
+            raise ActionRejected("CONTROLLED_MODE_INVALID")
+        label = "live" if mode == "LIVE_SINGLE_OPERATION" else "mock"
+        if mode == "MOCK_ONLY" and not isinstance(transport, httpx.MockTransport):
             raise ActionRejected("EXPLICIT_MOCK_TRANSPORT_REQUIRED")
         ActionSafetyGate.require_write()  # No runtime exception to the hard LIVE gate.
         if not self.policy.enabled:
@@ -472,14 +533,16 @@ class ActionEngine:
             raise ActionRejected("INVALID_ACTION_REVISION")
         now = self.clock()
         with self.sessions.begin() as session:
-            row = self._rehearsal_row(session, actor, request_id)
+            row = self._controlled_row(session, actor, request_id, mode)
             control = dict(row.provenance.get("controlled") or {})
-            if control.get("mode") != "MOCK_ONLY":
-                raise ActionRejected("MOCK_ONLY_PERMIT_REQUIRED")
+            if control.get("mode") != mode:
+                raise ActionRejected("CONTROLLED_PERMIT_MODE_MISMATCH")
             response_mode = control.get("response_mode", "ASYNC_JOB")
             if response_mode not in ("ASYNC_JOB", "SYNC_200"):
                 raise ActionRejected("REHEARSAL_RESPONSE_MODE_INVALID")
             asynchronous = response_mode == "ASYNC_JOB"
+            if mode == "LIVE_SINGLE_OPERATION" and asynchronous:
+                raise ActionRejected("SYNCHRONOUS_PILOT_REQUIRED")
             if control.get("attempts") or row.status != "CONFIRMED":
                 return None
             if row.revision != revision:
@@ -490,6 +553,10 @@ class ActionEngine:
                 session, row, actor, asynchronous=asynchronous
             ):
                 raise ActionRejected("REHEARSAL_BINDING_CHANGED")
+            if mode == "LIVE_SINGLE_OPERATION":
+                from services.actions.pilot import check_authorization
+
+                check_authorization(control, actor)
             state = checked_write_state(
                 session, actor["workspace"], control["credential_revision"], now
             )
@@ -510,27 +577,29 @@ class ActionEngine:
                     id=str(uuid4()),
                     request_id=row.id,
                     started_at=now,
-                    outcome="mock_started",
+                    outcome=label + "_started",
                 )
             )
             log(
                 session,
                 row.id,
-                "controlled_mock_attempt_claimed",
+                "controlled_" + label + "_attempt_claimed",
                 now,
                 claim_id=claim_id,
-                mode="MOCK_ONLY",
+                mode=mode,
                 max_attempts=1,
             )
 
         # The claim and unique ActionExecution are committed before opening a vault.
         def guard_before_http():
             with self.sessions.begin() as session:
-                current = self._rehearsal_row(session, actor, request_id)
+                current = self._controlled_row(session, actor, request_id, mode)
                 permit = dict(current.provenance["controlled"])
                 if (
                     current.status != "executing"
                     or permit.get("claim_id") != claim_id
+                    or permit.get("mode") != mode
+                    or permit.get("authorization") != control.get("authorization")
                     or permit.get("http_started")
                     or permit.get("response_mode", "ASYNC_JOB") != response_mode
                     or self.clock() >= datetime.fromisoformat(permit["expires_at"])
@@ -545,7 +614,7 @@ class ActionEngine:
                 log(
                     session,
                     current.id,
-                    "controlled_mock_http_reserved",
+                    "controlled_" + label + "_http_reserved",
                     self.clock(),
                     claim_id=claim_id,
                 )
@@ -588,6 +657,12 @@ class ActionEngine:
             error = type(
                 caught
             ).__name__  # Never store upstream bodies/credential inputs.
+            if mode == "LIVE_SINGLE_OPERATION" and isinstance(caught, RateLimitExceeded):
+                from services.providers.manager import ProviderManager
+
+                ProviderManager(self.sessions, actor["workspace"]).failure(
+                    "metricflow", caught, revision=-1
+                )
             if not isinstance(
                 caught,
                 (
@@ -648,18 +723,18 @@ class ActionEngine:
             )
             execution.completed_at = self.clock()
             execution.outcome, execution.error_code = (
-                ("mock_acknowledged" if acknowledged else "mock_unknown"),
+                (label + "_acknowledged" if acknowledged else label + "_unknown"),
                 error,
             )
             log(
                 session,
                 row.id,
-                "controlled_mock_acknowledged" if acknowledged else "controlled_mock_unknown",
+                "controlled_" + label + ("_acknowledged" if acknowledged else "_unknown"),
                 self.clock(),
                 claim_id=claim_id,
                 job_id=saved["job_id"],
                 error_code=error,
-                mode="MOCK_ONLY",
+                mode=mode,
             )
         if unexpected:
             raise ActionRejected("REHEARSAL_INTERNAL_ERROR_RECONCILE") from None
@@ -699,6 +774,7 @@ class ActionEngine:
                 started = aware(execution.started_at)
                 controlled = dict(request.provenance.get("controlled") or {})
                 if controlled:
+                    label = "live" if controlled.get("mode") == "LIVE_SINGLE_OPERATION" else "mock"
                     from services.actions.job_observation import recover_observation
                     from services.actions.readback import recover_readback
 
@@ -713,11 +789,11 @@ class ActionEngine:
                         request.provenance = {**request.provenance, "controlled": controlled}
                         request.status, request.revision = "unknown", request.revision + 1
                         execution.outcome, execution.error_code = (
-                            "mock_unknown", "MANUAL_READBACK_DEADLINE"
+                            label + "_unknown", "MANUAL_READBACK_DEADLINE"
                         )
                         log(
-                            session, request.id, "controlled_mock_manual_readback_expired",
-                            now, claim_id=controlled.get("claim_id"), mode="MOCK_ONLY"
+                            session, request.id, "controlled_" + label + "_manual_readback_expired",
+                            now, claim_id=controlled.get("claim_id"), mode=controlled.get("mode")
                         )
                         continue
 
@@ -731,10 +807,10 @@ class ActionEngine:
                     if request.status == "executing" and (now - started).total_seconds() >= 120:
                         controlled["state"] = "OUTCOME_UNKNOWN"
                         request.provenance = {**request.provenance, "controlled": controlled}
-                        request.status, execution.outcome = "unknown", "mock_unknown"
+                        request.status, execution.outcome = "unknown", label + "_unknown"
                         execution.completed_at, execution.error_code = now, "PROCESS_INTERRUPTED"
-                        log(session, request.id, "controlled_mock_recovery_no_resend", now,
-                            claim_id=controlled.get("claim_id"), mode="MOCK_ONLY")
+                        log(session, request.id, "controlled_" + label + "_recovery_no_resend", now,
+                            claim_id=controlled.get("claim_id"), mode=controlled.get("mode"))
                     continue
                 if request.status == "executing":
                     if (now - started).total_seconds() < 120:

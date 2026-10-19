@@ -149,3 +149,11 @@ ProviderManager quota reserve, read_retries=0. WRITE vault не использо
 или авторитетность status readback; существующие LIVE blockers остаются.
 Санитизированный результат: .tools/sync-pilot/account-profile-check.json (ignored).
 За этот шаг: authenticated READ attempts = 1; advertising WRITE requests = 0.
+
+## Subsequent checkpoint: production-shaped handoff
+
+The next local stage implements a private single-use AD pilot on the same executor;
+see [handoff acceptance](METRICFLOW_PRODUCTION_PILOT_HANDOFF.md).
+The earlier unimplemented-dispatcher statement above describes this report's original
+checkpoint. The new code remains undeployed and fails the unchanged contract/permission
+gates. No LIVE permit or advertising POST was created. Multilevel LIVE remains blocked.
