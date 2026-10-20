@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictBool, Strict
 
 from backend.auth import csrf_check
 from services.actions.engine import ActionEngine, ActionRejected
+from services.actions.experimental import ExperimentalPrepareInput, prepare_experiment
 from services.actions.pilot import (
     PilotAuthorizationInput,
     PilotExecuteInput,
@@ -206,7 +207,12 @@ async def mutate(operation: str, body: Command, request: Request):
         return await asyncio.to_thread(persist_change, a, body, operation)
     if body.token is not None:
         raise HTTPException(422, "CHECK_USES_STORED_CREDENTIAL")
-    token = await asyncio.to_thread(stored_token, a, body.revision)
+    return await check_stored_credential(a, body.revision)
+
+
+async def check_stored_credential(a, revision):
+    """Existing GET /me check, shared by settings and READ-only experiment preparation."""
+    token = await asyncio.to_thread(stored_token, a, revision)
     manager = ProviderManager(factory(), a["workspace"])
 
     async def reserve():
@@ -259,9 +265,7 @@ async def mutate(operation: str, body: Command, request: Request):
         status = "PROVIDER_UNAVAILABLE"
     except (MetricFlowError, ProviderError):
         status = "PROVIDER_UNAVAILABLE"
-    return await asyncio.to_thread(
-        persist_check, a, body.revision, status, scopes, access
-    )
+    return await asyncio.to_thread(persist_check, a, revision, status, scopes, access)
 
 
 @app.exception_handler(WriteDisabled)
@@ -309,3 +313,13 @@ async def pilot_readback(request_id: str, body: PilotReadbackInput, request: Req
     a = await asyncio.to_thread(actor, request, True)
     engine = ActionEngine(factory(), policy_from_environment())
     return await asyncio.to_thread(record_manual_readback, engine, a, request_id, body)
+
+
+@app.post("/controlled-pilot-experimental/prepare")
+async def experimental_prepare(body: ExperimentalPrepareInput, request: Request):
+    a = await asyncio.to_thread(actor, request, True)
+    await check_stored_credential(a, body.credential_revision)
+    engine = ActionEngine(factory(), policy_from_environment())
+    return await prepare_experiment(
+        engine, a, body, vault=vault(), transport=provider_transport()
+    )

@@ -38,7 +38,10 @@ class PilotAuthorizationInput(BaseModel):
     entity_id: str = Field(pattern=r"^[0-9]{1,128}$")
     operation: Literal["PAUSE_AD", "ENABLE_AD"]
     expected_status: Literal["ACTIVE", "PAUSED"]
-    statement: Literal["AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST"]
+    statement: Literal[
+        "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST",
+        "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID",
+    ]
 
 
 class PilotExecuteInput(BaseModel):
@@ -76,11 +79,18 @@ def require_ready(
             raise ActionRejected("PILOT_WRITE_PERMISSION_UNVERIFIED")
     else:
         contract.require_identity(actor, row)
-    return require_external_evidence(session, actor, row, now)
+    return require_external_evidence(
+        session, actor, row, now, experimental=bool(contract and contract.experimental)
+    )
 
 
 def require_external_evidence(
-    session: Session, actor: dict, row: ActionRequest, now: datetime
+    session: Session,
+    actor: dict,
+    row: ActionRequest,
+    now: datetime,
+    *,
+    experimental=False,
 ) -> str:
     """Check object permission and namespace proof without granting a global capability."""
     user = session.get(User, actor["id"])
@@ -103,12 +113,20 @@ def require_external_evidence(
         or row.provenance.get("rule_source")
     ):
         raise ActionRejected("PILOT_IDENTITY_OR_PERMISSION_CHANGED")
+    if experimental:
+        from services.actions.experimental import EVENT, NAMESPACE, REVOKED
+
+        events = (EVENT, REVOKED)
+        accepted_event, namespace = EVENT, NAMESPACE
+    else:
+        events = (EVIDENCE_EVENT, "pilot_external_evidence_revoked")
+        accepted_event, namespace = EVIDENCE_EVENT, "PROVIDER_AD_ID"
     credential = session.get(WriteCredentialState, actor["workspace"])
     evidence = session.scalars(
         select(ActionLog)
         .where(
             ActionLog.request_id == row.id,
-            ActionLog.event.in_((EVIDENCE_EVENT, "pilot_external_evidence_revoked")),
+            ActionLog.event.in_(events),
         )
         .order_by(ActionLog.created_at.desc(), ActionLog.event.desc())
     ).first()
@@ -120,7 +138,7 @@ def require_external_evidence(
         "operation": row.action,
         "credential_revision": credential.revision if credential else None,
         "read_revision": row.provenance["captured"].get("credential_revision"),
-        "entity_id_namespace": "PROVIDER_AD_ID",
+        "entity_id_namespace": namespace,
         "configured_status": row.baseline_status,
     }
     manual_permission = proof.get(
@@ -135,17 +153,22 @@ def require_external_evidence(
     )
     if (
         not evidence
-        or evidence.event != EVIDENCE_EVENT
+        or evidence.event != accepted_event
         or any(
             type(proof.get(k)) is not type(v) or proof.get(k) != v
             for k, v in expected.items()
         )
         or not -60 <= (now - aware(evidence.created_at)).total_seconds() <= 900
         or not (manual_permission or user_permission)
-        or type(proof.get("profile_id")) is not int
-        or proof["profile_id"] < 1
-        or not isinstance(proof.get("namespace_source"), str)
-        or not proof["namespace_source"].strip()
+        or (
+            not experimental
+            and (
+                type(proof.get("profile_id")) is not int
+                or proof["profile_id"] < 1
+                or not isinstance(proof.get("namespace_source"), str)
+                or not proof["namespace_source"].strip()
+            )
+        )
         or proof.get("effective_status") not in KNOWN_STATUSES
     ):
         raise ActionRejected("PILOT_EXTERNAL_EVIDENCE_REQUIRED")
@@ -218,6 +241,13 @@ def authorize_pilot(
         ActionSafetyGate.require_write()
     contract = load_contract(engine, actor, request_id, phase="AUTHORIZE")
     ActionSafetyGate.require_write(contract)
+    expected_statement = (
+        "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID"
+        if contract and contract.experimental
+        else STATEMENT
+    )
+    if body.statement != expected_statement:
+        raise ActionRejected("PILOT_AUTHORIZATION_STATEMENT_MISMATCH")
     with engine.sessions() as session:
         row = session.get(ActionRequest, request_id)
         if not row or row.workspace_id != actor["workspace"]:

@@ -120,3 +120,6 @@ The private executor now admits only an accepted, revocable single-AD contract b
 explicit authorization. A durable wire budget prevents resend. Default/global WRITE stays
 closed; provider evidence for the WRITE entity-ID namespace and separate LIVE approval
 are still required. No advertising WRITE has been executed.
+
+Экспериментальная подготовка одного MetricFlow PAUSE_AD (без разрешения LIVE):
+[карточка, ограничения и результаты проверок](docs/integrations/METRICFLOW_EXPERIMENTAL_PILOT_PREPARATION.md).

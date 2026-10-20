@@ -367,6 +367,11 @@ class ActionEngine:
             raise ActionRejected("REHEARSAL_PREFLIGHT_HELD")
         if row.provenance.get("confirmation_actor") != actor["id"]:
             raise ActionRejected("LOCAL_CONFIRMATION_REQUIRED")
+        captured_snapshot = snapshot(session, entity, account)
+        if row.provenance.get("experimental"):
+            from services.actions.experimental import execution_snapshot
+
+            captured_snapshot = execution_snapshot(session, row, captured_snapshot, self.clock())
         binding = {
             "workspace": actor["workspace"],
             "actor_id": actor["id"],
@@ -376,7 +381,7 @@ class ActionEngine:
             "external_id": entity.external_id,
             "action": row.action,
             "confirmation_at": row.provenance.get("confirmation_at"),
-            "snapshot": snapshot(session, entity, account),
+            "snapshot": captured_snapshot,
         }
         if not asynchronous:
             binding.update(

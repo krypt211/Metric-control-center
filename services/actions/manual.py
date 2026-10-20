@@ -221,6 +221,14 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
         failures.append("ENTITY_UNAVAILABLE")
     else:
         current = snapshot(s, entity, account)
+        if m.get("experimental"):
+            from services.actions.experimental import execution_snapshot
+            from services.providers.contracts import WriteDisabled
+
+            try:
+                current = execution_snapshot(s, row, current, now)
+            except WriteDisabled as error:
+                failures.append(error.code)
         captured = m["captured"]
         for field, code in (
             ("meta_ad_id", "IDENTITY_CHANGED"),

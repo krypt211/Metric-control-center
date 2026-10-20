@@ -180,6 +180,7 @@ def verify_runtime_source():
         ("engine", ActionEngine.__module__),
         ("pilot", authorize_pilot.__module__),
         ("pilot_contract", "services.actions.pilot_contract"),
+        ("experimental", "services.actions.experimental"),
     ):
         expected = Path(__file__).resolve().parents[1] / f"services/actions/{name}.py"
         loaded = Path(__import__(module, fromlist=["__file__"]).__file__)

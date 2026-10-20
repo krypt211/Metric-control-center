@@ -134,3 +134,12 @@ WRITE ID CONTRACT: UNVERIFIED.
 FIRST CONTROLLED AD POST: BLOCKED.
 Authenticated Business API requests: 0. Meta API requests: 0.
 Advertising WRITE requests: 0.
+
+## Дополнение: ограниченный эксперимент
+
+Последующий выбор пользователя разрешил только подготовку экспериментального PAUSE_AD
+с явно неподтверждённым namespace. Это отдельный USER_REQUESTED_EXPERIMENT,
+не provider-authored подтверждение и не accepted production contract.
+Создан локальный DRAFT без LIVE permit. Подробности и отдельный порядок согласования:
+[Experimental preparation](METRICFLOW_EXPERIMENTAL_PILOT_PREPARATION.md).
+WRITE ID CONTRACT остаётся UNVERIFIED; рекламных WRITE запросов 0.

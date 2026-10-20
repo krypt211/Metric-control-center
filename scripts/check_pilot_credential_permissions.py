@@ -24,6 +24,12 @@ from scripts.check_controlled_rehearsal_postgres import (
     verify_runtime_source,
 )
 from services.actions.engine import ActionEngine, ActionPolicy
+from services.actions.experimental import (
+    PREPARE,
+    ExperimentalPrepareInput,
+    prepare_experiment,
+)
+from services.actions.experimental import STATEMENT as EXPERIMENTAL_STATEMENT
 from services.actions.manual_schema import ManualDraftInput
 from services.actions.pilot import (
     EVIDENCE_EVENT,
@@ -34,6 +40,7 @@ from services.actions.pilot import (
     record_manual_readback,
 )
 from services.actions.write_credentials import WriteCredentialVault
+from services.providers.integration_models import WriteCredentialState
 from services.storage.credential_permissions import grant_credential_access
 from services.storage.database import database_url, make_engine
 from services.storage.models import ActionExecution, ActionLog, ActionRequest, Base
@@ -84,6 +91,11 @@ def main():
                 join_transaction_mode="create_savepoint",
             )
             seed_rehearsal(sf, vault, NOW)
+            with sf.begin() as session:
+                session.get(WriteCredentialState, ACTOR["workspace"]).scopes = [
+                    "entities:write",
+                    "campaigns:read",
+                ]
             engine = ActionEngine(
                 sf, ActionPolicy(enabled=True), clock=lambda: clock[0]
             )
@@ -233,6 +245,105 @@ def main():
                 )
                 == "ACTIVE"
             )
+            # Real experimental gates under the restricted role, including INSERT draft.
+            experimental_calls = []
+
+            def experimental_response(request):
+                experimental_calls.append(request.method)
+                if request.method == "POST":
+                    assert request.url.path.endswith("/1003/pause")
+                    return httpx.Response(
+                        200,
+                        json={
+                            "success": True,
+                            "entity_id": "1003",
+                            "message": "fixture",
+                        },
+                    )
+                kind = request.url.path.rsplit("/", 1)[-1]
+                rows = {
+                    "campaigns": {
+                        "id": "1001",
+                        "status": "PAUSED",
+                        "effective_status": "PAUSED",
+                    },
+                    "adsets": {
+                        "id": "1002",
+                        "campaign_id": "1001",
+                        "parent_id": "1001",
+                        "status": "PAUSED",
+                        "effective_status": "PAUSED",
+                    },
+                    "ads": {
+                        "id": "1003",
+                        "campaign_id": "1001",
+                        "parent_id": "1002",
+                        "status": "ACTIVE",
+                        "effective_status": "ADSET_PAUSED",
+                    },
+                }
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": [rows[kind]],
+                        "meta": {"total": 1, "data_updated_at": clock[0].isoformat()},
+                    },
+                )
+
+            with patch.dict(
+                os.environ, {"ACTIONS_ENABLED": "false", "LOCAL_READ_ONLY": "true"}
+            ):
+                card = asyncio.run(
+                    prepare_experiment(
+                        engine,
+                        ACTOR,
+                        ExperimentalPrepareInput(
+                            entity_id="ad",
+                            credential_revision=1,
+                            management_confirmed=True,
+                            statement=PREPARE,
+                        ),
+                        vault=vault,
+                        transport=httpx.MockTransport(experimental_response),
+                    )
+                )
+                local = {"id": card["request_id"], "revision": card["revision"]}
+                for event in ("preflight", "confirm"):
+                    local = engine.transition_manual(
+                        ACTOR, local["id"], event, local["revision"]
+                    )
+            with patch.dict(
+                os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
+            ):
+                permit = authorize_pilot(
+                    engine,
+                    ACTOR,
+                    local["id"],
+                    PilotAuthorizationInput(
+                        revision=local["revision"],
+                        credential_revision=1,
+                        account_id="act_100",
+                        entity_id="1003",
+                        operation="PAUSE_AD",
+                        expected_status="ACTIVE",
+                        statement=EXPERIMENTAL_STATEMENT,
+                    ),
+                )
+                for expected in (local["id"], None):
+                    assert (
+                        asyncio.run(
+                            execute_pilot(
+                                engine,
+                                ACTOR,
+                                local["id"],
+                                permit["revision"],
+                                vault=vault,
+                                transport=httpx.MockTransport(experimental_response),
+                            )
+                        )
+                        == expected
+                    )
+            assert experimental_calls == ["GET"] * 6 + ["POST"]
         finally:
             outer.rollback()
         assert not connection.scalar(
@@ -251,6 +362,8 @@ def main():
                 "role": "NOLOGIN_NOSUPERUSER",
                 "excess_privilege_checks": 6,
                 "single_use_mock_attempts": 1,
+                "experimental_mock_post_attempts": 1,
+                "experimental_get_attempts": 6,
                 "contract_gate": "UNPATCHED",
                 "resend": False,
                 "manual_record": "NON_AUTHORITATIVE",

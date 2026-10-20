@@ -62,6 +62,7 @@ class PilotContract:
     evidence_sha256: str
     expires_at: datetime
     phase: Literal["AUTHORIZE", "EXECUTE"]
+    experimental: bool = False
 
     @property
     def actor(self) -> dict:
@@ -71,6 +72,7 @@ class PilotContract:
         """Persist only immutable metadata, never a token or a callable permit."""
         return {
             "wire_revision": "status-sync-v1",
+            "experimental_unverified_id": self.experimental,
             "workspace": self.workspace,
             "actor_id": self.actor_id,
             "request_id": self.request_id,
@@ -125,13 +127,31 @@ class PilotContract:
         if not row:
             raise WriteDisabled("PILOT_CONTRACT_REQUEST_MISSING")
         self.require_identity(self.actor, row)
-        evidence_id = require_external_evidence(session, self.actor, row, now)
+        evidence_id = require_external_evidence(
+            session, self.actor, row, now, experimental=self.experimental
+        )
         proof = session.get(ActionLog, evidence_id)
-        review = reviewed_contract(proof.details, self.actor_id, self.operation)
+        if self.experimental:
+            from services.actions.experimental import (
+                NAMESPACE,
+                review_for,
+            )
+            from services.actions.manual import snapshot
+            from services.storage.models import AdAccount, Entity
+
+            entity = session.get(Entity, row.entity_id)
+            current = snapshot(
+                session, entity, session.get(AdAccount, entity.account_id)
+            )
+            review = review_for(session, row, current, now)
+            namespace = NAMESPACE
+        else:
+            review = reviewed_contract(proof.details, self.actor_id, self.operation)
+            namespace = "PROVIDER_AD_ID"
         if (
             evidence_id != self.evidence_id
             or fingerprint(proof.details) != self.evidence_sha256
-            or review.entity_id_namespace != "PROVIDER_AD_ID"
+            or review.entity_id_namespace != namespace
             or proof.details["entity_id"] != self.entity_id
         ):
             raise WriteDisabled("PILOT_CONTRACT_EVIDENCE_CHANGED")
@@ -145,6 +165,13 @@ class PilotContract:
             if control.get("provider_contract") != self.pin():
                 raise WriteDisabled("PILOT_CONTRACT_PIN_CHANGED")
             check_authorization(control, self.actor)
+            expected_statement = (
+                "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID"
+                if self.experimental
+                else "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST"
+            )
+            if control["authorization"]["statement"] != expected_statement:
+                raise WriteDisabled("PILOT_AUTHORIZATION_STATEMENT_MISMATCH")
             authorized_at = datetime.fromisoformat(
                 control["authorization"]["authorized_at"]
             )
@@ -171,6 +198,7 @@ class PilotContract:
             self.phase != "EXECUTE"
             or method != "POST"
             or path != f"entities/{self.entity_id}/{operation}"
+            or (self.experimental and self.operation != "PAUSE_AD")
             or payload != {"level": "ad"}
             or params not in (None, {})
         ):
@@ -198,6 +226,12 @@ class PilotContract:
             raise WriteDisabled("PILOT_WIRE_BUDGET_UNAVAILABLE")
         return row
 
+    async def refresh_before_write(self, token: str, *, transport=None) -> None:
+        if self.experimental:
+            from services.actions.experimental import revalidate_before_post
+
+            await revalidate_before_post(self, token, transport=transport)
+
     def consume_before_http(self) -> None:
         """Atomically spend the wire budget; crashes/reconstructed scopes cannot resend."""
         from services.actions.manual import require_permission
@@ -215,6 +249,22 @@ class PilotContract:
             control = dict(row.provenance["controlled"])
             if control.get("http_started") is not True:
                 raise WriteDisabled("PILOT_WIRE_BUDGET_UNAVAILABLE")
+            if self.experimental:
+                check = control.get("experimental_revalidation") or {}
+                try:
+                    checked_at = datetime.fromisoformat(check["checked_at"])
+                    valid = (
+                        checked_at.tzinfo is not None
+                        and 0 <= (self.clock() - checked_at).total_seconds() <= 30
+                    )
+                except (KeyError, TypeError, ValueError):
+                    valid = False
+                if (
+                    not valid
+                    or check.get("claim_id") != control.get("claim_id")
+                    or control.get("validation_gets") != 3
+                ):
+                    raise WriteDisabled("EXPERIMENTAL_PREPOST_READ_REQUIRED")
             control["wire_spent"] = True
             row.provenance = {**row.provenance, "controlled": control}
 
@@ -244,13 +294,18 @@ def load_contract(
         row = session.get(ActionRequest, request_id)
         if not row or row.workspace_id != actor["workspace"]:
             return None
+        experimental = bool(row.provenance.get("experimental"))
+        if experimental:
+            from services.actions.experimental import EVENT, REVOKED
+
+            events = (EVENT, REVOKED)
+        else:
+            events = (EVIDENCE_EVENT, "pilot_external_evidence_revoked")
         evidence = session.scalars(
             select(ActionLog)
             .where(
                 ActionLog.request_id == request_id,
-                ActionLog.event.in_(
-                    (EVIDENCE_EVENT, "pilot_external_evidence_revoked")
-                ),
+                ActionLog.event.in_(events),
             )
             .order_by(ActionLog.created_at.desc(), ActionLog.event.desc())
         ).first()
@@ -261,8 +316,9 @@ def load_contract(
         ):
             return None  # Scope/tariff/manual consent alone cannot release the gate.
         now = engine.clock()
-        require_external_evidence(session, actor, row, now)
-        reviewed_contract(evidence.details, actor["id"], row.action)
+        require_external_evidence(session, actor, row, now, experimental=experimental)
+        if not experimental:
+            reviewed_contract(evidence.details, actor["id"], row.action)
         state = checked_write_state(
             session, actor["workspace"], evidence.details["credential_revision"], now
         )
@@ -271,6 +327,11 @@ def load_contract(
             aware(evidence.created_at) + timedelta(seconds=900),
             datetime.fromisoformat(row.provenance["expires_at"]),
         )
+        if experimental:
+            baseline_at = datetime.fromisoformat(
+                evidence.details["contract_review"]["baseline"]["source_updated_at"]
+            )
+            expiry = min(expiry, baseline_at + timedelta(seconds=900))
         if phase == "EXECUTE":
             pin = (row.provenance.get("controlled") or {}).get(
                 "provider_contract"
@@ -295,6 +356,7 @@ def load_contract(
             evidence_sha256=fingerprint(evidence.details),
             expires_at=expiry,
             phase=phase,
+            experimental=experimental,
         )
         contract._verify(session)
         return contract

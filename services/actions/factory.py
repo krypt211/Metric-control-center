@@ -94,6 +94,8 @@ def create_action_connector(
 
     async def guard():
         await asyncio.to_thread(check_current)
+        if contract is not None:
+            await contract.refresh_before_write(token, transport=transport)
         if before_request:
             await before_request()
         # Rotation/deletion during a preceding local guard must also stop HTTP.

@@ -94,3 +94,14 @@ Playwright тесты не запускались. Проверены три а�
 ID/status/timestamp и штатное восстановление READ. Рабочие WRITE gates не обходились.
 
 FINAL: CANDIDATE IDENTIFIED; LIVE BLOCKED; EXPERIMENTAL MODE DECISION PENDING.
+
+## Дополнение: выбор экспериментальной подготовки принят
+
+Пользователь выбрал подготовку экспериментального пилота на AD 120247730105960571.
+Реализован отдельный fail-closed допуск PAUSE_AD с UNVERIFIED namespace, собственным
+READ baseline и повторной проверкой выключенных родителей. Подготовлен DRAFT
+776a0dd3-6130-4785-ba41-b6d3596afd10; разрешение POST не предоставлялось.
+Предыдущие измерения и блокеры выше относятся к состоянию до этой реализации.
+Namespace провайдером по-прежнему не подтверждён; production contract остаётся BLOCKED.
+Актуальные лимиты, срок карточки и результаты проверок:
+[Experimental preparation](METRICFLOW_EXPERIMENTAL_PILOT_PREPARATION.md).

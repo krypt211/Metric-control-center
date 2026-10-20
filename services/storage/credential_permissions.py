@@ -44,10 +44,14 @@ def grant_credential_access(
         ("SELECT", READ_TABLES),
         (
             "INSERT, UPDATE",
-            ("write_credential_states", "api_quotas", "action_executions"),
+            (
+                "write_credential_states",
+                "api_quotas",
+                "action_executions",
+                "action_requests",
+            ),
         ),
         ("INSERT", ("write_credential_audit", "action_logs")),
-        ("UPDATE", ("action_requests",)),
         ("UPDATE (id)", ("users", "entities")),
     )
     for privileges, tables in groups:
