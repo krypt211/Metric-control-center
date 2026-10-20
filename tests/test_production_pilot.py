@@ -482,3 +482,64 @@ def test_unfinished_nonpilot_command_also_blocks_workspace(
         )
     with pytest.raises(ActionRejected, match="PILOT_WORKSPACE_CONFLICT"):
         authorize_pilot(engine, ACTOR, row["id"], body(row))
+
+
+@pytest.mark.parametrize("management_confirmed", [True, False, "true", 1])
+def test_user_attestation_is_separate_from_an_observed_meta_role(
+    setup, mock_gate, accepted_capability, management_confirmed
+):
+    engine, sf, _, clock = setup
+    row = confirmed(engine)
+    evidence(
+        sf,
+        row,
+        clock[0],
+        permission_source="USER_ATTESTED",
+        permission=None,
+        management_confirmed=management_confirmed,
+    )
+    if management_confirmed is True:
+        permit = authorize_pilot(engine, ACTOR, row["id"], body(row))
+        assert permit["mode"] == MODE
+    else:
+        with pytest.raises(ActionRejected, match="PILOT_EXTERNAL_EVIDENCE_REQUIRED"):
+            authorize_pilot(engine, ACTOR, row["id"], body(row))
+
+
+def test_user_attestation_cannot_supply_missing_write_namespace(
+    setup, mock_gate, accepted_capability
+):
+    engine, sf, _, clock = setup
+    row = confirmed(engine)
+    evidence(
+        sf,
+        row,
+        clock[0],
+        permission_source="USER_ATTESTED",
+        permission=None,
+        management_confirmed=True,
+        namespace_source="",
+    )
+    with pytest.raises(ActionRejected, match="PILOT_EXTERNAL_EVIDENCE_REQUIRED"):
+        authorize_pilot(engine, ACTOR, row["id"], body(row))
+
+
+def test_documented_write_is_not_a_verified_live_capability(setup):
+    _, sf, _, _ = setup
+    with sf() as session:
+        value = ActionCapabilityRegistry.inspect(
+            session, ACTOR["workspace"], "metricflow"
+        )
+    assert value["documented_contract"]["advertising_write"] == "DOCUMENTED"
+    assert set(value["documented_contract"]["status_operations"]) == {
+        "PAUSE_AD",
+        "ENABLE_AD",
+        "PAUSE_ADSET",
+        "ENABLE_ADSET",
+        "PAUSE_CAMPAIGN",
+        "ENABLE_CAMPAIGN",
+    }
+    assert value["documented_contract"]["entity_id_binding"] == "UNVERIFIED"
+    assert not value["documented_contract"]["execution_verified"]
+    assert not value["write_permission"] and value["live_status"] == "BLOCKED"
+    assert set(value["operations"].values()) == {"UNVERIFIED"}

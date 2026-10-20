@@ -93,6 +93,16 @@ def require_ready(
         "entity_id_namespace": "PROVIDER_AD_ID",
         "configured_status": row.baseline_status,
     }
+    manual_permission = proof.get(
+        "permission_source"
+    ) == "MANUAL_META_ACCESS_REVIEW" and proof.get("permission") in (
+        "MANAGE_CAMPAIGNS",
+        "FULL_CONTROL",
+    )
+    user_permission = (
+        proof.get("permission_source") == "USER_ATTESTED"
+        and proof.get("management_confirmed") is True
+    )
     if (
         not evidence
         or evidence.event != EVIDENCE_EVENT
@@ -101,8 +111,7 @@ def require_ready(
             for k, v in expected.items()
         )
         or not -60 <= (now - aware(evidence.created_at)).total_seconds() <= 900
-        or proof.get("permission") not in ("MANAGE_CAMPAIGNS", "FULL_CONTROL")
-        or proof.get("permission_source") != "MANUAL_META_ACCESS_REVIEW"
+        or not (manual_permission or user_permission)
         or type(proof.get("profile_id")) is not int
         or proof["profile_id"] < 1
         or not isinstance(proof.get("namespace_source"), str)

@@ -8,7 +8,10 @@ from services.providers.models import ProviderConnection
 OPERATIONS = (
     "PAUSE_AD",
     "ENABLE_AD",
-    "PAUSE_ADSET", "ENABLE_ADSET", "PAUSE_CAMPAIGN", "ENABLE_CAMPAIGN",
+    "PAUSE_ADSET",
+    "ENABLE_ADSET",
+    "PAUSE_CAMPAIGN",
+    "ENABLE_CAMPAIGN",
     "SET_ADSET_BUDGET",
     "SET_CAMPAIGN_BUDGET",
     "SET_BID",
@@ -34,6 +37,19 @@ class ActionCapabilityRegistry:
             "credential_revision": connection.revision if connection else None,
             "read_credentials": connected,
             "write_credentials": write_credential,
+            "documented_contract": {
+                "advertising_write": "DOCUMENTED"
+                if provider == "metricflow"
+                else "NOT_AUDITED_HERE",
+                "status_operations": list(OPERATIONS[:6])
+                if provider == "metricflow"
+                else [],
+                "source_url": "https://metricflowit.click/api/v1/openapi.json?lang=en"
+                if provider == "metricflow"
+                else None,
+                "entity_id_binding": "UNVERIFIED",
+                "execution_verified": False,
+            },
             "write_permission": False,
             "required_permission": ENTITY_WRITE_SCOPE
             if provider == "metricflow"

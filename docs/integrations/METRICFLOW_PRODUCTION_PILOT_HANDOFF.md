@@ -2,6 +2,12 @@
 
 STATUS: IMPLEMENTED / VERIFIED LOCAL-MOCK. LIVE: BLOCKED.
 
+Current deployment/subscription checkpoint (20 October):
+[provider readiness](AD_CONTROL_PROVIDER_READINESS_2026-10-20.md).
+Backend/private CM are now deployed behind closed gates; the earlier undeployed statements
+below describe the original 19 October checkpoint. LIVE remains BLOCKED.
+
+
 ## Результат этапа
 
 Добавлен закрытый путь одноразового пилота в существующий ActionEngine и приватный

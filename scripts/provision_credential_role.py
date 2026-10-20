@@ -8,6 +8,7 @@ from pathlib import Path
 from psycopg import Error, sql
 from sqlalchemy.exc import SQLAlchemyError
 
+from services.storage.credential_permissions import grant_credential_access
 from services.storage.database import make_engine
 
 
@@ -36,16 +37,7 @@ def main():
                         sql.Identifier(os.environ.get("POSTGRES_DB", "metric_control"))
                     )
                 )
-                cursor.execute("GRANT USAGE ON SCHEMA public TO mcc_credential_manager")
-                cursor.execute(
-                    "GRANT SELECT ON users,user_sessions,provider_connections,write_credential_states,api_quotas TO mcc_credential_manager"
-                )
-                cursor.execute(
-                    "GRANT INSERT,UPDATE ON write_credential_states,api_quotas TO mcc_credential_manager"
-                )
-                cursor.execute(
-                    "GRANT INSERT ON write_credential_audit TO mcc_credential_manager"
-                )
+                grant_credential_access(cursor)
             connection.commit()
         finally:
             connection.close()

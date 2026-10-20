@@ -108,4 +108,9 @@ verification; production authorization and dispatch remain blocked.
 Production-shaped single-operation handoff: [private pilot acceptance and remaining gates](docs/integrations/METRICFLOW_PRODUCTION_PILOT_HANDOFF.md).
 The private Credential Manager now has a locally tested single-use AD permit/dispatcher
 and a separate manual result record. Contract and asset-permission gates remain closed;
-this code is not deployed or authorized for LIVE. Rules gain no verified pause ownership.
+the private path is deployed with WRITE disabled and is not authorized for LIVE.
+Rules gain no verified pause ownership.
+
+Provider decision, deployed credential-role fix and measured Business API access:
+[20 October readiness](docs/integrations/AD_CONTROL_PROVIDER_READINESS_2026-10-20.md).
+MetricFlow is retained; documented WRITE support is separate from actual execution verification.
