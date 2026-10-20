@@ -68,3 +68,69 @@ PAUSE_AD для кабинета act_1047962734516123 / AD 120247747556780571.
 Public documentation GET: 3. Authenticated provider API requests: 0.
 Meta API requests: 0. Advertising WRITE requests: 0.
 ACTIONS_ENABLED=false; LOCAL_READ_ONLY=true; AI_ENABLED=false; AI_AUTOPILOT_ALLOWED=false.
+
+## Повторное подтверждение по запросу пользователя — 20.10.2026
+
+Проверка выполнена по команде «подтверждай», без рекламного POST. Свежий EN OpenAPI
+получен в 09:10:48 UTC / 12:10:48 МСК; он полностью совпадает с прежним SHA256
+f52bc8ca0691fa0e2f2b5a5de06aa74a897546b88705ee16851859138a2f3327.
+Проверены также RU OpenAPI, публичное руководство и отрисованный официальный changelog.
+
+Дополнительные официальные источники:
+
+- [RU OpenAPI](https://metricflowit.click/api/v1/openapi.json?lang=ru), HTTP 200,
+  SHA256 07750aff409c4b22405c21645a6a1b682ce5d55565aa2dc5227a1e5c7b417c24.
+- [Changelog](https://metricflowit.click/changelog), HTTP 200; прочитан после загрузки
+  JavaScript в отдельном анонимном Edge. Только same-origin GET, без ввода данных,
+  без ключей, без аккаунта MetricFlow. Внешний запрос заблокирован.
+
+Официальная запись changelog от 14.04.2026 описывает появление управления статусом
+и бюджетом через Public API и исправления WRITE-операций. Это дополнительное
+подтверждение существования API-функции. Оно не доказывает успешную работу текущего
+ключа на выбранном AD и не определяет namespace параметра WRITE entity_id.
+
+Результаты точного сравнения:
+
+| Проверка | Статус |
+| --- | --- |
+| PAUSE/ENABLE через Public API | CONFIRMED_DOCUMENTED |
+| Body для AD: level=ad | CONFIRMED_DOCUMENTED |
+| READ AdCreativeInfo.ad_id — Facebook Ad ID | CONFIRMED_DOCUMENTED |
+| WRITE entity_id — Facebook Ad ID | UNVERIFIED |
+| WRITE entity_id — внутренний ID MetricFlow | UNVERIFIED |
+| EN и RU path parameter entity_id | Только string / Entity Id, без description/example |
+| Документированный GET resolver под /entities/ | Отсутствует в проверенных 102 paths |
+| Changelog о mapping entity_id между ad/adset/campaign | Относится к scope правил; не является контрактом pause/enable |
+
+Вычисленные schema assertions прошли для обоих языков и обоих status endpoints.
+Обычные authenticated READ не выполнялись: они не устраняют найденную неясность,
+поэтому квота подключения на эту проверку не тратилась. Пробный рекламный POST
+не использован как способ выяснения namespace.
+
+Первый GET RU OpenAPI вернул 403; один повтор с тем же User-Agent, что у успешной
+EN проверки, дал 200. Всего прямых публичных GET: 6 (5 успешных, 1 HTTP 403), плюс
+анонимные GET ресурсов/changelog браузером. /api/auth/get-session был анонимным
+служебным запросом публичной страницы; Business API credential туда не передавался.
+Никакие сообщения провайдеру не отправлены. Context7 не нашёл именно этот MetricFlow;
+результаты для Click и других несвязанных продуктов не использованы.
+
+Сохранены локальные evidence в ignored .tools/write-id-confirmation-20261020/:
+sources.json, EN/RU JSON, guide-visible.txt, changelog-browser.txt/json,
+verification.json. В рабочую БД не внесено принятого contract_review:
+accepted evidence=0, LIVE_SINGLE_OPERATION permits=0, ActionExecution=0.
+Эти значения проверены локальными SELECT. .env SHA совпадает с прежним снимком;
+ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false. Код, контейнеры и подключения не менялись.
+Backend-тесты не перезапускались: изменён только этот отчёт; выполнены schema
+assertions и анонимная браузерная проверка официального changelog.
+
+Итог: API-функция подтверждена официальными источниками; точный WRITE namespace
+остаётся неподтверждённым. Оснований самостоятельно записывать accepted review нет.
+Нужно provider-authored пояснение из раздела «Единственное необходимое уточнение по ID».
+После него действуют scoped review, свежие scope/status checks и отдельное разрешение
+на один рекламный POST. Текущая команда пользователя не является таким разрешением.
+
+WRITE ID CONTRACT: UNVERIFIED.
+FIRST CONTROLLED AD POST: BLOCKED.
+Authenticated Business API requests: 0. Meta API requests: 0.
+Advertising WRITE requests: 0.
