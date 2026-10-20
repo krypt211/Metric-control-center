@@ -114,3 +114,9 @@ Rules gain no verified pause ownership.
 Provider decision, deployed credential-role fix and measured Business API access:
 [20 October readiness](docs/integrations/AD_CONTROL_PROVIDER_READINESS_2026-10-20.md).
 MetricFlow is retained; documented WRITE support is separate from actual execution verification.
+
+Scoped pilot contract: [acceptance](docs/integrations/METRICFLOW_SCOPED_PILOT_CONTRACT_ACCEPTANCE.md).
+The private executor now admits only an accepted, revocable single-AD contract bound to
+explicit authorization. A durable wire budget prevents resend. Default/global WRITE stays
+closed; provider evidence for the WRITE entity-ID namespace and separate LIVE approval
+are still required. No advertising WRITE has been executed.

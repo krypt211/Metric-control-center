@@ -130,9 +130,10 @@ runtime-final.json, browser-smoke.json, build/provision/deploy logs, SDK SHA met
    или иной ID? Текущий OpenAPI задаёт string без уточнения. Это остаётся внешним
    контрактным блокером; [точный вопрос](METRICFLOW_WRITE_ID_DECISION_2026-10-20.md) подготовлен,
    но никому не отправлен. Наличие Business/entities:write не доказывает ID namespace.
-2. После подтверждения ID нужна финальная серверная приёмка именно этого контракта.
-   ActionSafetyGate.require_verified_contract пока безусловно закрыт; одной смены env
-   недостаточно. Подтверждение пользователя о правах не снимает этот gate.
+2. Механизм серверной приёмки теперь реализован для одного приватного пилота:
+   [scoped contract acceptance](METRICFLOW_SCOPED_PILOT_CONTRACT_ACCEPTANCE.md).
+   Нужны provider-authored evidence и доверенный review с точной привязкой к запросу.
+   Принятого review в production нет; смена env или подтверждение прав его не заменяет.
 3. Перед карточкой нужны свежие own/effective status, иерархия и штатный WRITE check.
    Историческая симуляция не переводится в LIVE; сведения не продлеваются искусственно.
 4. Только затем — отдельное явное разрешение пользователя на один PAUSE_AD для

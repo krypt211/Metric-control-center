@@ -1,4 +1,4 @@
-"""Single-operation production handoff. Existing contract and permission gates stay closed."""
+"""Single-operation private handoff with request-bound contract admission."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class PilotExecuteInput(BaseModel):
 
 
 def require_ready(
-    session: Session, actor: dict, row: ActionRequest, now: datetime
+    session: Session, actor: dict, row: ActionRequest, now: datetime, contract=None
 ) -> str:
     """No route writes acceptance evidence or promotes an unknown object permission."""
     user = session.get(User, actor["id"])
@@ -65,14 +65,44 @@ def require_ready(
         or row.provenance.get("rule_source")
     ):
         raise ActionRejected("MANUAL_SINGLE_AD_STATUS_ONLY")
-    capability = ActionCapabilityRegistry.inspect(
-        session, actor["workspace"], "metricflow"
-    )
+    if contract is None:
+        capability = ActionCapabilityRegistry.inspect(
+            session, actor["workspace"], "metricflow"
+        )
+        if (
+            not capability.get("write_permission")
+            or capability.get("operations", {}).get(row.action) != "VERIFIED"
+        ):
+            raise ActionRejected("PILOT_WRITE_PERMISSION_UNVERIFIED")
+    else:
+        contract.require_identity(actor, row)
+    return require_external_evidence(session, actor, row, now)
+
+
+def require_external_evidence(
+    session: Session, actor: dict, row: ActionRequest, now: datetime
+) -> str:
+    """Check object permission and namespace proof without granting a global capability."""
+    user = session.get(User, actor["id"])
+    entity = session.get(Entity, row.entity_id)
+    account = session.get(AdAccount, entity.account_id) if entity else None
     if (
-        not capability.get("write_permission")
-        or capability.get("operations", {}).get(row.action) != "VERIFIED"
+        not user
+        or not user.is_active
+        or user.role != "admin"
+        or user.workspace_id != actor["workspace"]
+        or row.workspace_id != actor["workspace"]
+        or row.initiator_id != actor["id"]
+        or not entity
+        or entity.kind != "ad"
+        or not account
+        or account.workspace_id != actor["workspace"]
+        or account.provider != "metricflow"
+        or row.value is not None
+        or row.action not in ("PAUSE_AD", "ENABLE_AD")
+        or row.provenance.get("rule_source")
     ):
-        raise ActionRejected("PILOT_WRITE_PERMISSION_UNVERIFIED")
+        raise ActionRejected("PILOT_IDENTITY_OR_PERMISSION_CHANGED")
     credential = session.get(WriteCredentialState, actor["workspace"])
     evidence = session.scalars(
         select(ActionLog)
@@ -182,7 +212,12 @@ def check_authorization(control: dict, actor: dict) -> None:
 def authorize_pilot(
     engine: ActionEngine, actor: dict, request_id: str, body: PilotAuthorizationInput
 ) -> dict:
-    ActionSafetyGate.require_write()
+    from services.actions.pilot_contract import load_contract
+
+    if not ActionSafetyGate.allowed():
+        ActionSafetyGate.require_write()
+    contract = load_contract(engine, actor, request_id, phase="AUTHORIZE")
+    ActionSafetyGate.require_write(contract)
     with engine.sessions() as session:
         row = session.get(ActionRequest, request_id)
         if not row or row.workspace_id != actor["workspace"]:
@@ -193,10 +228,13 @@ def authorize_pilot(
         request_id,
         body.revision,
         body.credential_revision,
-        min(engine.clock() + timedelta(seconds=600), draft_expiry),
+        min(engine.clock() + timedelta(seconds=600), draft_expiry, contract.expires_at)
+        if contract
+        else min(engine.clock() + timedelta(seconds=600), draft_expiry),
         asynchronous=False,
         mode=MODE,
         authorization=body.model_dump(),
+        contract=contract,
     )
 
 
@@ -209,6 +247,12 @@ async def execute_pilot(
     vault,
     transport=None,
 ) -> str | None:
+    from services.actions.pilot_contract import load_contract
+
+    if not ActionSafetyGate.allowed():
+        ActionSafetyGate.require_write()
+    contract = load_contract(engine, actor, request_id, phase="EXECUTE")
+    ActionSafetyGate.require_write(contract)
     return await engine._execute_controlled(
         actor,
         request_id,
@@ -216,6 +260,7 @@ async def execute_pilot(
         vault=vault,
         transport=transport,
         mode=MODE,
+        contract=contract,
     )
 
 

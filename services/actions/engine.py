@@ -330,17 +330,19 @@ class ActionEngine:
             raise ActionRejected("CONFIRMED_MANUAL_REHEARSAL_REQUIRED")
         return row
 
-    def _controlled_row(self, session, actor: dict, request_id: str, mode: str):
+    def _controlled_row(self, session, actor: dict, request_id: str, mode: str, contract=None):
         if mode == "MOCK_ONLY":
+            if contract is not None:
+                raise ActionRejected("CONTROLLED_CONTRACT_MODE_MISMATCH")
             return self._rehearsal_row(session, actor, request_id)
         if mode != "LIVE_SINGLE_OPERATION":
             raise ActionRejected("CONTROLLED_MODE_INVALID")
         from services.actions.pilot import require_ready
         from services.actions.safety import ActionSafetyGate
 
-        ActionSafetyGate.require_write()
+        ActionSafetyGate.require_write(contract)
         row = self._locked_manual_row(session, actor, request_id)
-        require_ready(session, actor, row, self.clock())
+        require_ready(session, actor, row, self.clock(), contract)
         return row
 
     def _rehearsal_binding(
@@ -404,7 +406,7 @@ class ActionEngine:
 
     def _prepare_controlled(
         self, actor, request_id, revision, credential_revision, expires_at,
-        *, asynchronous: bool, mode: str, authorization: dict | None = None,
+        *, asynchronous: bool, mode: str, authorization: dict | None = None, contract=None,
     ) -> dict:
         from services.actions.factory import checked_write_state, credential_digest
         from services.actions.job_observation import new_observation
@@ -420,7 +422,7 @@ class ActionEngine:
         ):
             raise ActionRejected("INVALID_REHEARSAL_WINDOW_OR_REVISION")
         with self.sessions.begin() as session:
-            row = self._controlled_row(session, actor, request_id, mode)
+            row = self._controlled_row(session, actor, request_id, mode, contract)
             if row.status != "CONFIRMED" or row.revision != revision:
                 raise ActionRejected("CONFIRMED_REVISION_REQUIRED")
             if row.provenance.get("controlled"):
@@ -440,7 +442,7 @@ class ActionEngine:
                         continue  # Isolated synthetic rehearsals cannot dispatch LIVE.
                     if other.status in IN_FLIGHT or other_mode == mode:
                         raise ActionRejected("PILOT_WORKSPACE_CONFLICT")
-                evidence_id = require_ready(session, actor, row, now)
+                evidence_id = require_ready(session, actor, row, now, contract)
             if expires_at > datetime.fromisoformat(row.provenance["expires_at"]):
                 raise ActionRejected("REHEARSAL_EXCEEDS_DRAFT_WINDOW")
             state = checked_write_state(
@@ -469,6 +471,8 @@ class ActionEngine:
 
                 if asynchronous or not self.policy.enabled:
                     raise ActionRejected("SYNCHRONOUS_ENABLED_PILOT_REQUIRED")
+                if contract is not None:
+                    control["provider_contract"] = contract.pin()
                 control["evidence_id"] = evidence_id
                 control["authorization"] = bind_authorization(
                     authorization, control["binding"], actor, now,
@@ -504,7 +508,7 @@ class ActionEngine:
         )
 
     async def _execute_controlled(
-        self, actor, request_id, revision, *, vault, transport, mode: str
+        self, actor, request_id, revision, *, vault, transport, mode: str, contract=None
     ) -> str | None:
         import asyncio
 
@@ -526,14 +530,14 @@ class ActionEngine:
         label = "live" if mode == "LIVE_SINGLE_OPERATION" else "mock"
         if mode == "MOCK_ONLY" and not isinstance(transport, httpx.MockTransport):
             raise ActionRejected("EXPLICIT_MOCK_TRANSPORT_REQUIRED")
-        ActionSafetyGate.require_write()  # No runtime exception to the hard LIVE gate.
+        ActionSafetyGate.require_write(contract)
         if not self.policy.enabled:
             raise ActionRejected("ACTION_POLICY_DISABLED")
         if type(revision) is not int or revision < 1:
             raise ActionRejected("INVALID_ACTION_REVISION")
         now = self.clock()
         with self.sessions.begin() as session:
-            row = self._controlled_row(session, actor, request_id, mode)
+            row = self._controlled_row(session, actor, request_id, mode, contract)
             control = dict(row.provenance.get("controlled") or {})
             if control.get("mode") != mode:
                 raise ActionRejected("CONTROLLED_PERMIT_MODE_MISMATCH")
@@ -593,7 +597,7 @@ class ActionEngine:
         # The claim and unique ActionExecution are committed before opening a vault.
         def guard_before_http():
             with self.sessions.begin() as session:
-                current = self._controlled_row(session, actor, request_id, mode)
+                current = self._controlled_row(session, actor, request_id, mode, contract)
                 permit = dict(current.provenance["controlled"])
                 if (
                     current.status != "executing"
@@ -642,6 +646,7 @@ class ActionEngine:
                     transport=transport,
                     before_request=before_http,
                     clock=self.clock,
+                    contract=contract,
                 ) as connector:
                     operation = (
                         connector.pause_entity

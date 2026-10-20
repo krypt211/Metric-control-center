@@ -105,3 +105,12 @@ status/effective_status остаётся UNKNOWN / authoritative=false до пр
 контракта авторитетности. Rehearsal работает только на изолированной БД с явным
 MockTransport и не имеет production endpoint/dispatcher.
 См. [текущую приёмку](integrations/METRICFLOW_READBACK_ACCEPTANCE.md).
+## Scoped pilot admission (20.10.2026)
+
+The private single-operation executor validates a request-bound provider contract at
+its gate, credential factory and HTTP boundary. Contract acceptance is trusted audit
+evidence, never a field accepted from an HTTP caller. The wire request is restricted
+to the explicitly authorized synchronous PAUSE_AD/ENABLE_AD and has a durable one-use
+budget. Public capability inspection and legacy automation remain blocked. See
+[scoped pilot acceptance](integrations/METRICFLOW_SCOPED_PILOT_CONTRACT_ACCEPTANCE.md)
+for tests, source-review limitations and the remaining external namespace blocker.

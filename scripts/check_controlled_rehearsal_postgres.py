@@ -179,9 +179,10 @@ def verify_runtime_source():
     for name, module in (
         ("engine", ActionEngine.__module__),
         ("pilot", authorize_pilot.__module__),
+        ("pilot_contract", "services.actions.pilot_contract"),
     ):
         expected = Path(__file__).resolve().parents[1] / f"services/actions/{name}.py"
-        loaded = Path(sys.modules[module].__file__)
+        loaded = Path(__import__(module, fromlist=["__file__"]).__file__)
         if (
             hashlib.sha256(expected.read_bytes()).digest()
             != hashlib.sha256(loaded.read_bytes()).digest()
@@ -525,7 +526,9 @@ def production_child(mode, request_id, revision):
 
     if mode == "pilot-recover":
         engine.verify_pending()
-    with synthetic_pilot_gates():
+    with patch.dict(
+        os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
+    ):
         result = asyncio.run(
             execute_pilot(
                 engine,
@@ -597,10 +600,22 @@ def seed_pilot(sf, vault, index):
                     "permission_source": "MANUAL_META_ACCESS_REVIEW",
                     "profile_id": 123,
                     "namespace_source": "synthetic fixture only",
+                    "contract_review": {
+                        "provider": "metricflow",
+                        "wire_revision": "status-sync-v1",
+                        "operation": "PAUSE_AD",
+                        "entity_id_namespace": "PROVIDER_AD_ID",
+                        "source_kind": "PROVIDER_CLARIFICATION",
+                        "source_reference": "Synthetic fixture, not provider evidence",
+                        "source_sha256": "a" * 64,
+                        "reviewed_by": ACTOR["id"],
+                    },
                 },
             )
         )
-    with synthetic_pilot_gates():
+    with patch.dict(
+        os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
+    ):
         return authorize_pilot(
             engine,
             ACTOR,

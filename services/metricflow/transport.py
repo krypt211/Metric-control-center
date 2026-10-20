@@ -2,7 +2,8 @@
 
 import asyncio
 import json
-from typing import Any, Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any
 
 import httpx
 
@@ -33,16 +34,21 @@ class MetricFlowTransport:
         read_retries: int = 2,
         retry_delay: float = 0.5,
         before_request: Callable[[], Awaitable[None]] | None = None,
+        contract=None,
     ):
         if read_retries < 0 or retry_delay < 0:
             raise ValueError("Retry settings must be nonnegative")
+        self._contract = contract
         self._write = write
         self._read_retries = read_retries
         self._retry_delay = retry_delay
         self._before_request = before_request
         self._client = httpx.AsyncClient(
             base_url=BASE_URL,
-            headers={"Authorization": f"Bearer {validate_key(key)}", "Accept": "application/json"},
+            headers={
+                "Authorization": f"Bearer {validate_key(key)}",
+                "Accept": "application/json",
+            },
             timeout=httpx.Timeout(30.0, connect=10.0),
             follow_redirects=False,
             trust_env=False,
@@ -65,7 +71,11 @@ class MetricFlowTransport:
         if method != expected:
             raise PermissionDenied(403, "Operation not allowed by this connector")
         # Paths are built by connector methods, never accepted from HTTP callers.
-        if not path or path.startswith("/") or any(c in path for c in (":", "?", "#", "\\", "%")):
+        if (
+            not path
+            or path.startswith("/")
+            or any(c in path for c in (":", "?", "#", "\\", "%"))
+        ):
             raise ValueError("Invalid API path")
         if any(part in (".", "..", "") for part in path.split("/")):
             raise ValueError("Invalid API path")
@@ -78,20 +88,29 @@ class MetricFlowTransport:
             if self._write:
                 from services.actions.safety import ActionSafetyGate
 
-                ActionSafetyGate.require_write()
+                ActionSafetyGate.require_write(self._contract)
+                if self._contract is not None:
+                    self._contract.check_request(method, path, payload, params)
             if self._before_request is not None:
                 await self._before_request()
             if self._write:
                 from services.actions.safety import ActionSafetyGate
 
-                ActionSafetyGate.require_write()
+                ActionSafetyGate.require_write(self._contract)
+            if self._write and self._contract is not None:
+                self._contract.consume_before_http()
             try:
                 response = await self._client.request(
-                    method, path, params=params, json=dict(payload) if payload is not None else None
+                    method,
+                    path,
+                    params=params,
+                    json=dict(payload) if payload is not None else None,
                 )
             except httpx.TransportError:
                 if self._write:
-                    raise ActionOutcomeUnknown("Command outcome unknown; reconcile before retrying") from None
+                    raise ActionOutcomeUnknown(
+                        "Command outcome unknown; reconcile before retrying"
+                    ) from None
                 if attempt + 1 < attempts:
                     await asyncio.sleep(self._retry_delay * (2**attempt))
                     continue
@@ -100,7 +119,11 @@ class MetricFlowTransport:
             status = response.status_code
             if status == 429:
                 retry_after = response.headers.get("Retry-After", "")
-                seconds = int(retry_after) if retry_after.isascii() and retry_after.isdigit() else None
+                seconds = (
+                    int(retry_after)
+                    if retry_after.isascii() and retry_after.isdigit()
+                    else None
+                )
                 # Limits can be daily. Let the scheduler choose when to resume.
                 raise RateLimitExceeded(seconds)
             if status == 401:
@@ -111,7 +134,9 @@ class MetricFlowTransport:
                 raise SubscriptionRequired(status)
             if status >= 500 or status == 408:
                 if self._write:
-                    raise ActionOutcomeUnknown("Command outcome unknown; reconcile before retrying")
+                    raise ActionOutcomeUnknown(
+                        "Command outcome unknown; reconcile before retrying"
+                    )
                 if attempt + 1 < attempts:
                     await asyncio.sleep(self._retry_delay * (2**attempt))
                     continue
@@ -119,7 +144,9 @@ class MetricFlowTransport:
                 raise APIError(status)
             if accepted_statuses is not None and status not in accepted_statuses:
                 if self._write:
-                    raise ActionOutcomeUnknown("Undocumented action response status; reconcile")
+                    raise ActionOutcomeUnknown(
+                        "Undocumented action response status; reconcile"
+                    )
                 raise InvalidResponse("Unexpected response status")
             if status == 204:
                 return {}
@@ -129,7 +156,11 @@ class MetricFlowTransport:
                     raise ValueError("Expected an object or array")
             except (ValueError, UnicodeError):
                 if self._write:
-                    raise ActionOutcomeUnknown("Command returned an unreadable result; reconcile before retrying") from None
-                raise InvalidResponse("MetricFlow returned an invalid JSON response") from None
+                    raise ActionOutcomeUnknown(
+                        "Command returned an unreadable result; reconcile before retrying"
+                    ) from None
+                raise InvalidResponse(
+                    "MetricFlow returned an invalid JSON response"
+                ) from None
             return result
         raise AssertionError("Unreachable")

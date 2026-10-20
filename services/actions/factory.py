@@ -63,15 +63,18 @@ def create_action_connector(
     transport: httpx.AsyncBaseTransport | None = None,
     before_request: Callable[[], Awaitable[None]] | None = None,
     clock: Callable[[], datetime] = utc_now,
+    contract=None,
 ) -> MetricFlowActionConnector:
     """Load only an explicitly bound encrypted WRITE record after the hard gate.
 
-    Production still fails the unverified-contract gate before opening any vault.
+    Production requires accepted contract evidence and a durable execution claim.
     Tests supply isolated sessions, a synthetic vault and MockTransport explicitly.
     """
     if not workspace or type(credential_revision) is not int or credential_revision < 1:
         raise ConfigurationError("Explicit encrypted WRITE binding is required")
-    ActionSafetyGate.require_write()
+    ActionSafetyGate.require_write(contract)
+    if contract is not None:
+        contract.require_credential(workspace, credential_revision)
     factory = session_factory or sessions(make_engine())
     with factory() as session:
         row = checked_write_state(session, workspace, credential_revision, clock())
@@ -96,4 +99,6 @@ def create_action_connector(
         # Rotation/deletion during a preceding local guard must also stop HTTP.
         await asyncio.to_thread(check_current)
 
-    return MetricFlowActionConnector(token, transport=transport, before_request=guard)
+    return MetricFlowActionConnector(
+        token, transport=transport, before_request=guard, contract=contract
+    )

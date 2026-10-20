@@ -219,3 +219,12 @@ validate/dry-run для этого ID не найдено. Осталось вн
 одним вопросом в отчёте. Провайдеру ничего не отправлялось. До ответа не нужно повторять
 симуляцию или общий вопрос о правах. Неподтверждённый контракт не реализован и gates
 не изменены; authenticated API requests=0, Advertising WRITE requests=0 за этот шаг.
+
+## Обновление 20.10.2026: серверная приёмка одного контракта
+
+[Scoped contract acceptance](METRICFLOW_SCOPED_PILOT_CONTRACT_ACCEPTANCE.md):
+поддержана привязанная к одному запросу приёмка provider-authored evidence через
+приватный PilotContract, с отзывом/expiry и durable wire budget. Без accepted review,
+явного authorization и разрешающих флагов gate остаётся закрытым. Публичный registry
+по-прежнему BLOCKED. Рабочие accepted proof/permit не создавались; namespace ID всё
+ещё не подтверждён. Прежние записи выше описывают исторические состояния этапов.

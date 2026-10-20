@@ -16,12 +16,19 @@ class ActionSafetyGate:
         )
 
     @staticmethod
-    def require_verified_contract() -> None:
-        """No LIVE adapter has an accepted provider contract in this phase."""
-        raise WriteDisabled("WRITE_CONTRACT_UNVERIFIED")
+    def require_verified_contract(contract=None) -> None:
+        """Only a private, request-bound contract can release this boundary."""
+        from services.actions.pilot_contract import PilotContract
+
+        if type(contract) is not PilotContract:
+            raise WriteDisabled("WRITE_CONTRACT_UNVERIFIED")
+        contract.verify()
 
     @classmethod
-    def require_write(cls) -> None:
+    def require_write(cls, contract=None) -> None:
         if not cls.allowed():
             raise WriteDisabled()
-        cls.require_verified_contract()
+        if contract is None:
+            cls.require_verified_contract()
+        else:
+            cls.require_verified_contract(contract)

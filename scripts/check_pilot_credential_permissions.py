@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 from uuid import uuid4
 
 import httpx
@@ -19,7 +21,6 @@ from scripts.check_controlled_rehearsal_postgres import (
     ACTOR,
     NOW,
     seed_rehearsal,
-    synthetic_pilot_gates,
     verify_runtime_source,
 )
 from services.actions.engine import ActionEngine, ActionPolicy
@@ -124,6 +125,16 @@ def main():
                             "management_confirmed": True,
                             "profile_id": 123,
                             "namespace_source": "Synthetic fixture only",
+                            "contract_review": {
+                                "provider": "metricflow",
+                                "wire_revision": "status-sync-v1",
+                                "operation": "PAUSE_AD",
+                                "entity_id_namespace": "PROVIDER_AD_ID",
+                                "source_kind": "PROVIDER_CLARIFICATION",
+                                "source_reference": "Synthetic fixture, not provider evidence",
+                                "source_sha256": "a" * 64,
+                                "reviewed_by": ACTOR["id"],
+                            },
                         },
                     )
                 )
@@ -156,7 +167,9 @@ def main():
                     json={"success": True, "entity_id": "1003", "message": "fixture"},
                 )
 
-            with synthetic_pilot_gates():
+            with patch.dict(
+                os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
+            ):
                 permit = authorize_pilot(
                     engine,
                     ACTOR,
@@ -238,6 +251,7 @@ def main():
                 "role": "NOLOGIN_NOSUPERUSER",
                 "excess_privilege_checks": 6,
                 "single_use_mock_attempts": 1,
+                "contract_gate": "UNPATCHED",
                 "resend": False,
                 "manual_record": "NON_AUTHORITATIVE",
                 "facts_unchanged": True,

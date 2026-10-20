@@ -100,14 +100,23 @@ class MetricFlowActionConnector:
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         before_request: Callable[[], Awaitable[None]] | None = None,
+        contract=None,
     ):
         self._http = MetricFlowTransport(
-            write_key, write=True, transport=transport, before_request=before_request
+            write_key,
+            write=True,
+            transport=transport,
+            before_request=before_request,
+            contract=contract,
         )
 
         async def observation_guard():
             from services.actions.safety import ActionSafetyGate
 
+            if contract is not None:
+                from services.providers.contracts import WriteDisabled
+
+                raise WriteDisabled("SYNCHRONOUS_PILOT_ONLY")
             ActionSafetyGate.require_write()
             if before_request:
                 await before_request()
