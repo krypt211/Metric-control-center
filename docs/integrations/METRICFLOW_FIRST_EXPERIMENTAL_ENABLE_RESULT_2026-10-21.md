@@ -117,3 +117,28 @@ status или повторного подтверждения родителей
 собственным переключателям после отдельных согласованных POST. Поддержка Campaign/
 AdSet WRITE, автоправил и произвольного ID namespace этим не доказана.
 ADVERTISING WRITE TOTAL: 2. Дополнительных команд или READ после ответа: 0.
+
+## Итоговая ручная сверка иерархии
+
+Пользователь дополнительно подтвердил: «объявление включено, компания и группа
+отключены». Сохранено событие pilot_manual_enable_parents_confirmed:
+AD 120247730105960571 ACTIVE, AdSet 120247730105950571 PAUSED,
+Campaign 120247730079240571 PAUSED. Это ручная сверка собственных переключателей;
+effective/доставка и точное время наблюдения не сообщены и не выдумывались.
+Время регистрации ответа: 21.10.2026 13:32:30 UTC / 16:32:30 МСК.
+Предыдущие уточнения и задержки сообщений не удалялись из журнала.
+
+Практический ограниченный цикл PAUSE -> ENABLE на этом AD подтверждён пользователем.
+Родители остались выключенными. Это не проверка фактической доставки, прямой Meta API
+readback, произвольного namespace, Campaign/AdSet WRITE или автоматического Rule Engine.
+Технический запрос на момент записи всё ещё verifying / revision 9, execution
+live_acknowledged. Обязательные поля полного record_manual_readback не подделывались;
+при истечении исходного окна действует обычный deadline/recovery, без продления.
+
+Новых provider GET/POST нет. Суммарно один PAUSE и один ENABLE; повторов нет.
+ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false. Дальнейших рекламных действий не разрешено.
+
+MANUAL OWN-STATUS ROUNDTRIP: CONFIRMED FOR THIS AD ONLY.
+PARENTS: PAUSED / PAUSED. AD: ACTIVE.
+AUTOMATED/AUTHORITATIVE VERIFICATION: NOT ESTABLISHED.
