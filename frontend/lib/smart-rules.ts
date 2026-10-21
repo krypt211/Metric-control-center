@@ -102,6 +102,7 @@ export type Simulation = {
   actor_id: string;
   start: string;
   end: string;
+  reporting_timezone?: string;
   counts: Record<string, number>;
   rows: Row[];
   total: number;

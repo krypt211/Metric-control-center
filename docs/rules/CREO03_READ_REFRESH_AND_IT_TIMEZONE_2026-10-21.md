@@ -100,3 +100,33 @@ tests/test_economics_core.py, tests/test_controlled_sync_status.py.
 Basic source secret scan PASS. The production configuration/import assertions
 passed against PostgreSQL. No new Playwright/frontend run was performed in this
 configuration-only stage. Manual UI verification is the next checkpoint.
+
+## Manual UI acceptance and calendar-label fix
+
+User supplied the v2 UI result: KEEP, false CPL condition, complete window,
+fresh CAMPAIGN_PAUSED status, attribution warning and LIVE forbidden. This
+confirms the analytical result shown in the preceding checkpoint.
+
+The same UI exposed an incorrect hardcoded Europe/Moscow simulation header.
+Backend reporting_timezone and row evaluation already used America/Los_Angeles;
+this was a display defect, not a recalculation. SmartRules now displays the
+saved simulation's reporting_timezone, labels PROFILE_SCOPED as calendars of
+profiles, and shows an explicit unknown-calendar label for legacy missing data.
+The editor note no longer claims a fixed Moscow calendar. The optional existing
+backend field was added to the frontend Simulation type. No saved simulation,
+financial input, rule revision, authorization or backend behavior was changed.
+
+Frontend typecheck PASS; 36 unit tests PASS; Docker frontend build PASS.
+Playwright Edge: 3 mocked calendar scenarios PASS, zero page errors, zero browser
+POST and zero provider HTTP. A temporary addressed viewer/session fixture passed
+the normal server-side auth gate, and was removed in finally; server-side auth
+GETs were real local READ checks, all browser business API responses were mocked.
+Initial harness attempts stopped at authentication and an unlisted settings GET;
+no guards were weakened. The final harness included both prerequisites.
+
+Only frontend was updated with the built image. Other 6 service container/image
+identities are unchanged; .env SHA matches the pilot checkpoint. Existing database
+volumes and data were not recreated. Secret scan PASS. Evidence (ignored):
+.tools/rules-timezone-ui-20261021/ (browser.json, before.json, after.json, build.txt).
+After refresh, reopening the saved v2 simulation should show America/Los_Angeles
+in its header. LIVE remains blocked by attribution and the existing safety gates.

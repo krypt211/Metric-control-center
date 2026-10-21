@@ -441,7 +441,7 @@ export default function SmartRules() {
               </select>
             </label>
             <p className="card-note">
-              Europe/Moscow — календарь отчёта; timezone кабинета видна в
+              Календарь отчёта определяется выбранным профилем; timezone кабинета видна в
               результате. Сегодня всегда требует проверки полноты. UNKNOWN
               остаётся неизвестным даже в OR. Реальное выполнение всегда
               запрещено.
@@ -578,7 +578,10 @@ export default function SmartRules() {
           <>
             <p>
               DRY RUN · версия правила {simulation.rule_revision} ·{" "}
-              {simulation.start} — {simulation.end} · Europe/Moscow ·{" "}
+              {simulation.start} — {simulation.end} ·{" "}
+              {simulation.reporting_timezone === "PROFILE_SCOPED"
+                ? "По календарям профилей"
+                : simulation.reporting_timezone || "Календарь не указан"} ·{" "}
               {formatTime(simulation.created_at)} · проверено {simulation.total}{" "}
               · без профиля {simulation.missing_profiles}
             </p>
