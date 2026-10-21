@@ -142,3 +142,15 @@ AI_AUTOPILOT_ALLOWED=false. Дальнейших рекламных действ
 MANUAL OWN-STATUS ROUNDTRIP: CONFIRMED FOR THIS AD ONLY.
 PARENTS: PAUSED / PAUSED. AD: ACTIVE.
 AUTOMATED/AUTHORITATIVE VERIFICATION: NOT ESTABLISHED.
+
+## После ручного пилота: подготовка правил
+
+Пользователь подтвердил видимый статус «Группа объявлений отключена»; effective
+ADSET_PAUSED записан отдельным событием без выдуманного времени наблюдения.
+После исходного окна исполнения существующий recovery сохранил UNKNOWN /
+MANUAL_READBACK_DEADLINE. Ручные подтверждения переключателей не удалялись;
+подменять ими authoritative ownership правил нельзя.
+
+По отдельному выбору пользователя создано выключенное DRY RUN правило на Creo 03
+с существующим IT-профилем. Новых рекламных запросов нет.
+[Результат и блокеры проверки правил](../rules/CREO03_IT_RULE_DRY_RUN_2026-10-21.md).

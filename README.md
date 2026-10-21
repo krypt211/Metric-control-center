@@ -126,3 +126,6 @@ are still required. No advertising WRITE has been executed.
 
 [Подготовка обратного ENABLE_AD пилота](docs/integrations/METRICFLOW_EXPERIMENTAL_ENABLE_PREPARATION_2026-10-21.md)
 — отдельное согласование, LIVE не запущен.
+
+[Creo 03 — отдельное IT DRY RUN правило и проверка блокеров](docs/rules/CREO03_IT_RULE_DRY_RUN_2026-10-21.md).
+Правило выключено; новые рекламные команды не запускались.
