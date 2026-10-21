@@ -110,3 +110,24 @@ Source implementation commit be48ec4; дополнительных source изм
 
 CURRENT STATUS: GROUP ENABLE ACKNOWLEDGED; MANUAL READBACK PENDING.
 ADSET ENABLE POST: 1. ADVERTISING WRITE REQUESTS TOTAL: 3.
+
+## Исправленная ручная сверка после обновления Ads Manager
+
+21.10.2026 в 18:38:41 МСК записан ответ пользователя: группа включилась;
+предыдущий ответ «остаётся выключенной» был ошибочным из-за необновлённой страницы.
+Для группы 120247730105950571 сохранено отдельное локальное audit-событие
+pilot_manual_adset_target_confirmed_after_refresh, configured_status=ACTIVE,
+matches_target=true, source=USER_REPLY_CORRECTION_AFTER_REFRESH.
+
+Это пользовательская сверка переключателя, а не authoritative API readback.
+Точное время наблюдения, актуальное состояние кампании и effective статус группы
+в исправлении не указаны; эти поля не выдумывались. Запрошено дополнение.
+Формальный статус на момент записи: verifying, revision 9,
+SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK; execution live_acknowledged.
+Окно первоначальной проверки не продлевалось, server-side gates не обходились.
+Никаких новых provider GET/POST для этой сверки не выполнено. Глобальные четыре
+защитных флага проверены и сохранены. Рекламных исполнений по-прежнему всего 3.
+
+CURRENT MANUAL RESULT: USER CONFIRMED GROUP TOGGLE ACTIVE AFTER REFRESH.
+FORMAL READBACK: INCOMPLETE (campaign/effective status and observation time missing).
+NEW ADVERTISING WRITE REQUESTS: 0. TOTAL: 3.
