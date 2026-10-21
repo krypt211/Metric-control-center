@@ -131,3 +131,27 @@ SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK; execution live_acknowledged.
 CURRENT MANUAL RESULT: USER CONFIRMED GROUP TOGGLE ACTIVE AFTER REFRESH.
 FORMAL READBACK: INCOMPLETE (campaign/effective status and observation time missing).
 NEW ADVERTISING WRITE REQUESTS: 0. TOTAL: 3.
+
+## Полная ручная сверка пользователя
+
+В 18:48:35 МСК 21.10.2026 сохранено дополнение пользователя: кампания выключена,
+показ кампании прекращён; проверено «только что». Вместе с предыдущим исправлением
+это подтверждает вручную: группа 120247730105950571 ACTIVE, кампания
+120247730079240571 PAUSED, effective статус группы нормализован как CAMPAIGN_PAUSED.
+Время observed_at — серверное время записи ответа «только что», а не независимая
+метка времени Meta; происхождение этой оценки отдельно зафиксировано в audit.
+
+Применён существующий record_manual_readback, без provider HTTP. Полная сверка
+записана позже исходного deadline 18:40:04 МСК: request unknown, revision 10,
+control MANUAL_OBSERVATION_OUTCOME_UNKNOWN, execution live_unknown, error_code null.
+Никакой ошибки провайдера этим не установлено: формальная неопределённость связана
+с поздней полной сверкой, при наличии HTTP ACK и пользовательского подтверждения.
+Deadline, прежние события и число попыток не изменялись; API authority и владение
+паузой для Rule Engine не создавались. Историческое незавершённое описание выше
+относится к предыдущим контрольным точкам, а актуальный результат приведён здесь.
+
+FINAL MANUAL RESULT: ADSET ACTIVE; CAMPAIGN PAUSED; DELIVERY BLOCKED BY CAMPAIGN.
+FORMAL PILOT RESULT: UNKNOWN (complete manual readback recorded after deadline).
+GLOBAL ACTIONS: DISABLED; LOCAL_READ_ONLY=true; AI flags=false.
+NEW PROVIDER HTTP REQUESTS: 0. ADVERTISING WRITE REQUESTS TOTAL: 3.
+Evidence: .tools/adset-enable-pilot-20261021/manual-complete-readback.json (ignored).
