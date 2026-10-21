@@ -150,3 +150,35 @@ UNKNOWN или создать pause ownership для правил. Причин�
 Новый итог: MANUAL/READ CONFLICT; OUTCOME UNKNOWN; NO RESEND.
 ADVERTISING WRITE REQUESTS TOTAL: 1.
 Additional diagnostic GET: 1. Код не менялся; unit-тесты повторно не запускались.
+
+## Уточнение объекта и положительная поздняя сверка
+
+После сопоставления точных ID пользователь подтвердил нужную кампанию
+120247730079240571 и объявление #71012012_EGR_Creo 03. На вопрос о собственном
+переключателе AD 120247730105960571 ответил: «выключен».
+120247730105950571 — родительская группа «3», а не ID объявления; это проверено
+локальными entities/adsets/ads и иерархией. Журнал физической отправки подтверждает
+POST именно на разрешённый AD 120247730105960571, без смены цели.
+
+Текущая ручная сверка теперь совпадает с диагностическим MetricFlow READ: собственный
+статус AD PAUSED. Предыдущее отрицательное сообщение заменено последующим уточнением
+пользователя; его исторический аудит не удалялся. Нельзя достоверно восстановить,
+какой переключатель был осмотрен ранее или точный момент смены статуса. Точное время
+новой сверки и effective status не сообщались и не подставлялись из старого снимка.
+
+В БД добавлен pilot_late_manual_target_confirmed с matches_target=true,
+configured_status=PAUSED, source USER_REPLY_AFTER_ID_CLARIFICATION, observed_at=null.
+Срок первоначального permit уже истёк: request остаётся unknown / revision 10,
+execution live_unknown / MANUAL_READBACK_DEADLINE. Позднее наблюдение не превращает
+проверку в своевременный authoritative readback и не создаёт pause ownership правил.
+
+Результат ограниченного опыта: один PAUSE принят HTTP 200, после него выключенный
+переключатель нужного AD подтверждён пользователем; MetricFlow также сообщает PAUSED.
+Это эмпирическое подтверждение для данного AD и операции, не общее подтверждение
+namespace, ENABLE_AD, Campaign/AdSet WRITE или автоматического Rule Engine.
+Глобальные ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false сохранены. Новых provider GET/POST не выполнялось.
+
+FINAL OBSERVATION: TARGET PAUSED CONFIRMED MANUALLY (LATE).
+FORMAL EXECUTION: UNKNOWN — ORIGINAL READBACK DEADLINE EXPIRED.
+ADVERTISING WRITE REQUESTS TOTAL: 1. ENABLE NOT AUTHORIZED / NOT EXECUTED.
