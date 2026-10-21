@@ -161,3 +161,11 @@ test_smart_rules, test_rule_targets, test_smart_recommendations — 98 PASS, 99.
 Secret scan PASS; git diff --check PASS. Production-код не менялся;
 backend/frontend/Docker/Playwright не перезапускались ради документации и DB-only
 симуляции. Предыдущие результаты относятся к своим этапам, не к этому повтору.
+
+## Последующее READ-обновление и исправление календаря
+
+Актуальный следующий этап: [READ refresh and isolated IT timezone](CREO03_READ_REFRESH_AND_IT_TIMEZONE_2026-10-21.md).
+Правило v2 использует отдельную копию IT-профиля America/Los_Angeles.
+Историческое окно штатно обновлено: новая симуляция KEEP, окно полное,
+статус свежий; ATTRIBUTION_UNVERIFIED и запрет LIVE сохраняются.
+Предыдущие DATA_STALE результаты выше сохранены как история этапов.
