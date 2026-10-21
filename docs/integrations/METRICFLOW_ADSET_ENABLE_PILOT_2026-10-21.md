@@ -71,3 +71,42 @@ are not modified. Before group execution advertising POST total remains 2.
 
 Evidence (ignored): .tools/adset-enable-pilot-20261021/.
 STATUS AT THIS CHECKPOINT: GROUP PILOT PREPARED; ONE USER-AUTHORIZED ATTEMPT PENDING.
+
+## Единственная разрешённая LIVE попытка
+
+21.10.2026 15:30:44 UTC / 18:30:44 MSK отправлен ровно один:
+
+```http
+POST https://metricflowit.click/api/v1/entities/120247730105950571/enable
+Content-Type: application/json
+
+{"level":"adset"}
+```
+
+После durable claim перед ним выполнены три GET catalogs, все 200; кампания и группа
+повторно PAUSED, состав из одного ACTIVE AD не изменился. Получен HTTP 200,
+existing typed adapter принял success=true с точным entity_id группы, без job.
+Completed_at 15:30:46 UTC. Новых AD или Campaign POST нет; ничего не повторялось.
+
+Request 39836b5b-296f-4896-917c-3ae2b48eb536: verifying, revision 9,
+control SYNC_ACKNOWLEDGED_NEEDS_MANUAL_READBACK, attempts=1, wire_spent=true,
+execution live_acknowledged, error_code=null. Окно до 15:40:04 UTC / 18:40:04 MSK.
+ACK не равен подтверждённому изменению переключателя.
+
+Пользователю запрошена сверка именно вкладки «Группы объявлений», группы «3» / ID
+120247730105950571: группа включена, кампания всё ещё выключена, effective статус
+«Кампания выключена». Никаких переключений вручную. Ожидается ручной ответ.
+Новые API GET для наблюдения/опроса не запускались; только локальные SELECT/runtime.
+
+После одноразового процесса backend и CM снова проверены: ACTIONS_ENABLED=false,
+LOCAL_READ_ONLY=true, AI_ENABLED=false, AI_AUTOPILOT_ALLOWED=false, WRITE_DISABLED,
+global capability BLOCKED. .env SHA неизменён, Meta disconnected/disabled revision 4.
+Rule/profile настройки не менялись. Из 14 защищённых таблиц 9 совпали полностью;
+изменились только requests/logs/executions и результат/audit проверки WRITE ключа.
+Две попытки GET /me не являются рекламными retry. Новый ActionExecution ровно 1.
+Сохранены 3 исторических исполнения: AD PAUSE, AD ENABLE, ADSET ENABLE; ни одного resend.
+Playwright Edge smoke 3 PASS (login/auth redirect/page errors), provider HTTP=0.
+Source implementation commit be48ec4; дополнительных source изменений после тестов нет.
+
+CURRENT STATUS: GROUP ENABLE ACKNOWLEDGED; MANUAL READBACK PENDING.
+ADSET ENABLE POST: 1. ADVERTISING WRITE REQUESTS TOTAL: 3.
