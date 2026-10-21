@@ -512,3 +512,47 @@ class SmartRulesApiTests(EconomicsApiTests):
 
 
 from services.storage.models import User
+
+
+@pytest.mark.parametrize(
+    "cpl,attribution,expected",
+    [
+        ("5.38333333", None, "KEEP"),
+        ("9", None, "REVIEW"),
+        (
+            "9",
+            {
+                "action_attribution_windows": ["7d_click", "1d_view"],
+                "action_report_time": "impression",
+            },
+            "WOULD_PAUSE",
+        ),
+    ],
+)
+def test_cpl_attribution_gate_keeps_false_and_holds_true(cpl, attribution, expected):
+    """Synthetic attribution evidence never authorizes an advertising action."""
+    rule = config(
+        expression={
+            "children": [
+                {
+                    "kind": "condition",
+                    "type": "CPL_ABOVE_LIMIT",
+                    "limit": "custom",
+                    "value": "8.81355932",
+                }
+            ]
+        }
+    )
+    row = facts(
+        spend=str(D(cpl) * 10),
+        actual_cpl=cpl,
+        source_attribution=attribution,
+    )
+
+    result = decision(rule, row, CONFIG, NOW)
+
+    assert result["status"] == expected
+    assert ("ATTRIBUTION_UNVERIFIED" in result["reason_codes"]) == (attribution is None)
+    assert result["real_action"] is False
+    assert result["action_eligibility"] is False
+    assert "DRY_RUN_ONLY" in result["future_action_blockers"]

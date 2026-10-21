@@ -130,3 +130,7 @@ volumes and data were not recreated. Secret scan PASS. Evidence (ignored):
 .tools/rules-timezone-ui-20261021/ (browser.json, before.json, after.json, build.txt).
 After refresh, reopening the saved v2 simulation should show America/Los_Angeles
 in its header. LIVE remains blocked by attribution and the existing safety gates.
+
+Attribution follow-up: [CPL attribution readiness audit](CREO03_CPL_ATTRIBUTION_AUDIT_2026-10-21.md).
+The v2 KEEP manual check is accepted. An attribution-specific regression confirms
+true CPL with unknown attribution stays REVIEW; the live evidence gap remains open.
