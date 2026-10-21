@@ -152,3 +152,11 @@ Frontend typecheck PASS; backend/CM image build PASS; security scan и diff chec
 
 FINAL STATUS: EXPERIMENTAL PREPARATION READY; LIVE NOT AUTHORIZED.
 ADVERTISING WRITE REQUESTS: 0.
+
+## Первый LIVE результат — 21.10.2026
+
+После отдельного явного разрешения пользователя выполнен один PAUSE_AD выбранного
+AD: HTTP 200, typed ACK принят, статус verifying. Повторных POST нет. Глобальные
+флаги по-прежнему закрыты. Фактическое отключение ожидает ручной сверки.
+[Результат единственной попытки](METRICFLOW_FIRST_EXPERIMENTAL_PAUSE_RESULT_2026-10-21.md).
+Состояние «WRITE=0» выше — исторический результат подготовки; текущий суммарный WRITE=1.
