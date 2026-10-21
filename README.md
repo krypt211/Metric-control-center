@@ -129,3 +129,6 @@ are still required. No advertising WRITE has been executed.
 
 [Creo 03 — отдельное IT DRY RUN правило и проверка блокеров](docs/rules/CREO03_IT_RULE_DRY_RUN_2026-10-21.md).
 Правило выключено; новые рекламные команды не запускались.
+
+[One-group ENABLE pilot](docs/integrations/METRICFLOW_ADSET_ENABLE_PILOT_2026-10-21.md):
+explicitly scoped experimental group test under a paused campaign; global WRITE closed.

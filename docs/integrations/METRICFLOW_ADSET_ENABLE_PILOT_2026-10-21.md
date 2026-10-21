@@ -1,0 +1,73 @@
+﻿# Single-group ENABLE pilot — 21.10.2026
+
+## Scope and authorization
+
+User requested: «можешь попробовать еще включить группу обьявлений» after the
+single-AD PAUSE/ENABLE acceptance in the same hierarchy. This authorizes one
+experimental ENABLE_ADSET for group 120247730105950571 (name 3), account
+act_1047962734516123. Campaign 120247730079240571 must stay PAUSED.
+No campaign enable, child AD write, budget/bid, retries or automation is authorized.
+
+Official OpenAPI anonymous GET was rechecked: enable endpoint and EntityActionRequest
+unchanged, SHA256 f52bc8ca0691fa0e2f2b5a5de06aa74a897546b88705ee16851859138a2f3327.
+[Official source](https://metricflowit.click/api/v1/openapi.json?lang=en).
+Body level=adset is documented. WRITE ID namespace still explicitly unverified:
+UNVERIFIED_CANDIDATE_FACEBOOK_ADSET_ID. AD acceptance does not prove every group ID.
+
+Existing ActionEngine, durable claim, quota/cooldown, encrypted WRITE credential,
+shared POST timeout and UNKNOWN/no-resend are reused. No second executor was added.
+The additional private contract is limited to ENABLE_ADSET, exact group/account,
+level=adset and distinct AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_ADSET_WITH_UNVERIFIED_ID.
+Normal and verified AD-only contracts do not gain general group/campaign admission.
+
+## Guards
+
+- Fresh, complete campaigns/adsets/ads catalogs with identical source timestamp.
+- Campaign configured/effective PAUSED/PAUSED; group PAUSED/PAUSED.
+- Correct account/hierarchy and sorted pinned child inventory (ID + own status).
+- After durable claim: three GETs repeat all guards; child changes stop POST.
+- Single synchronous POST /api/v1/entities/120247730105950571/enable,
+  JSON {"level":"adset"}; no async job, redirect or retry.
+- Concurrency 1, maximum 3 pre-POST GET + 1 POST; window <=600s,
+  shared POST-stage timeout <=30s. Any uncertainty stops without resend.
+- API scope alone is not asset permission; management remains USER_ATTESTED.
+- Cached MetricFlow READ is not an atomic Meta lock; it cannot exclude outside
+  operators changing the campaign after the snapshot.
+
+Previous child ENABLE request 48e04f4a-1991-4e8b-8a09-7876044fa20c was locally reviewed
+only after spent wire, expired window, original live_unknown/MANUAL_READBACK_DEADLINE,
+three actual manual observations and fresh ACTIVE child inside this exact group.
+ActionRequest is MANUALLY_REVIEWED; original execution outcome/error, wire_spent,
+OUTCOME_UNKNOWN and historical logs are retained. No Rule Engine ownership is created.
+
+## Preparation measured
+
+Request 39836b5b-296f-4896-917c-3ae2b48eb536, revision 1, DRAFT.
+Baseline 21.10.2026 15:25:04 UTC / 18:25:04 MSK:
+campaign PAUSED, group PAUSED, only child AD 120247730105960571 ACTIVE.
+Baseline expires 15:40:04 UTC; draft expires 15:44:07 UTC.
+First credential GET /me returned PROVIDER_UNAVAILABLE; one bounded READ recheck
+succeeded (SCOPES_VERIFIED/active_paid), then three catalog GETs succeeded.
+No advertising POST was sent during preparation. No keys/revisions changed.
+
+Backend and Credential Manager updated with image
+metric-control-center-experimental-adset-20261021:prepared, based on the existing
+working image, unchanged dependencies. Source hashes of 13 modules match locally
+in both services. Before preparation all 14 protected tables matched exactly.
+Other five service containers and .env were not changed. No migrations/role grants.
+
+Tests: new group 10 PASS; prior experimental/enable/contract regressions 75 PASS;
+private API/admin/CSRF and production pilot 93 PASS. Isolated restored PostgreSQL
+PASS: AD PAUSE -> AD ENABLE -> local review -> group mock ENABLE, no resend,
+UNKNOWN preserved, facts unchanged, private schema removed in finally.
+Group tests include wrong level/ID/method, parent/children change and timeout.
+All test HTTP is MockTransport. Ruff check/format and secret/diff scans PASS.
+
+ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false in running services. Meta LIVE remains disconnected.
+The future authorized attempt uses enabled flags only in one bounded exec process.
+Rule TEST - Creo 03 - PAUSE - IT remains disabled DRY_RUN; existing profiles/rules
+are not modified. Before group execution advertising POST total remains 2.
+
+Evidence (ignored): .tools/adset-enable-pilot-20261021/.
+STATUS AT THIS CHECKPOINT: GROUP PILOT PREPARED; ONE USER-AUTHORIZED ATTEMPT PENDING.

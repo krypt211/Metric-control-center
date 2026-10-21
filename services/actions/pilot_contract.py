@@ -63,6 +63,7 @@ class PilotContract:
     expires_at: datetime
     phase: Literal["AUTHORIZE", "EXECUTE"]
     experimental: bool = False
+    entity_level: Literal["ad", "adset"] = "ad"
 
     @property
     def actor(self) -> dict:
@@ -78,6 +79,7 @@ class PilotContract:
             "request_id": self.request_id,
             "entity_id": self.entity_id,
             "operation": self.operation,
+            "entity_level": self.entity_level,
             "credential_revision": self.credential_revision,
             "credential_digest": self.credential_digest,
             "evidence_id": self.evidence_id,
@@ -133,6 +135,7 @@ class PilotContract:
         proof = session.get(ActionLog, evidence_id)
         if self.experimental:
             from services.actions.experimental import (
+                ADSET_NAMESPACE,
                 NAMESPACE,
                 review_for,
             )
@@ -144,7 +147,11 @@ class PilotContract:
                 session, entity, session.get(AdAccount, entity.account_id)
             )
             review = review_for(session, row, current, now)
-            namespace = NAMESPACE
+            namespace = (
+                ADSET_NAMESPACE if self.operation == "ENABLE_ADSET" else NAMESPACE
+            )
+            if current["entity_level"] != self.entity_level:
+                raise WriteDisabled("PILOT_LEVEL_CHANGED")
         else:
             review = reviewed_contract(proof.details, self.actor_id, self.operation)
             namespace = "PROVIDER_AD_ID"
@@ -200,8 +207,13 @@ class PilotContract:
             self.phase != "EXECUTE"
             or method != "POST"
             or path != f"entities/{self.entity_id}/{operation}"
-            or (self.experimental and self.operation not in ("PAUSE_AD", "ENABLE_AD"))
-            or payload != {"level": "ad"}
+            or (
+                self.experimental
+                and self.operation not in ("PAUSE_AD", "ENABLE_AD", "ENABLE_ADSET")
+            )
+            or self.entity_level
+            != ("adset" if self.operation == "ENABLE_ADSET" else "ad")
+            or payload != {"level": self.entity_level}
             or params not in (None, {})
         ):
             raise WriteDisabled("PILOT_WIRE_CONTRACT_MISMATCH")
@@ -359,6 +371,7 @@ def load_contract(
             expires_at=expiry,
             phase=phase,
             experimental=experimental,
+            entity_level="adset" if row.action == "ENABLE_ADSET" else "ad",
         )
         contract._verify(session)
         return contract

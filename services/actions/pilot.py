@@ -36,12 +36,13 @@ class PilotAuthorizationInput(BaseModel):
     credential_revision: int = Field(ge=1)
     account_id: str = Field(pattern=r"^act_[0-9]{1,128}$")
     entity_id: str = Field(pattern=r"^[0-9]{1,128}$")
-    operation: Literal["PAUSE_AD", "ENABLE_AD"]
+    operation: Literal["PAUSE_AD", "ENABLE_AD", "ENABLE_ADSET"]
     expected_status: Literal["ACTIVE", "PAUSED"]
     statement: Literal[
         "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST",
         "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID",
         "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_WITH_UNVERIFIED_ID",
+        "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_ADSET_WITH_UNVERIFIED_ID",
     ]
 
 
@@ -61,11 +62,21 @@ def require_ready(
         raise ActionRejected("PILOT_ADMIN_REQUIRED")
     if (
         not entity
-        or entity.kind != "ad"
+        or entity.kind
+        != (
+            "adset"
+            if row.action == "ENABLE_ADSET" and bool(contract and contract.experimental)
+            else "ad"
+        )
         or not account
         or account.provider != "metricflow"
         or row.value is not None
-        or row.action not in ("PAUSE_AD", "ENABLE_AD")
+        or row.action
+        not in (
+            ("ENABLE_ADSET",)
+            if row.action == "ENABLE_ADSET" and bool(contract and contract.experimental)
+            else ("PAUSE_AD", "ENABLE_AD")
+        )
         or row.provenance.get("rule_source")
     ):
         raise ActionRejected("MANUAL_SINGLE_AD_STATUS_ONLY")
@@ -105,20 +116,34 @@ def require_external_evidence(
         or row.workspace_id != actor["workspace"]
         or row.initiator_id != actor["id"]
         or not entity
-        or entity.kind != "ad"
+        or entity.kind
+        != ("adset" if row.action == "ENABLE_ADSET" and experimental else "ad")
         or not account
         or account.workspace_id != actor["workspace"]
         or account.provider != "metricflow"
         or row.value is not None
-        or row.action not in ("PAUSE_AD", "ENABLE_AD")
+        or row.action
+        not in (
+            ("ENABLE_ADSET",)
+            if row.action == "ENABLE_ADSET" and experimental
+            else ("PAUSE_AD", "ENABLE_AD")
+        )
         or row.provenance.get("rule_source")
     ):
         raise ActionRejected("PILOT_IDENTITY_OR_PERMISSION_CHANGED")
     if experimental:
-        from services.actions.experimental import EVENT, NAMESPACE, REVOKED
+        from services.actions.experimental import (
+            ADSET_NAMESPACE,
+            EVENT,
+            NAMESPACE,
+            REVOKED,
+        )
 
         events = (EVENT, REVOKED)
-        accepted_event, namespace = EVENT, NAMESPACE
+        accepted_event, namespace = (
+            EVENT,
+            ADSET_NAMESPACE if row.action == "ENABLE_ADSET" else NAMESPACE,
+        )
     else:
         events = (EVIDENCE_EVENT, "pilot_external_evidence_revoked")
         accepted_event, namespace = EVIDENCE_EVENT, "PROVIDER_AD_ID"
