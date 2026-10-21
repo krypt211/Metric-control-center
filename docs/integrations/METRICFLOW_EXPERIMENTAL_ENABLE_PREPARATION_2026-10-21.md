@@ -123,3 +123,12 @@ write_credential_audit +1, обновлён результат проверки 
 
 FINAL STATUS: ENABLE PILOT PREPARED — EXPLICIT AUTHORIZATION REQUIRED.
 ENABLE LIVE POST: 0. ADVERTISING WRITE REQUESTS TOTAL: 1 (PREVIOUS PAUSE ONLY).
+
+## Отдельно разрешённый LIVE ENABLE
+
+После отдельного согласия пользователя устаревший DRAFT заменён свежей карточкой
+48e04f4a-1991-4e8b-8a09-7876044fa20c. Выполнен ровно один ENABLE POST в 16:27:59 МСК,
+HTTP 200 и typed ACK приняты. Ручной readback ожидается, повторов нет.
+[Результат ENABLE](METRICFLOW_FIRST_EXPERIMENTAL_ENABLE_RESULT_2026-10-21.md).
+Статусы «ENABLE=0 / WRITE total=1» выше относятся к подготовке; теперь total=2
+(один PAUSE и один ENABLE). Глобальные WRITE-флаги остаются закрытыми.
