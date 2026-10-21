@@ -105,3 +105,48 @@ PostgreSQL race/restricted-role mock harness, frontend typecheck и Playwright s
 
 FINAL STATUS: ACKNOWLEDGED; MANUAL READBACK PENDING; NO RESEND.
 ADVERTISING WRITE REQUESTS: 1.
+
+## Ручная сверка и противоречие источников — 21.10.2026
+
+Пользователь ответил: «AD по-прежнему включено». Это отрицательная ручная сверка:
+собственный статус ACTIVE не совпадает с целевым PAUSED. Точное время наблюдения,
+effective status и повторное подтверждение обоих родителей не были сообщены;
+эти значения не выдумывались. В ActionLog добавлено pilot_manual_status_mismatch_reported
+с observed_at=null и USER_REPLY. Полный record_manual_readback с обязательным effective
+status не использован для неполного ответа.
+
+На момент локальной фиксации 11:17 UTC окно permit уже истекло. Существующий
+ActionEngine.verify_pending штатно перевёл запрос в unknown, revision 10,
+control OUTCOME_UNKNOWN, execution live_unknown / MANUAL_READBACK_DEADLINE.
+Это техническая причина закрытия окна, а не диагностированный ответ MetricFlow.
+Сохранены attempts=1, wire_spent=true. ACK HTTP 200 остаётся историческим фактом.
+
+Один диагностический READ через отдельный READ-ключ, с общей квотой и retries=0,
+получил именно AD 120247730105960571:
+
+- configured_status PAUSED;
+- effective_status PAUSED;
+- parent_id 120247730105950571; campaign_id 120247730079240571;
+- source_updated_at 21.10.2026 11:16:04 UTC / 14:16:04 МСК;
+- retrieved_at 11:19:04 UTC / 14:19:04 МСК.
+
+Ранние локальные диагностические запуски остановились до GET. Был обнаружен сохранённый
+READ health error / PROVIDER_READ_FAILED после сетевого TransportUnavailable штатного
+sync в 11:10 UTC; предыдущий sync 11:03 UTC был успешным. Однократный GET каталога
+успешен, но health вручную не переписывался. Cooldown отсутствовал, лимит не менялся.
+
+MetricFlow READ — кэшированное состояние провайдера, не прямой authoritative Meta
+readback. Оно противоречит пользовательской сверке Ads Manager. Нельзя объявить PAUSE
+успешно проверенным, выбрать удобный источник, подтвердить WRITE namespace, снять
+UNKNOWN или создать pause ownership для правил. Причина расхождения пока неизвестна:
+данные не позволяют отличить задержку/кэш, отображение другого объекта или проблему
+на стороне провайдера. Гипотезы не считаются диагнозом.
+
+В ActionLog добавлено pilot_read_manual_conflict_recorded; UNKNOWN сохранён.
+Запрошена повторная ручная сверка точного Ad ID после обновления страницы Ads Manager
+с указанием собственного переключателя и времени. Ни PAUSE, ни ENABLE не повторялись.
+Глобальные четыре safety flags сохранены; Meta LIVE не подключался.
+
+Новый итог: MANUAL/READ CONFLICT; OUTCOME UNKNOWN; NO RESEND.
+ADVERTISING WRITE REQUESTS TOTAL: 1.
+Additional diagnostic GET: 1. Код не менялся; unit-тесты повторно не запускались.
