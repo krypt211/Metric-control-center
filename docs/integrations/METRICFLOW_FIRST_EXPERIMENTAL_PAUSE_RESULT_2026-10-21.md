@@ -182,3 +182,12 @@ AI_AUTOPILOT_ALLOWED=false сохранены. Новых provider GET/POST не
 FINAL OBSERVATION: TARGET PAUSED CONFIRMED MANUALLY (LATE).
 FORMAL EXECUTION: UNKNOWN — ORIGINAL READBACK DEADLINE EXPIRED.
 ADVERTISING WRITE REQUESTS TOTAL: 1. ENABLE NOT AUTHORIZED / NOT EXECUTED.
+
+## Подготовка обратного теста
+
+При отдельной подготовке ENABLE прежняя ActionRequest локально закрыта как
+MANUALLY_REVIEWED по поздней ручной сверке и свежему READ. Исторический
+ActionExecution live_unknown / MANUAL_READBACK_DEADLINE и spent wire сохранены.
+Это не своевременный API readback и не право на повтор PAUSE.
+[Ограничения и карточка ENABLE](METRICFLOW_EXPERIMENTAL_ENABLE_PREPARATION_2026-10-21.md).
+ENABLE не исполнен; суммарный рекламный WRITE остаётся 1.

@@ -165,8 +165,10 @@ class PilotContract:
             if control.get("provider_contract") != self.pin():
                 raise WriteDisabled("PILOT_CONTRACT_PIN_CHANGED")
             check_authorization(control, self.actor)
+            from services.actions.experimental import authorization_statement
+
             expected_statement = (
-                "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID"
+                authorization_statement(self.operation)
                 if self.experimental
                 else "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST"
             )
@@ -198,7 +200,7 @@ class PilotContract:
             self.phase != "EXECUTE"
             or method != "POST"
             or path != f"entities/{self.entity_id}/{operation}"
-            or (self.experimental and self.operation != "PAUSE_AD")
+            or (self.experimental and self.operation not in ("PAUSE_AD", "ENABLE_AD"))
             or payload != {"level": "ad"}
             or params not in (None, {})
         ):

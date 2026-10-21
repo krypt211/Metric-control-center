@@ -41,6 +41,7 @@ class PilotAuthorizationInput(BaseModel):
     statement: Literal[
         "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST",
         "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID",
+        "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_WITH_UNVERIFIED_ID",
     ]
 
 
@@ -241,8 +242,10 @@ def authorize_pilot(
         ActionSafetyGate.require_write()
     contract = load_contract(engine, actor, request_id, phase="AUTHORIZE")
     ActionSafetyGate.require_write(contract)
+    from services.actions.experimental import authorization_statement
+
     expected_statement = (
-        "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID"
+        authorization_statement(contract.operation)
         if contract and contract.experimental
         else STATEMENT
     )

@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, Self
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from sqlalchemy import select
 
 from services.actions.factory import checked_write_state, credential_digest
@@ -24,6 +31,17 @@ from services.storage.models import ActionLog, ActionRequest, AdAccount, Entity,
 EVENT = "pilot_experimental_prepared"
 REVOKED = "pilot_experimental_revoked"
 STATEMENT = "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID"
+ENABLE_STATEMENT = "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_WITH_UNVERIFIED_ID"
+
+
+def authorization_statement(operation: str) -> str:
+    if operation == "PAUSE_AD":
+        return STATEMENT
+    if operation == "ENABLE_AD":
+        return ENABLE_STATEMENT
+    raise WriteDisabled("EXPERIMENTAL_OPERATION_INVALID")
+
+
 PREPARE = "PREPARE_EXPERIMENT_ONLY_NO_POST"
 NAMESPACE = "UNVERIFIED_CANDIDATE_FACEBOOK_AD_ID"
 
@@ -37,6 +55,18 @@ class ExperimentalPrepareInput(StrictModel):
     credential_revision: int = Field(ge=1)
     management_confirmed: Literal[True]
     statement: Literal["PREPARE_EXPERIMENT_ONLY_NO_POST"]
+    operation: Literal["PAUSE_AD", "ENABLE_AD"] = "PAUSE_AD"
+    previous_pause_request_id: str | None = Field(
+        default=None, min_length=1, max_length=36
+    )
+
+    @model_validator(mode="after")
+    def require_previous_pause(self) -> Self:
+        if (self.operation == "ENABLE_AD") != bool(self.previous_pause_request_id):
+            raise ValueError(
+                "ENABLE requires a previous PAUSE; PAUSE cannot reference one"
+            )
+        return self
 
     @field_validator("management_confirmed", mode="before")
     @classmethod
@@ -55,8 +85,8 @@ class Baseline(StrictModel):
     campaign_effective: Literal["PAUSED"]
     adset_status: Literal["PAUSED"]
     adset_effective: Literal["PAUSED"]
-    ad_status: Literal["ACTIVE"]
-    ad_effective: Literal["ADSET_PAUSED"]
+    ad_status: Literal["ACTIVE", "PAUSED"]
+    ad_effective: Literal["ADSET_PAUSED", "PAUSED"]
     source_updated_at: str
 
     def fresh(self, now: datetime) -> None:
@@ -71,12 +101,31 @@ class Baseline(StrictModel):
 class ExperimentalReview(StrictModel):
     provider: Literal["metricflow"] = "metricflow"
     wire_revision: Literal["status-sync-v1"] = "status-sync-v1"
-    operation: Literal["PAUSE_AD"] = "PAUSE_AD"
+    operation: Literal["PAUSE_AD", "ENABLE_AD"] = "PAUSE_AD"
     entity_id_namespace: Literal["UNVERIFIED_CANDIDATE_FACEBOOK_AD_ID"] = NAMESPACE
     source_kind: Literal["USER_REQUESTED_EXPERIMENT"] = "USER_REQUESTED_EXPERIMENT"
     preparation_statement: Literal["PREPARE_EXPERIMENT_ONLY_NO_POST"]
     reviewed_by: str
     baseline: Baseline
+    previous_pause: dict | None = None
+
+    @model_validator(mode="after")
+    def validate_operation_baseline(self) -> Self:
+        require_operation_baseline(self.baseline, self.operation)
+        if (self.operation == "ENABLE_AD") != bool(self.previous_pause):
+            raise ValueError("Previous PAUSE reference does not match operation")
+        return self
+
+
+def require_operation_baseline(baseline: Baseline, operation: str) -> None:
+    expected = (
+        ("ACTIVE", "ADSET_PAUSED") if operation == "PAUSE_AD" else ("PAUSED", "PAUSED")
+    )
+    if (
+        operation not in ("PAUSE_AD", "ENABLE_AD")
+        or (baseline.ad_status, baseline.ad_effective) != expected
+    ):
+        raise WriteDisabled("EXPERIMENTAL_STATUS_OR_SHAPE_CHANGED")
 
 
 def selected(payload: dict, entity_id: str) -> dict:
@@ -177,7 +226,7 @@ def review_for(session, row, current: dict, now: datetime) -> ExperimentalReview
         raise WriteDisabled("EXPERIMENTAL_PREPARATION_INVALID") from None
     expected = identity_for(current)
     if (
-        row.action != "PAUSE_AD"
+        row.action != review.operation
         or row.value is not None
         or row.provenance.get("rule_source")
         or review.reviewed_by != row.initiator_id
@@ -186,6 +235,10 @@ def review_for(session, row, current: dict, now: datetime) -> ExperimentalReview
     ):
         raise WriteDisabled("EXPERIMENTAL_BINDING_CHANGED")
     review.baseline.fresh(now)
+    if review.operation == "ENABLE_AD":
+        from services.actions.experimental_reconciliation import require_previous_pause
+
+        require_previous_pause(session, row, review.previous_pause)
     return review
 
 
@@ -275,6 +328,7 @@ async def prepare_experiment(
         raise WriteDisabled("EXPERIMENTAL_READ_FAILED") from None
     finally:
         token = None
+    require_operation_baseline(baseline, body.operation)
     # Recheck key/routing/identity before committing preparation. No token in evidence.
     with engine.sessions() as s:
         state = checked_write_state(
@@ -288,6 +342,11 @@ async def prepare_experiment(
             != current
         ):
             raise WriteDisabled("EXPERIMENTAL_PREPARATION_RACE")
+    previous_pause = None
+    if body.operation == "ENABLE_AD":
+        from services.actions.experimental_reconciliation import review_previous_pause
+
+        previous_pause = review_previous_pause(engine, actor, body, baseline)
     draft = engine.prepare_manual(
         actor,
         ManualDraftInput(
@@ -295,8 +354,8 @@ async def prepare_experiment(
             account_id=account_local_id,
             meta_ad_id=baseline.ad_id,
             provider="metricflow",
-            operation="PAUSE_AD",
-            expected_status="ACTIVE",
+            operation=body.operation,
+            expected_status=baseline.ad_status,
             reason="Experimental pilot preparation only; WRITE ID is unverified",
         ),
         "experimental-" + str(uuid4()),
@@ -305,17 +364,21 @@ async def prepare_experiment(
         row = engine._locked_manual_row(s, actor, draft["id"])
         eid = str(uuid4())
         review = ExperimentalReview(
-            preparation_statement=PREPARE, reviewed_by=actor["id"], baseline=baseline
+            preparation_statement=PREPARE,
+            reviewed_by=actor["id"],
+            baseline=baseline,
+            operation=body.operation,
+            previous_pause=previous_pause,
         )
         proof = {
             "actor_id": actor["id"],
             "account_id": baseline.account_id,
             "entity_id": baseline.ad_id,
-            "operation": "PAUSE_AD",
+            "operation": body.operation,
             "credential_revision": body.credential_revision,
             "read_revision": current["credential_revision"],
             "entity_id_namespace": NAMESPACE,
-            "configured_status": "ACTIVE",
+            "configured_status": baseline.ad_status,
             "effective_status": baseline.ad_effective,
             "permission_source": "USER_ATTESTED",
             "management_confirmed": True,
@@ -336,7 +399,7 @@ async def prepare_experiment(
             "experimental": {"evidence_id": eid, "evidence_sha256": fingerprint(proof)},
             "captured": {
                 **current,
-                "status": "ACTIVE",
+                "status": baseline.ad_status,
                 "effective_status": baseline.ad_effective,
                 "status_refreshed_at": baseline.source_updated_at,
                 "status_source": "METRICFLOW_CATALOG_STATUS",
@@ -361,7 +424,9 @@ async def prepare_experiment(
             ).isoformat(),
             "max_post_attempts": 1,
             "max_prepost_get_attempts": 3,
-            "authorization_statement_required": STATEMENT,
+            "authorization_statement_required": authorization_statement(body.operation),
+            "operation": body.operation,
+            "previous_pause": previous_pause,
             "advertising_write_requests": 0,
         }
 
@@ -409,6 +474,7 @@ async def revalidate_before_post(contract, token: str, *, transport=None) -> Non
         before_request=reserve,
         transport=transport,
     )
+    require_operation_baseline(baseline, contract.operation)
     with contract.sessions.begin() as s:
         row = s.scalar(
             select(ActionRequest)

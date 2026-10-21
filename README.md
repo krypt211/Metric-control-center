@@ -123,3 +123,6 @@ are still required. No advertising WRITE has been executed.
 
 Экспериментальная подготовка одного MetricFlow PAUSE_AD (без разрешения LIVE):
 [карточка, ограничения и результаты проверок](docs/integrations/METRICFLOW_EXPERIMENTAL_PILOT_PREPARATION.md).
+
+[Подготовка обратного ENABLE_AD пилота](docs/integrations/METRICFLOW_EXPERIMENTAL_ENABLE_PREPARATION_2026-10-21.md)
+— отдельное согласование, LIVE не запущен.
