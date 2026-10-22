@@ -433,20 +433,12 @@ class ActionEngine:
             if row.provenance.get("controlled"):
                 raise ActionRejected("REHEARSAL_ALREADY_PREPARED")
             if mode == "LIVE_SINGLE_OPERATION":
-                from services.actions.manual import IN_FLIGHT
-                from services.actions.pilot import require_ready
+                from services.actions.pilot import (
+                    require_ready,
+                    require_workspace_available,
+                )
 
-                others = session.scalars(select(ActionRequest).where(
-                    ActionRequest.workspace_id == actor["workspace"],
-                    ActionRequest.id != row.id,
-                    ActionRequest.status.in_(("CONFIRMED", *IN_FLIGHT)),
-                )).all()
-                for other in others:
-                    other_mode = (other.provenance.get("controlled") or {}).get("mode")
-                    if other_mode == "MOCK_ONLY":
-                        continue  # Isolated synthetic rehearsals cannot dispatch LIVE.
-                    if other.status in IN_FLIGHT or other_mode == mode:
-                        raise ActionRejected("PILOT_WORKSPACE_CONFLICT")
+                require_workspace_available(session, actor["workspace"], row.id)
                 evidence_id = require_ready(session, actor, row, now, contract)
             if expires_at > datetime.fromisoformat(row.provenance["expires_at"]):
                 raise ActionRejected("REHEARSAL_EXCEEDS_DRAFT_WINDOW")

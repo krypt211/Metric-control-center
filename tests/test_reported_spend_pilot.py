@@ -490,3 +490,61 @@ def test_effective_parent_status_is_not_treated_as_own_switch(
     with sf() as s:
         assert s.get(EntityCurrentState, "ad").status == effective
     assert spend_case[0]["rows"][0]["status"] == "REVIEW"
+
+
+@pytest.mark.parametrize("terminal", ["cancel", "expired"])
+def test_unspent_terminal_draft_can_be_prepared_again(fixture, spend_case, terminal):
+    engine, sf, _vault, clock = fixture
+    first, _calls = prepare(fixture, spend_case)
+    if terminal == "cancel":
+        engine.transition_manual(
+            ACTOR, first["request_id"], "cancel", first["revision"]
+        )
+    else:
+        clock[0] += timedelta(minutes=16)
+        with sf.begin() as s:
+            s.get(EntityCurrentState, "ad").observed_at = clock[0]
+            s.get(WriteCredentialState, "default").checked_at = clock[0]
+        for payload in spend_case[2].values():
+            payload["meta"]["data_updated_at"] = clock[0].isoformat()
+    second, calls = prepare(fixture, spend_case)
+    assert second["request_id"] != first["request_id"]
+    assert calls == ["GET"] * 3
+    with sf() as s:
+        assert s.get(ActionRequest, first["request_id"]).status == (
+            "CANCELLED" if terminal == "cancel" else "EXPIRED"
+        )
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
+
+
+def test_spend_preparation_refuses_unknown_workspace_before_get(fixture, spend_case):
+    engine, sf, vault, clock = fixture
+    with sf.begin() as s:
+        s.add(
+            ActionRequest(
+                id="unfinished-parent",
+                workspace_id="default",
+                entity_id="adset",
+                initiator_id="admin",
+                idempotency_key="unfinished-parent",
+                action="ENABLE_ADSET",
+                status="unknown",
+                revision=1,
+                created_at=clock[0],
+                provenance={"controlled": {"mode": "LIVE_SINGLE_OPERATION"}},
+            )
+        )
+    calls = []
+    with pytest.raises(ActionRejected, match="PILOT_WORKSPACE_CONFLICT"):
+        asyncio.run(
+            prepare_experiment(
+                engine,
+                ACTOR,
+                input_body(spend_case),
+                vault=vault,
+                transport=transport(spend_case, calls),
+            )
+        )
+    assert not calls
+    with sf() as s:
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0

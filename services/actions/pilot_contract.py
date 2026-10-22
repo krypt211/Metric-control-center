@@ -312,7 +312,11 @@ def load_contract(
 ) -> PilotContract | None:
     """Load trusted proof, never accept evidence from the authorization request body."""
     from services.actions.factory import checked_write_state, credential_digest
-    from services.actions.pilot import EVIDENCE_EVENT, require_external_evidence
+    from services.actions.pilot import (
+        EVIDENCE_EVENT,
+        require_external_evidence,
+        require_workspace_available,
+    )
 
     if phase not in ("AUTHORIZE", "EXECUTE"):
         raise WriteDisabled("PILOT_CONTRACT_PHASE_INVALID")
@@ -341,6 +345,7 @@ def load_contract(
             or "contract_review" not in evidence.details
         ):
             return None  # Scope/tariff/manual consent alone cannot release the gate.
+        require_workspace_available(session, actor["workspace"], request_id)
         now = engine.clock()
         require_external_evidence(session, actor, row, now, experimental=experimental)
         if not experimental:

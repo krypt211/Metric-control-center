@@ -451,12 +451,19 @@ def prepare(
                         ActionRequest.entity_id == entity.id,
                     )
                 ).all()
+                from services.storage.models import ActionExecution
+
                 repeated = next(
                     (
                         r
                         for r in existing
                         if (r.provenance.get("rule_source") or {}).get("decision_key")
                         == card["decision_key"]
+                        and not (
+                            r.status in ("CANCELLED", "EXPIRED")
+                            and not (r.provenance.get("controlled") or {}).get("authorization")
+                            and not s.scalar(select(ActionExecution.id).where(ActionExecution.request_id == r.id).limit(1))
+                        )
                     ),
                     None,
                 )

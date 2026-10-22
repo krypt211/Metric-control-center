@@ -53,6 +53,27 @@ class PilotExecuteInput(BaseModel):
     revision: int = Field(ge=1)
 
 
+def require_workspace_available(
+    session: Session, workspace: str, request_id: str
+) -> None:
+    """Apply the same unresolved-workspace gate to review and durable admission."""
+    from services.actions.manual import IN_FLIGHT
+
+    others = session.scalars(
+        select(ActionRequest).where(
+            ActionRequest.workspace_id == workspace,
+            ActionRequest.id != request_id,
+            ActionRequest.status.in_(("CONFIRMED", *IN_FLIGHT)),
+        )
+    ).all()
+    for other in others:
+        mode = (other.provenance.get("controlled") or {}).get("mode")
+        if mode == "MOCK_ONLY":
+            continue
+        if other.status in IN_FLIGHT or mode == MODE:
+            raise ActionRejected("PILOT_WORKSPACE_CONFLICT")
+
+
 def require_ready(
     session: Session, actor: dict, row: ActionRequest, now: datetime, contract=None
 ) -> str:

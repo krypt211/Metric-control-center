@@ -394,6 +394,15 @@ def main(*, reported_spend_test: bool = False):
                     assert calls == ["GET"] * 3
                     calls.clear()
                     card = prepare_card()
+                    cancelled = engine.transition_manual(
+                        actor, card["request_id"], "cancel", card["revision"]
+                    )
+                    assert cancelled["status"] == "CANCELLED"
+                    assert calls == ["GET"] * 3
+                    calls.clear()
+                    retry = prepare_card()
+                    assert retry["request_id"] != card["request_id"]
+                    card = retry
                     draft = {"id": card["request_id"], "revision": card["revision"]}
                     for event in ("preflight", "confirm"):
                         draft = engine.transition_manual(
@@ -438,6 +447,106 @@ def main(*, reported_spend_test: bool = False):
                     assert (
                         s.scalar(select(func.count()).select_from(ActionExecution)) == 1
                     )
+            # Administrative late group review also runs under the restricted role.
+            from services.actions.engine import ActionRejected
+            from services.actions.experimental_reconciliation import (
+                SPENT_ADSET_REVIEW,
+                review_spent_adset_enable,
+            )
+            from services.actions.manual import snapshot
+            from services.actions.pilot import require_workspace_available
+
+            expiry = NOW - timedelta(hours=1)
+            with sf.begin() as s:
+                captured = snapshot(
+                    s, s.get(Entity, "adset"), s.get(AdAccount, "account")
+                )
+                control = {
+                    "mode": "LIVE_SINGLE_OPERATION",
+                    "response_mode": "SYNC_200",
+                    "attempts": 1,
+                    "wire_spent": True,
+                    "http_started": True,
+                    "expires_at": expiry.isoformat(),
+                    "job_id": None,
+                    "manual_readback": {
+                        "actor_id": actor["id"],
+                        "entity_id": ids[1],
+                        "account_id": captured["meta_account_id"],
+                        "configured_status": "ACTIVE",
+                        "observed_at": (expiry + timedelta(minutes=2)).isoformat(),
+                        "authoritative_api": False,
+                        "creates_pause_ownership": False,
+                    },
+                }
+                s.add(
+                    ActionRequest(
+                        id="late-group-review",
+                        workspace_id=actor["workspace"],
+                        initiator_id=actor["id"],
+                        entity_id="adset",
+                        idempotency_key="late-group-review",
+                        action="ENABLE_ADSET",
+                        status="unknown",
+                        revision=10,
+                        created_at=NOW - timedelta(days=1),
+                        provenance={
+                            "phase": "4A",
+                            "captured": captured,
+                            "experimental": {"evidence_id": "synthetic-old-proof"},
+                            "controlled": control,
+                        },
+                    )
+                )
+                s.flush()
+                s.add(
+                    ActionExecution(
+                        id="late-group-execution",
+                        request_id="late-group-review",
+                        started_at=expiry - timedelta(minutes=10),
+                        completed_at=expiry - timedelta(minutes=9),
+                        outcome="live_unknown",
+                    )
+                )
+                s.add(
+                    ActionLog(
+                        id="late-group-ack",
+                        request_id="late-group-review",
+                        created_at=expiry - timedelta(minutes=9),
+                        event="controlled_live_acknowledged",
+                        details={},
+                    )
+                )
+            preview = review_spent_adset_enable(engine, actor, "late-group-review", 10)
+            assert not preview["applied"]
+            with sf() as s:
+                assert s.get(ActionRequest, "late-group-review").status == "unknown"
+                try:
+                    require_workspace_available(s, actor["workspace"], draft["id"])
+                except ActionRejected as error:
+                    assert str(error) == "PILOT_WORKSPACE_CONFLICT"
+                else:
+                    raise AssertionError("UNKNOWN_GROUP_DID_NOT_BLOCK")
+            reviewed = review_spent_adset_enable(
+                engine,
+                actor,
+                "late-group-review",
+                10,
+                acknowledgement=SPENT_ADSET_REVIEW,
+            )
+            assert reviewed["applied"]
+            with sf() as s:
+                assert (
+                    s.get(ActionExecution, "late-group-execution").outcome
+                    == "live_unknown"
+                )
+                assert (
+                    s.get(ActionRequest, "late-group-review").provenance["controlled"][
+                        "wire_spent"
+                    ]
+                    is True
+                )
+                require_workspace_available(s, actor["workspace"], draft["id"])
         finally:
             outer.rollback()
         assert not connection.scalar(
@@ -457,6 +566,8 @@ def main(*, reported_spend_test: bool = False):
                 "provider_requests": 0,
                 "select_only_rule_evaluation": True,
                 "failed_preparation_rolled_back": True,
+                "unspent_cancelled_draft_reprepared": True,
+                "spent_group_review_kept_unknown": True,
                 "excess_privilege_checks": 5,
                 "schema_and_role_rolled_back": True,
             }

@@ -1,5 +1,11 @@
 # Exact-scope reported-spend rule experiment - 2026-10-22
 
+Current checkpoint: the authorized attempt was stopped locally before HTTP.
+Request e8804322-74a9-4ef9-9589-22974e3aefdb is now EXPIRED, with zero GET/POST
+attempts. An older group UNKNOWN blocks the workspace. See the
+[guarded-stop report and local review proposal](SPEND_PILOT_GUARDED_STOP_2026-10-22.md).
+Historical card details below are not a current LIVE permit.
+
 ## User agreement and scope
 
 The user agreed to PREPARATION of one separate spend-only test. No advertising

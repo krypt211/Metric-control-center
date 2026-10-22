@@ -433,11 +433,13 @@ async def prepare_experiment(
         ):
             raise WriteDisabled("EXPERIMENTAL_SINGLE_AD_REQUIRED")
         if body.rule_evidence_policy == POLICY:
+            from services.actions.pilot import require_workspace_available
             from services.actions.reported_spend import require_config
             from services.automation.smart_models import RuleSimulation
             from services.automation.smart_schema import SmartRuleInput
             from services.storage.models import Rule
 
+            require_workspace_available(s, actor["workspace"], "")
             run = s.get(RuleSimulation, body.simulation_id)
             rule = (
                 s.get(Rule, run.rule_id)

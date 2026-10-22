@@ -300,3 +300,30 @@ def test_factory_cannot_decrypt_before_durable_execution_claim(
             contract=contract,
         )
     vault.unseal.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["unknown", "queued", "CONFIRMED"])
+def test_contract_review_refuses_workspace_conflict_before_user_authorization(
+    setup, status
+):
+    engine, sf, _vault, clock = setup
+    row = accepted(setup)
+    with sf.begin() as s:
+        s.add(
+            ActionRequest(
+                id="unfinished-workspace",
+                workspace_id=ACTOR["workspace"],
+                entity_id="adset",
+                initiator_id=ACTOR["id"],
+                idempotency_key="unfinished-workspace",
+                action="ENABLE_ADSET",
+                status=status,
+                revision=1,
+                created_at=clock[0],
+                provenance={"controlled": {"mode": "LIVE_SINGLE_OPERATION"}},
+            )
+        )
+    with pytest.raises(ActionRejected, match="PILOT_WORKSPACE_CONFLICT"):
+        load_contract(engine, ACTOR, row["id"], phase="AUTHORIZE")
+    with sf() as s:
+        assert not s.get(ActionRequest, row["id"]).provenance.get("controlled")

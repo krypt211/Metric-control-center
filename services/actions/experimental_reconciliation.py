@@ -266,3 +266,164 @@ def review_ad_enable_for_group(engine, actor, request_id, baseline) -> None:
                 },
             )
         )
+
+
+SPENT_ADSET_REVIEW = "ACKNOWLEDGE_SPENT_ADSET_ENABLE_UNKNOWN_NO_RESEND"
+
+
+def review_spent_adset_enable(
+    engine, actor, request_id: str, revision: int, *, acknowledgement: str | None = None
+) -> dict:
+    """Preview or explicitly acknowledge a late-reviewed spent group ENABLE.
+
+    Only the local request is closed. The execution remains UNKNOWN; its attempt,
+    wire claim, original response/audit and absence of pause ownership are retained.
+    """
+    from services.actions.manual import snapshot
+    from services.storage.models import AdAccount, Entity
+    from services.sync.engine import aware
+
+    with engine.sessions.begin() as session:
+        row = engine._locked_manual_row(session, actor, request_id)
+        control = row.provenance.get("controlled") or {}
+        marker = control.get("spent_adset_local_review")
+        if (
+            acknowledgement == SPENT_ADSET_REVIEW
+            and marker
+            == {
+                "actor_id": actor["id"],
+                "revision": revision,
+                "statement": SPENT_ADSET_REVIEW,
+            }
+            and row.status == "MANUALLY_REVIEWED"
+        ):
+            return {
+                "request_id": row.id,
+                "revision": row.revision,
+                "status": row.status,
+                "applied": True,
+                "idempotent": True,
+            }
+        execution = session.scalar(
+            select(ActionExecution).where(ActionExecution.request_id == row.id)
+        )
+        ack = session.scalar(
+            select(ActionLog.id)
+            .where(
+                ActionLog.request_id == row.id,
+                ActionLog.event == "controlled_live_acknowledged",
+            )
+            .limit(1)
+        )
+        manual = control.get("manual_readback") or {}
+        captured = row.provenance.get("captured") or {}
+        entity = session.get(Entity, row.entity_id)
+        account = session.get(AdAccount, entity.account_id) if entity else None
+        try:
+            expires = datetime.fromisoformat(control["expires_at"])
+            observed = datetime.fromisoformat(manual["observed_at"])
+        except (KeyError, TypeError, ValueError):
+            raise WriteDisabled("SPENT_ADSET_REVIEW_EVIDENCE_REQUIRED") from None
+        if (
+            row.revision != revision
+            or row.status != "unknown"
+            or row.action != "ENABLE_ADSET"
+            or not row.provenance.get("experimental")
+            or not entity
+            or entity.kind != "adset"
+            or not account
+            or account.workspace_id != actor["workspace"]
+            or account.provider != "metricflow"
+            or control.get("mode") != "LIVE_SINGLE_OPERATION"
+            or control.get("response_mode") != "SYNC_200"
+            or control.get("attempts") != 1
+            or control.get("wire_spent") is not True
+            or control.get("http_started") is not True
+            or control.get("job_id") is not None
+            or not execution
+            or execution.outcome != "live_unknown"
+            or execution.error_code not in (None, "MANUAL_READBACK_DEADLINE")
+            or not execution.completed_at
+            or not ack
+            or expires.tzinfo is None
+            or observed.tzinfo is None
+            or engine.clock() <= expires
+            or observed <= expires
+            or observed < aware(execution.completed_at)
+            or manual.get("actor_id") != actor["id"]
+            or manual.get("entity_id") != entity.external_id
+            or manual.get("account_id") != account.external_id
+            or manual.get("configured_status") != "ACTIVE"
+            or manual.get("authoritative_api") is not False
+            or manual.get("creates_pause_ownership") is not False
+        ):
+            raise WriteDisabled("SPENT_ADSET_REVIEW_EVIDENCE_REQUIRED")
+        current = snapshot(session, entity, account)
+        if any(
+            current.get(k) != captured.get(k)
+            for k in (
+                "entity_id",
+                "entity_level",
+                "meta_ad_id",
+                "account_id",
+                "meta_account_id",
+                "hierarchy",
+                "provider",
+                "routing",
+            )
+        ):
+            raise WriteDisabled("SPENT_ADSET_REVIEW_IDENTITY_CHANGED")
+        result = {
+            "request_id": row.id,
+            "revision": row.revision,
+            "operation": row.action,
+            "account_id": account.external_id,
+            "entity_id": entity.external_id,
+            "status": row.status,
+            "proposed_status": "MANUALLY_REVIEWED",
+            "execution_outcome_preserved": execution.outcome,
+            "creates_pause_ownership": False,
+            "provider_requests": 0,
+            "required_acknowledgement": SPENT_ADSET_REVIEW,
+            "applied": False,
+        }
+        if acknowledgement is None:
+            return result
+        if acknowledgement != SPENT_ADSET_REVIEW:
+            raise WriteDisabled("SPENT_ADSET_REVIEW_ACKNOWLEDGEMENT_REQUIRED")
+        row.provenance = {
+            **row.provenance,
+            "controlled": {
+                **control,
+                "spent_adset_local_review": {
+                    "actor_id": actor["id"],
+                    "revision": revision,
+                    "statement": SPENT_ADSET_REVIEW,
+                },
+            },
+        }
+        row.status = "MANUALLY_REVIEWED"
+        row.revision += 1
+        session.add(
+            ActionLog(
+                id=str(uuid4()),
+                request_id=row.id,
+                event="pilot_spent_adset_outcome_locally_reviewed",
+                created_at=engine.clock(),
+                details={
+                    "actor_id": actor["id"],
+                    "previous_revision": revision,
+                    "statement": SPENT_ADSET_REVIEW,
+                    "authoritative_api": False,
+                    "creates_pause_ownership": False,
+                    "execution_outcome_preserved": "live_unknown",
+                    "no_resend": True,
+                },
+            )
+        )
+        return {
+            **result,
+            "revision": row.revision,
+            "status": row.status,
+            "applied": True,
+        }
