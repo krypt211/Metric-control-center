@@ -1,6 +1,7 @@
 """READ provider regressions; all remote requests use httpx.MockTransport."""
 import json,os
 from datetime import date,datetime,timedelta,timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -200,7 +201,8 @@ class ProviderIntegrationTests(StorageFixture,unittest.IsolatedAsyncioTestCase):
             if old:old.primary_provider=p;old.fallback_provider=fallback
             else:s.add(ProviderRoutingSetting(workspace_id="default",scope="workspace",primary_provider=p,fallback_provider=fallback,action_provider="disabled",updated_at=datetime.now(timezone.utc)))
     async def test_meta_only_full_dashboard_filters_catalog_persistence_without_metricflow(self):
-        today=date.today();self.primary()
+        # dashboard_today uses the account day; date.today() differs near Moscow midnight.
+        today=datetime.now(ZoneInfo("Europe/Moscow")).date();self.primary()
         result=await MetaSync(self.manager).run("initial",today-timedelta(days=2),today)
         self.assertEqual(result["status"],"succeeded",result)
         with self.sessions() as s:
