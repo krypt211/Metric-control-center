@@ -164,3 +164,71 @@ AI_AUTOPILOT_ALLOWED=false. Advertising WRITE requests this stage: 0.
 FINAL STATUS: DEPLOYED / MOCK AND POSTGRESQL VALIDATED;
 LOCAL RULE REVIEW READY; BLOCKED ON MANUAL PARENT SWITCH CHECK;
 LIVE RULE EXECUTION NOT AUTHORIZED / NOT EXECUTED.
+
+
+## Manual checkpoint accepted and exact request prepared (21:00 MSK review)
+
+User confirmed at 2026-10-22 21:00 Europe/Moscow: campaign OFF, group OFF, AD ON.
+This attestation is NOT advertising authorization and is stored separately from
+provider evidence. The bounded READ refresh succeeded (4 GETs, run
+6b5e8017-840e-4a81-9580-01d13747536d). It reused rule revision 1 and saved fresh
+simulation 9b7444aa-ba9c-46eb-9387-d10ac39cb747. Spend remains 16.15 USD,
+condition TRUE; private spend-test eligibility true; strict financial result
+remains REVIEW with attribution null. Original rules/profiles unchanged.
+
+The refreshed historical parent catalog still showed group ACTIVE at first;
+its response timestamp was 20:59:44.545293 MSK, before the user's manual check.
+The discrepancy was not fixed by changing local data or relaxing the baseline.
+The first Credential Manager GET /me check returned PROVIDER_UNAVAILABLE, with
+no local cooldown. One bounded repeat succeeded. The retry also completed the
+existing 3 catalog GETs. Their actual entity fields confirmed:
+
+| Field | Confirmed value |
+| --- | --- |
+| Request UUID | e8804322-74a9-4ef9-9589-22974e3aefdb |
+| Request revision after local preflight | 4 |
+| Account | act_1047962734516123 / Valya Sergeeva |
+| Campaign | 120247730079240571 / PAUSED, effective PAUSED |
+| Adset | 120247730105950571 / PAUSED, effective PAUSED |
+| AD | 120247730105960571 / ACTIVE, effective ADSET_PAUSED |
+| Operation | one PAUSE_AD, ACTIVE -> PAUSED |
+| Rule | f0fc9bf5-d00c-4462-bd0e-9576a0288a6d / revision 1 |
+| Evidence policy | CREO03_REPORTED_SPEND15_V1 |
+| Period | 2026-09-28 / America/Los_Angeles |
+| READ / WRITE revision | 1 / 1 |
+| Credential check | SCOPES_VERIFIED, entities:write, active_paid |
+| Credential check time | 21:05:24.529650 MSK |
+| Baseline source timestamp | 20:59:44.545293 MSK |
+| Baseline / effective permit deadline | 21:14:44.545293 MSK, 2026-10-22 |
+| Draft deadline | 21:20:31.671037 MSK (does not extend baseline validity) |
+| Future execution cap | 3 pre-POST GETs + 1 POST, no retries/resend |
+| Future permit duration | <=600 seconds, also bounded by baseline deadline |
+
+All preparation attempts were counted: local MetricFlow counter 158 -> 167,
+i.e. 9 physical GET attempts: 4 refresh, 1 failed GET /me, 1 successful GET /me,
+3 baseline catalogs. This remains within the preparation-stage cap of 10.
+No additional provider calls are made while awaiting permission. Cooldown none.
+WRITE credential was checked, not replaced; scope is not proof of object-level
+permission. WRITE ID namespace remains explicitly unverified.
+
+Local preflight at 21:06:05.918626 MSK: local_allowed=true, no blocking_reasons.
+The generic request state remains BLOCKED with WRITE_DISABLED,
+WRITE_CONTRACT_UNVERIFIED and WRITE_PERMISSION_UNVERIFIED, as expected with
+closed global flags and unverified namespace/object permissions. This does not
+open ordinary LIVE execution. The existing experimental PilotContract was then
+loaded and verified in AUTHORIZE phase using read-only checks; it was valid for
+this exact request and requires the distinct reported-spend authorization
+statement. No authorize, confirm or execute call was made by this preparation.
+
+Status: EXACT EXPERIMENTAL CARD READY FOR EXPLICIT USER AUTHORIZATION.
+This is not general financial-rule or namespace certification. Authorization must
+identify this request, AD, one PAUSE and the unverified-ID risk. After the deadline,
+refresh/revalidate first; do not extend timestamps or execute a stale permit.
+Stop on changed parent/AD status, credential/rule/evidence revision, emergency
+stop, cooldown, rate/permission/token error or timeout; no automatic resend.
+
+All four safety flags remain closed. Advertising executions remain 3 historical,
+new advertising WRITE requests=0. Meta LIVE requests=0. No new implementation
+changes or test reruns were required for this operational preparation; local
+preflight and read-only contract verification were actually run.
+Evidence: .tools/reported-spend-20261022-2100/.
