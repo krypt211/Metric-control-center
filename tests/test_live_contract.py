@@ -16,6 +16,11 @@ from services.sync.engine import SyncEngine
 from services.sync.schema import InsightSchema, SchemaError, page_items
 
 ROOT=Path(__file__).resolve().parents[1]
+# Parent state catalog from the verified live contract; config/metricflow-schema.json is local-only.
+CATALOG_PAGINATION={'mode':'none','total_path':'meta.total','require_null_paths':['meta.limit','meta.offset']}
+STATE_CATALOG={'cache_seconds':3600,'entities':{
+    'campaign':{'items_path':'data','pagination':CATALOG_PAGINATION,'fields':{'entity_id':'id','name':'name','status':'effective_status'}},
+    'adset':{'items_path':'data','pagination':CATALOG_PAGINATION,'fields':{'entity_id':'id','name':'name','status':'effective_status','campaign_id':'campaign_id'}}}}
 def sample(name):
     return json.loads((ROOT/'docs/metricflow-live-contract'/f'{name}.json').read_text())['body']
 
@@ -79,8 +84,8 @@ class ParentStateTests(unittest.IsolatedAsyncioTestCase):
         self.directory=tempfile.TemporaryDirectory()
         self.db=make_engine(f'sqlite:///{Path(self.directory.name)/"state.db"}')
         Base.metadata.create_all(self.db);self.factory=sessions(self.db)
-        self.config=json.loads((ROOT/'config/metricflow-schema.json').read_text())
         self.catalog=sample('ad-accounts');self.insights=sample('insights')
+        self.config={**discover(self.catalog,self.insights),'state_catalog':copy.deepcopy(STATE_CATALOG)}
         self.calls=[];self.corrupt=False
         from datetime import datetime,timezone
         self.now=datetime(2026,10,7,16,34,tzinfo=timezone.utc)
