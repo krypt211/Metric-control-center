@@ -124,3 +124,54 @@ do not execute the expired card or restore its timestamps.
 FINAL STATUS: ADVERTISING PAUSE NOT SENT (0 GET / 0 POST IN AUTHORIZED RUN);
 READINESS BUG FIXED AND DEPLOYED; OLD GROUP OUTCOME STILL UNKNOWN;
 LOCAL UNKNOWN REVIEW READY, AWAITING USER ACKNOWLEDGMENT.
+
+
+## Approved local review applied and fresh card prepared (2026-10-22)
+
+The user explicitly approved closing the local group-command blocker while
+preserving UNKNOWN. The existing restricted Credential Manager helper applied
+request 39836b5b-296f-4896-917c-3ae2b48eb536 revision 10 -> 11,
+status MANUALLY_REVIEWED. The execution is still live_unknown. Full execution
+column equality and preservation of every previous audit row were asserted;
+exactly one local-review audit event was added. Total executions remain 3.
+This administrative operation made zero provider requests and created no pause
+ownership. The workspace-conflict predicate now passes.
+
+A new bounded READ succeeded: run b979b891-5c4f-4b1b-b94b-5375006b7156,
+2 physical GET attempts, 7 selected-account insight rows, Sep 28 LA period.
+The separate disabled test rule and all original profiles/rules are unchanged.
+New simulation b41d4a90-a132-4e01-a5a8-4afe02cb3e18 confirms reported spend
+16.15 USD >= 15 USD. Normal financial eligibility remains false and source
+attribution remains unverified. Only the previously approved spend-test policy
+is eligible.
+
+Credential Manager GET /me confirmed SCOPES_VERIFIED, active_paid, credential
+revision 1. Three existing catalog GETs confirmed campaign and group PAUSED,
+own AD ACTIVE, effective ADSET_PAUSED; source 2026-10-22T18:35:08.949025Z.
+Preparation used 6 physical READ attempts total (2 sync + 1 /me + 3 catalogs),
+without advertising POST. READ remains healthy.
+
+New request: 1599c718-7e49-435c-ab22-c66fab189a42, revision 4 after local
+preflight. Operation PAUSE_AD, AD 120247730105960571, account
+act_1047962734516123. Local allowed=true, no local blockers. Global LIVE remains
+BLOCKED, as required. Read-only AUTHORIZE contract review passed the shared
+workspace gate; it does not grant authorization. Its conservative reviewed
+expiry is 2026-10-22T18:46:05.399990Z (21:46:05 Moscow); baseline hard expiry
+18:50:08.949025Z. A future admission must revalidate all gates and cannot extend
+baseline freshness. The expired e880... card was not reused or altered.
+
+Fresh explicit authorization for this new request is required before any POST.
+Future operation: at most 3 pre-POST verification GETs and 1 PAUSE POST, no
+retry/resend, no campaign/group/budget change, maximum 600 seconds bounded by
+freshness. WRITE ID namespace remains UNVERIFIED_CANDIDATE_FACEBOOK_AD_ID;
+object permissions and readback are not globally certified.
+
+Both runtime services preserve ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true,
+AI_ENABLED=false, AI_AUTOPILOT_ALLOWED=false; .env digest unchanged. Actual local
+review, preserved history, current READ, local preflight, contract gate and flags
+were checked in production. No code changed in this step; prior 308-test suite
+was not rerun for this administrative operation.
+Evidence: ignored .tools/reported-spend-local-review-20261022-2133/.
+
+CURRENT STATUS: LOCAL REVIEW APPLIED; NEW CARD READY FOR EXPLICIT AUTHORIZATION.
+NEW ADVERTISING WRITE REQUESTS: 0. Historical executions: 3, unchanged.
