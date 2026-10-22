@@ -14,7 +14,6 @@ from sqlalchemy import select, update
 from services.actions.engine import ActionRejected
 from services.storage.models import AIDecision, AgentMessage, TelegramCommand, TelegramCursor, User
 from services.storage.repository import insert_for
-from services.sync.engine import aware
 
 
 class Binding(BaseModel):

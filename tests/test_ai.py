@@ -16,7 +16,7 @@ from services.ai.policy import read_policy, save_policy, reserve
 from services.ai.provider import OpenAIProvider, ProviderFailure
 from services.ai.schema import CopilotOutput, CopilotPolicy, Proposal
 from services.ai.snapshot import build_snapshot
-from services.storage.models import ActionRequest, AIAction, AIDecision, AIQuota, DailyMetric, EntityCurrentState, TelegramCursor, User
+from services.storage.models import ActionRequest, AIDecision, AIQuota, DailyMetric, EntityCurrentState, TelegramCursor, User
 from services.telegram.bot import ApprovalBot, Binding, TelegramFailure
 from test_recommendations import RecommendationFixture
 from test_sync import DAY, NOW

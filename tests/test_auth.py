@@ -8,7 +8,7 @@ import httpx
 from sqlalchemy import select
 from backend.app import app
 from backend.auth import validate_environment
-from services.auth.sessions import authenticate,cookie_name,new_user,utcnow
+from services.auth.sessions import authenticate,new_user,utcnow
 from services.storage.models import UserSession,User
 from test_sync import StorageFixture
 

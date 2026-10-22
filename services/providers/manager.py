@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from sqlalchemy import select,update,or_
-from services.providers.models import ProviderConnection,ProviderCredential
+from services.providers.models import ProviderConnection
 from services.providers.credentials import load
-from services.providers.contracts import ProviderError,ActionProviderRouter
+from services.providers.contracts import ProviderError
 from services.providers.matching import confirm_accounts
 from services.storage.models import AdAccount,ApiQuota
 from services.storage.repository import identity,upsert,insert_for

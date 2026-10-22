@@ -3,7 +3,7 @@ import os
 from datetime import timedelta
 from uuid import uuid4
 from sqlalchemy import delete,select,update,or_
-from services.providers.manager import ProviderManager,ensure
+from services.providers.manager import ensure
 from services.providers.models import ProviderConnection,ProviderWindow
 from services.providers.contracts import ProviderError
 from services.meta.provider import account_id as meta_account_id

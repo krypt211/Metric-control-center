@@ -1,5 +1,5 @@
 """Repeatable local HTTP/PostgreSQL UI-1 acceptance checks; no advertising commands."""
-import argparse,copy,json,os,secrets,subprocess,time
+import argparse,copy,json,os,subprocess,time
 from pathlib import Path
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor

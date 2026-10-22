@@ -1,5 +1,4 @@
 """Conservative mapping discovery from READ responses, never synthetic metrics."""
-from datetime import date
 import re
 from zoneinfo import ZoneInfo
 

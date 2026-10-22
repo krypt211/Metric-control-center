@@ -1,13 +1,11 @@
 from pathlib import Path
 from unittest.mock import patch
-import os,unittest,copy,json
+import os,unittest,copy
 import httpx
-from sqlalchemy import select
 from backend.app import app
 from services.auth.sessions import new_user
 from services.preferences.registry import system_presets,normalize_config,sort_rows,registry
-from services.storage.models import UserColumnPreset
-from test_sync import StorageFixture,DAY,row
+from test_sync import StorageFixture
 from test_auth import MemoryLimits
 
 class PreferenceTests(StorageFixture,unittest.IsolatedAsyncioTestCase):

@@ -1,8 +1,7 @@
 ﻿"""Durable provider job isolation, recovery and READ guards; no broker/network."""
 import os,unittest
 from datetime import timedelta
-from unittest.mock import AsyncMock,patch
-from sqlalchemy import select
+from unittest.mock import patch
 from test_sync import StorageFixture,DAY,NOW
 from services.providers.manager import ProviderManager
 from services.providers.models import ProviderJob

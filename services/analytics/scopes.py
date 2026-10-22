@@ -1,5 +1,4 @@
 """Require exact scope and currency before mixing provider monetary observations."""
-from decimal import Decimal
 from services.sync.schema import SchemaError, decimal_value, page_items
 
 COMPLETE={"mode":"none","total_path":"meta.total","require_null_paths":["meta.limit","meta.offset"]}

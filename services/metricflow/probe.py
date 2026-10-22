@@ -5,7 +5,7 @@ from datetime import date
 import json
 import os
 
-from .errors import APIError, MetricFlowError, PermissionDenied
+from .errors import APIError, PermissionDenied
 from .reader import MetricFlowConnector
 
 

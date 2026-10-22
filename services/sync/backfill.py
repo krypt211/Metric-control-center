@@ -1,7 +1,7 @@
 """Resumable core backfill; every window uses the proven atomic insight engine."""
 import argparse
 import asyncio
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 import hashlib
 import json
 import os
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from services.metricflow.secrets import read_key_file
 from services.storage.database import make_engine, sessions
 from services.storage.models import ApiQuota, SyncRun
-from services.sync.engine import SyncEngine, aware
+from services.sync.engine import SyncEngine
 from services.sync.schema import InsightSchema, SchemaError
 
 def windows(start, end, chunk_days=3):

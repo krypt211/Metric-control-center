@@ -1,7 +1,7 @@
 """Additive provider configuration; existing advertising facts are preserved."""
 from datetime import date,datetime
 from typing import Any
-from sqlalchemy import String,Integer,Boolean,Text,DateTime,Date,ForeignKey,UniqueConstraint,CheckConstraint,Index,text
+from sqlalchemy import String,Integer,Boolean,Text,DateTime,Date,ForeignKey,CheckConstraint,Index,text
 from sqlalchemy.orm import Mapped,mapped_column
 from services.storage.models import Base,JSON_TYPE
 

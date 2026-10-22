@@ -1,5 +1,5 @@
 """READ provider regressions; all remote requests use httpx.MockTransport."""
-import copy,json,os
+import json,os
 from datetime import date,datetime,timedelta,timezone
 from pathlib import Path
 import unittest
@@ -7,9 +7,9 @@ from unittest.mock import patch
 import httpx
 from cryptography.fernet import Fernet
 from sqlalchemy import select,func
-from test_sync import StorageFixture,DAY,NOW,row,config
+from test_sync import StorageFixture,DAY,row,config
 from services.providers.contracts import ProviderError,WriteDisabled,ActionProviderRouter
-from services.providers.credentials import validate,encrypt,decrypt,CredentialError
+from services.providers.credentials import encrypt,decrypt,CredentialError
 from services.providers.models import ProviderConnection,ProviderCredential,ProviderRoutingSetting,ProviderWindow,ProviderAccountMapping,ProviderSwitchEvent
 from services.providers.manager import ProviderManager
 from services.providers.sync import MetaSync,metricflow_sync
@@ -22,7 +22,7 @@ from services.sync.engine import utc_now
 from services.meta.provider import MetaMarketingProvider
 from services.meta.mapper import map_rows,numeric,action
 from services.analytics.table import table_data,Filters,filter_options
-from services.analytics.dashboard import dashboard_today,summary
+from services.analytics.dashboard import dashboard_today
 
 TOKEN="EA_test_token_never_log_12345"
 SECRET="app_secret_never_log_12345"

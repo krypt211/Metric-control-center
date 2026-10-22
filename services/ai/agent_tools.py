@@ -10,13 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from services.actions.engine import ActionRejected
-from services.analytics.dashboard import aggregate
 from services.analytics.recommendations import DetectorConfig, fresh
 from services.analytics.table import Filters, table_data
 from services.automation.rules import COMPARE
 from services.automation.schema import Condition
 from services.storage.models import ActionRequest, AdAccount, Entity, MediaBuyerProfile, Rule
-from .profiles import MediaProfile
 from .schema import Proposal
 from .snapshot import period, percent, TRENDS
 

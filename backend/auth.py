@@ -1,5 +1,4 @@
 """Authentication and workspace authorization, independently enforced by FastAPI."""
-from datetime import timedelta
 from functools import lru_cache
 import hmac
 import logging
@@ -17,7 +16,7 @@ from sqlalchemy import delete, select, text
 
 from services.auth.sessions import (
     auth_enabled, authenticate, cookie_name, create_session, digest, new_user,
-    password_hash, production, user_view, utcnow, verify_password,
+    password_hash, production, user_view, verify_password,
 )
 from services.storage.models import User, UserSession
 

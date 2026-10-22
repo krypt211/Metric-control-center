@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 import os
 from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 

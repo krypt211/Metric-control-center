@@ -12,7 +12,7 @@ from test_providers import CREDS,TOKEN,SECRET,graph
 from backend.app import app
 from services.auth.sessions import new_user
 from services.providers.credentials import decrypt
-from services.providers.models import ProviderConnection,ProviderCredential,ProviderJob,ProviderRoutingSetting
+from services.providers.models import ProviderConnection,ProviderCredential,ProviderJob
 from services.providers.manager import ProviderManager
 from services.storage.models import ActionRequest,AdAccount
 from services.sync.engine import utc_now

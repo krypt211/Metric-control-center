@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import redirect_stdout
 import copy
 import io
@@ -20,12 +19,12 @@ from services.actions.settings import policy_from_environment
 from services.metricflow.errors import PermissionDenied
 from services.metricflow.local import ReadBudget, synchronize
 from services.metricflow.onboarding import discover, list_mapping
-from services.metricflow.probe import check, safe_error, usage_summary
+from services.metricflow.probe import check, usage_summary
 from services.metricflow.reader import MetricFlowConnector
 from services.storage.models import AdAccount, DailyMetric, ActionRequest
 from services.sync.engine import QuotaExhausted, SyncEngine
 from services.sync.schema import InsightSchema, SchemaError
-from test_sync import DAY, NOW, ROOT, StorageFixture, row
+from test_sync import DAY, ROOT, StorageFixture, row
 
 
 def catalog():

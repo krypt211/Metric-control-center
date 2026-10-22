@@ -3,7 +3,7 @@ from datetime import datetime,timezone
 from typing import Literal
 from uuid import uuid4
 from fastapi import APIRouter,Request,HTTPException,Query
-from pydantic import BaseModel,ConfigDict,Field,StrictInt,model_validator
+from pydantic import BaseModel,ConfigDict,Field,StrictInt
 from sqlalchemy import select,update,delete,text
 from backend.auth import identity,factory
 from services.preferences.registry import validate_config,normalize_config,system_presets

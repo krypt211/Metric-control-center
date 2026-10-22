@@ -1,6 +1,5 @@
 """Validate Meta hierarchy and normalize selected, non-overlapping action metrics."""
 from datetime import date
-from decimal import Decimal
 from zoneinfo import ZoneInfo
 from services.meta.provider import account_id,entity_id
 from services.providers.contracts import ProviderError
