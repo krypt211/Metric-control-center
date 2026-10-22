@@ -7,8 +7,10 @@ import httpx
 from sqlalchemy import func, select
 
 from backend.app import app
+from services.ai.engine import CopilotEngine
 from services.storage.models import AIDecision, AISettings
 from test_recommendations import RecommendationFixture
+from test_sync import NOW
 
 
 class CopilotApiTests(RecommendationFixture, unittest.IsolatedAsyncioTestCase):
@@ -18,7 +20,10 @@ class CopilotApiTests(RecommendationFixture, unittest.IsolatedAsyncioTestCase):
         env = {"ACTION_API_TOKEN_FILE": str(token), "ACTION_OPERATOR_ID": "operator", "WORKSPACE_ID": "default",
             "AI_ENABLED": "false", "AI_AUTOPILOT_ALLOWED": "false", "ACTIONS_ENABLED": "false", "OPENAI_MODEL": "explicit-model"}
         headers = {"Authorization": "Bearer test-operator"}
-        with patch.dict(os.environ, env), patch("backend.app.database_sessions", return_value=self.sessions):
+        # The snapshot window follows the engine clock; pin it to the fixture day.
+        frozen = lambda actions: CopilotEngine(actions, clock=lambda: NOW)
+        with patch.dict(os.environ, env), patch("backend.app.database_sessions", return_value=self.sessions), \
+                patch("backend.ai_api.CopilotEngine", frozen):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 self.assertEqual((await client.get("/api/ai/settings")).status_code, 401)
                 initial = await client.get("/api/ai/settings", headers=headers)
