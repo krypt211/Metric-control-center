@@ -175,3 +175,48 @@ Evidence: ignored .tools/reported-spend-local-review-20261022-2133/.
 
 CURRENT STATUS: LOCAL REVIEW APPLIED; NEW CARD READY FOR EXPLICIT AUTHORIZATION.
 NEW ADVERTISING WRITE REQUESTS: 0. Historical executions: 3, unchanged.
+
+
+## Second explicit authorization: provider-health stop before HTTP
+
+User explicitly authorized one experimental PAUSE_AD for new request
+1599c718-7e49-435c-ab22-c66fab189a42, accepting the unverified ID risk,
+with at most 3 verification GETs and 1 POST, without resend. Admission started
+2026-10-22 around 18:42Z, before the reviewed 18:46:05Z cutoff.
+The trusted one-shot child used scoped process environment overrides; service
+and .env configuration were not changed.
+
+Local preflight at 18:42:28.103173Z committed BLOCKED revision 7. Subsequent
+confirm raised HTTPException before authorization or transport. No durable
+pilot authorization, wire claim or ActionExecution was created. Physical GET=0,
+POST=0, trace=[]; total historical executions remain 3. No retry was attempted.
+
+Local persisted evidence explains the stop: regular today sync
+0c21d7c3-cca9-4366-b91d-21af5e402b26, started 18:40:00Z and finished
+18:40:31Z, failed TransportUnavailable after 3 HTTP attempts. It changed the
+READ connection to error / PROVIDER_READ_FAILED, revision still 1. Those
+scheduler READ attempts are independent of the authorized child, not pilot
+GETs. Local quota was 182, no cooldown. User action was not the cause.
+
+Preflight blockers: RULE_PILOT_CURRENT_DECISION_HELD, STATUS_CHANGED,
+PROVIDER_UNAVAILABLE, REPORTED_SPEND_TEST_EVIDENCE_HELD. The local raw AD state
+is ADSET_PAUSED (effective status), while expected configured status is ACTIVE.
+When experimental review fails, its configured-status overlay is unavailable;
+therefore the extra STATUS_CHANGED is not evidence of a changed AD switch.
+No new provider observation was made and no advertising success is claimed.
+
+Post-run checks verified both backend and Credential Manager global flags
+ACTIONS_ENABLED=false, LOCAL_READ_ONLY=true, AI_ENABLED=false,
+AI_AUTOPILOT_ALLOWED=false. Environment file SHA256 unchanged. Old group local
+review and UNKNOWN history remain intact. No code changes in this step.
+Operational checks: preserved execution count/no claim, actual guard diagnosis,
+zero transport trace, both runtime flag sets and .env digest. Tests were not
+rerun for this operational attempt. Evidence ignored under
+.tools/reported-spend-authorized-20261022-2142/.
+
+CURRENT STATUS: AUTHORIZED ATTEMPT BLOCKED BEFORE HTTP BY READ PROVIDER HEALTH.
+ADVERTISING PAUSE SENT: NO. NEW ADVERTISING POST: 0. No automatic resend.
+Next step is restore/verify normal READ health, then re-evaluate the exact
+request, spend evidence and remaining freshness. Never mark provider healthy
+manually or override failed safety gates. After the agreed card deadline, no
+execution under this approval; fresh review/authorization is required.
