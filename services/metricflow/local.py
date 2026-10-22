@@ -117,7 +117,7 @@ def main():
     print("MCC_APPLICATION_STARTED")
     try:
         raise SystemExit(asyncio.run(synchronize(args.start, args.end)))
-    except SchemaError as error:
+    except SchemaError:
         print("Last sync: FAILED")
         print("READ schema: NOT VERIFIED")
         print("Schema validation failed; inspect the sanitized live contract and mappings.")
