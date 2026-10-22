@@ -25,6 +25,25 @@ READ_TABLES = (
     "action_logs",
 )
 
+# Rule revalidation reads financial evidence; it may never edit profiles or facts.
+RULE_READ_TABLES = (
+    "rules",
+    "rule_simulations",
+    "rule_cooldowns",
+    "automation_control",
+    "economics_profiles",
+    "economics_assignments",
+    "approval_observations",
+    "economics_evaluations",
+    "daily_metrics",
+    "tracker_metrics",
+    "breakdowns",
+    "creatives",
+    "provider_windows",
+    "sync_runs",
+    "provider_switch_events",
+)
+
 
 def grant_credential_access(
     cursor: Cursor, *, schema: str = "public", role: str = ROLE
@@ -41,7 +60,7 @@ def grant_credential_access(
         sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(sql.Identifier(schema), target)
     )
     groups = (
-        ("SELECT", READ_TABLES),
+        ("SELECT", READ_TABLES + RULE_READ_TABLES),
         (
             "INSERT, UPDATE",
             (

@@ -43,6 +43,7 @@ class PilotAuthorizationInput(BaseModel):
         "AUTHORIZE_ONE_EXPERIMENTAL_PAUSE_WITH_UNVERIFIED_ID",
         "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_WITH_UNVERIFIED_ID",
         "AUTHORIZE_ONE_EXPERIMENTAL_ENABLE_ADSET_WITH_UNVERIFIED_ID",
+        "AUTHORIZE_ONE_EXPERIMENTAL_RULE_PAUSE_WITH_UNVERIFIED_ID",
     ]
 
 
@@ -77,7 +78,6 @@ def require_ready(
             if row.action == "ENABLE_ADSET" and bool(contract and contract.experimental)
             else ("PAUSE_AD", "ENABLE_AD")
         )
-        or row.provenance.get("rule_source")
     ):
         raise ActionRejected("MANUAL_SINGLE_AD_STATUS_ONLY")
     if contract is None:
@@ -128,7 +128,6 @@ def require_external_evidence(
             if row.action == "ENABLE_ADSET" and experimental
             else ("PAUSE_AD", "ENABLE_AD")
         )
-        or row.provenance.get("rule_source")
     ):
         raise ActionRejected("PILOT_IDENTITY_OR_PERMISSION_CHANGED")
     if experimental:
@@ -198,6 +197,12 @@ def require_external_evidence(
         or proof.get("effective_status") not in KNOWN_STATUSES
     ):
         raise ActionRejected("PILOT_EXTERNAL_EVIDENCE_REQUIRED")
+    if row.provenance.get("rule_source"):
+        if not experimental:
+            raise ActionRejected("RULE_PILOT_EXPERIMENTAL_REVIEW_REQUIRED")
+        from services.actions.experimental import review_for
+
+        review_for(session, row, row.provenance["captured"], now)
     control = row.provenance.get("controlled") or {}
     if control.get("mode") == MODE and control.get("evidence_id") != evidence.id:
         raise ActionRejected("PILOT_EVIDENCE_CHANGED")
@@ -267,13 +272,7 @@ def authorize_pilot(
         ActionSafetyGate.require_write()
     contract = load_contract(engine, actor, request_id, phase="AUTHORIZE")
     ActionSafetyGate.require_write(contract)
-    from services.actions.experimental import authorization_statement
-
-    expected_statement = (
-        authorization_statement(contract.operation)
-        if contract and contract.experimental
-        else STATEMENT
-    )
+    expected_statement = contract.authorization_statement if contract else STATEMENT
     if body.statement != expected_statement:
         raise ActionRejected("PILOT_AUTHORIZATION_STATEMENT_MISMATCH")
     with engine.sessions() as session:

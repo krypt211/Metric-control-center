@@ -40,6 +40,12 @@ from services.actions.pilot import (
     record_manual_readback,
 )
 from services.actions.write_credentials import WriteCredentialVault
+from services.automation import (
+    smart_models as _smart_models,  # noqa: F401 - register isolated tables
+)
+from services.economics import (
+    models as _economics_models,  # noqa: F401 - register isolated tables
+)
 from services.providers.integration_models import WriteCredentialState
 from services.storage.credential_permissions import grant_credential_access
 from services.storage.database import database_url, make_engine
@@ -163,7 +169,9 @@ def main():
                 "UPDATE entity_current_state SET status='PAUSED' WHERE entity_id='ad'",
                 "DELETE FROM action_logs WHERE false",
                 "SELECT * FROM provider_credentials",
-                "SELECT * FROM daily_metrics",
+                "UPDATE daily_metrics SET spend=spend WHERE false",
+                "UPDATE rules SET revision=revision WHERE false",
+                "UPDATE economics_profiles SET version=version WHERE false",
             ):
                 denied(connection, statement)
             calls = []
@@ -360,7 +368,7 @@ def main():
                 "result": "PASS",
                 "scope": "RESTORED_DB_TRANSACTION",
                 "role": "NOLOGIN_NOSUPERUSER",
-                "excess_privilege_checks": 6,
+                "excess_privilege_checks": 8,
                 "single_use_mock_attempts": 1,
                 "experimental_mock_post_attempts": 1,
                 "experimental_get_attempts": 6,

@@ -311,7 +311,8 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
         else:
             try:
                 checked = check_preparation(
-                    s, row.workspace_id, sim, row.entity_id, row.action, now
+                    s, row.workspace_id, sim, row.entity_id, row.action, now,
+                    current_request_id=row.id,
                 )
                 if checked["decision_key"] != source.get("decision_key"):
                     failures.append("RULE_DECISION_CHANGED_REEVALUATE")

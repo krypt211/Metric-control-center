@@ -21,6 +21,14 @@ from sqlalchemy import select
 from services.actions.factory import checked_write_state, credential_digest
 from services.actions.manual import snapshot
 from services.actions.manual_schema import ManualDraftInput
+from services.actions.rule_pilot import (
+    STATEMENT as RULE_STATEMENT,
+)
+from services.actions.rule_pilot import (
+    RulePilotBinding,
+    bind_rule_source,
+    require_rule_source,
+)
 from services.metricflow.errors import MetricFlowError, RateLimitExceeded
 from services.metricflow.reader import MetricFlowConnector
 from services.providers.contracts import WriteDisabled
@@ -60,6 +68,7 @@ class ExperimentalPrepareInput(StrictModel):
     management_confirmed: Literal[True]
     statement: Literal["PREPARE_EXPERIMENT_ONLY_NO_POST"]
     operation: Literal["PAUSE_AD", "ENABLE_AD", "ENABLE_ADSET"] = "PAUSE_AD"
+    simulation_id: str | None = Field(default=None, min_length=1, max_length=36)
     previous_pause_request_id: str | None = Field(
         default=None, min_length=1, max_length=36
     )
@@ -70,6 +79,8 @@ class ExperimentalPrepareInput(StrictModel):
 
     @model_validator(mode="after")
     def require_previous_pause(self) -> Self:
+        if self.simulation_id and self.operation != "PAUSE_AD":
+            raise ValueError("Rule pilot supports only one PAUSE_AD")
         if (self.operation == "ENABLE_AD") != bool(self.previous_pause_request_id):
             raise ValueError(
                 "ENABLE requires a previous PAUSE; PAUSE cannot reference one"
@@ -163,6 +174,7 @@ class ExperimentalReview(StrictModel):
     reviewed_by: str
     baseline: Baseline | AdsetBaseline
     previous_pause: dict | None = None
+    rule_binding: RulePilotBinding | None = None
 
     @model_validator(mode="after")
     def validate_operation_baseline(self) -> Self:
@@ -347,12 +359,12 @@ def review_for(session, row, current: dict, now: datetime) -> ExperimentalReview
     if (
         row.action != review.operation
         or row.value is not None
-        or row.provenance.get("rule_source")
         or review.reviewed_by != row.initiator_id
         or any(getattr(review.baseline, k) != v for k, v in expected.items())
         or evidence.details.get("read_revision") != current["credential_revision"]
     ):
         raise WriteDisabled("EXPERIMENTAL_BINDING_CHANGED")
+    require_rule_source(session, row, review.rule_binding, now)
     review.baseline.fresh(now)
     if review.operation == "ENABLE_AD":
         from services.actions.experimental_reconciliation import require_previous_pause
@@ -479,12 +491,19 @@ async def prepare_experiment(
             provider="metricflow",
             operation=body.operation,
             expected_status=own_status(baseline),
+            simulation_id=body.simulation_id,
             reason="Experimental pilot preparation only; WRITE ID is unverified",
         ),
         "experimental-" + str(uuid4()),
     )
     with engine.sessions.begin() as s:
         row = engine._locked_manual_row(s, actor, draft["id"])
+        if body.simulation_id and (
+            row.status != "DRAFT"
+            or row.provenance.get("controlled")
+            or row.provenance.get("experimental")
+        ):
+            raise WriteDisabled("RULE_PILOT_ALREADY_PREPARED")
         eid = str(uuid4())
         review = ExperimentalReview(
             preparation_statement=PREPARE,
@@ -495,6 +514,7 @@ async def prepare_experiment(
             if body.operation == "ENABLE_ADSET"
             else NAMESPACE,
             previous_pause=previous_pause,
+            rule_binding=bind_rule_source(s, row, engine.clock()),
         )
         proof = {
             "actor_id": actor["id"],
@@ -547,7 +567,12 @@ async def prepare_experiment(
             ).isoformat(),
             "max_post_attempts": 1,
             "max_prepost_get_attempts": 3,
-            "authorization_statement_required": authorization_statement(body.operation),
+            "authorization_statement_required": (
+                RULE_STATEMENT
+                if review.rule_binding
+                else authorization_statement(body.operation)
+            ),
+            "rule_source": row.provenance.get("rule_source"),
             "operation": body.operation,
             "previous_pause": previous_pause,
             "advertising_write_requests": 0,

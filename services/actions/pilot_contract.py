@@ -87,6 +87,22 @@ class PilotContract:
             "expires_at": self.expires_at.isoformat(),
         }
 
+    @property
+    def authorization_statement(self) -> str:
+        from services.actions.experimental import authorization_statement
+        from services.actions.rule_pilot import STATEMENT as RULE_STATEMENT
+
+        with self.sessions() as session:
+            row = session.get(ActionRequest, self.request_id)
+            rule_source = bool(row and row.provenance.get("rule_source"))
+        if self.experimental and rule_source:
+            return RULE_STATEMENT
+        return (
+            authorization_statement(self.operation)
+            if self.experimental
+            else "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST"
+        )
+
     def require_identity(self, actor: dict, row: ActionRequest) -> None:
         if (
             actor.get("id") != self.actor_id
@@ -172,13 +188,7 @@ class PilotContract:
             if control.get("provider_contract") != self.pin():
                 raise WriteDisabled("PILOT_CONTRACT_PIN_CHANGED")
             check_authorization(control, self.actor)
-            from services.actions.experimental import authorization_statement
-
-            expected_statement = (
-                authorization_statement(self.operation)
-                if self.experimental
-                else "AUTHORIZE_ONE_METRICFLOW_AD_STATUS_POST"
-            )
+            expected_statement = self.authorization_statement
             if control["authorization"]["statement"] != expected_statement:
                 raise WriteDisabled("PILOT_AUTHORIZATION_STATEMENT_MISMATCH")
             authorized_at = datetime.fromisoformat(

@@ -48,6 +48,7 @@ def economics_adapter(
     now: datetime,
     *,
     _timezone: str | None = None,
+    persist_snapshot: bool = True,
 ) -> dict[str, Any]:
     """Read routed Phase 2 facts and provenance, without constructing a provider."""
     profile = s.get(EconomicsProfile, config.profile_id) if config.profile_id else None
@@ -73,7 +74,14 @@ def economics_adapter(
                     config.effective_end and today > config.effective_end
                 ):
                     continue
-                group = economics_adapter(s, workspace, config, now, _timezone=zone)
+                group = economics_adapter(
+                    s,
+                    workspace,
+                    config,
+                    now,
+                    _timezone=zone,
+                    persist_snapshot=persist_snapshot,
+                )
                 selected_rows = []
                 for row in group["rows"]:
                     p = (
@@ -170,6 +178,7 @@ def economics_adapter(
         selected=config.profile_id,
         now=now,
         limit=2000,
+        persist_snapshot=persist_snapshot,
     )
     sources = {r["canonical_id"]: r for r in table["sources"]}
     account_map, entity_map = identity_maps(s, workspace)
@@ -469,7 +478,13 @@ def profile_zone(s: Session, config: SmartRuleInput) -> str:
 
 
 def action_context(
-    s: Session, workspace: str, fact: dict, rule_id: str, now: datetime
+    s: Session,
+    workspace: str,
+    fact: dict,
+    rule_id: str,
+    now: datetime,
+    *,
+    current_request_id: str | None = None,
 ) -> dict:
     """Only durable READ/verified ActionLog evidence; a simulation never proves ownership."""
     from services.actions.manual import IN_FLIGHT, snapshot
@@ -534,6 +549,7 @@ def action_context(
         if last
         else None
     )
+    # A validated pilot excludes only its own durable claim, never another action.
     unresolved = bool(
         s.scalar(
             select(ActionRequest.id)
@@ -541,6 +557,7 @@ def action_context(
                 ActionRequest.workspace_id == workspace,
                 ActionRequest.entity_id == entity.id,
                 ActionRequest.status.in_(IN_FLIGHT),
+                ActionRequest.id != current_request_id if current_request_id else True,
             )
             .limit(1)
         )
@@ -589,12 +606,16 @@ def assess_rule(
     config: SmartRuleInput,
     data: dict,
     now: datetime,
+    *,
+    current_request_id: str | None = None,
 ) -> list[dict]:
     from services.sync.engine import aware
 
     result = []
     for fact in data["rows"]:
-        context = action_context(s, workspace, fact, rule.id, now)
+        context = action_context(
+            s, workspace, fact, rule.id, now, current_request_id=current_request_id
+        )
         profile = (
             s.get(EconomicsProfile, fact.get("profile_id"))
             if fact.get("profile_id")
@@ -676,8 +697,13 @@ def assess_scope(
     config: SmartRuleInput,
     data: dict,
     now: datetime,
+    *,
+    current_request_id: str | None = None,
+    persist_snapshot: bool = True,
 ) -> list[dict]:
-    own = assess_rule(s, workspace, rule, config, data, now)
+    own = assess_rule(
+        s, workspace, rule, config, data, now, current_request_id=current_request_id
+    )
     grouped = {}
     for item in own:
         grouped.setdefault(item["id"], []).append(item)
@@ -706,12 +732,22 @@ def assess_scope(
         elif monotonic() - started > MAX_SECONDS:
             raise HTTPException(422, "CONFLICT_EVALUATION_TIME_LIMIT")
         try:
-            peer_data = economics_adapter(s, workspace, cfg, now)
+            peer_data = economics_adapter(
+                s, workspace, cfg, now, persist_snapshot=persist_snapshot
+            )
         except HTTPException as error:
             if error.detail == "RULE_OUTSIDE_EFFECTIVE_DATES":
                 continue
             raise
-        for item in assess_rule(s, workspace, peer, cfg, peer_data, now):
+        for item in assess_rule(
+            s,
+            workspace,
+            peer,
+            cfg,
+            peer_data,
+            now,
+            current_request_id=current_request_id,
+        ):
             if item["id"] in grouped:
                 grouped[item["id"]].append(item)
     for values in grouped.values():
@@ -808,8 +844,21 @@ def check_preparation(
     entity_id: str,
     operation: str,
     now: datetime,
+    *,
+    current_request_id: str | None = None,
 ) -> dict:
     """Recompute current conditions/conflicts locally before entering ActionEngine."""
+    if current_request_id:
+        current = s.get(ActionRequest, current_request_id)
+        source = (current.provenance.get("rule_source") or {}) if current else {}
+        if (
+            not current
+            or current.workspace_id != workspace
+            or current.entity_id != entity_id
+            or current.action != operation
+            or source.get("simulation_id") != run.id
+        ):
+            raise HTTPException(409, "RULE_CURRENT_REQUEST_MISMATCH")
     rule = get_rule(s, workspace, run.rule_id)
     if rule.revision != run.revision or rule.status == "SMART_ARCHIVED":
         raise HTTPException(409, "RULE_VERSION_CONFLICT")
@@ -820,10 +869,19 @@ def check_preparation(
         or (config.effective_end and today > config.effective_end)
     ):
         raise HTTPException(409, "RULE_OUTSIDE_EFFECTIVE_DATES")
-    data = economics_adapter(s, workspace, config, now)
+    data = economics_adapter(s, workspace, config, now, persist_snapshot=False)
     cards = [
         c
-        for c in assess_scope(s, workspace, rule, config, data, now)
+        for c in assess_scope(
+            s,
+            workspace,
+            rule,
+            config,
+            data,
+            now,
+            current_request_id=current_request_id,
+            persist_snapshot=False,
+        )
         if c.get("source_entity_id") == entity_id
     ]
     wanted = "WOULD_ENABLE" if operation == "ENABLE_AD" else "WOULD_PAUSE"
