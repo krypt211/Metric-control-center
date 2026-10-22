@@ -119,7 +119,6 @@ async def metricflow_sync(manager,job,start,end,schema=None):
             confirm_accounts(s,manager.workspace)
             if schema.kind=="ad" and schema.config.get("endpoint","insights")=="insights":
                 from services.sync.schema import field
-                raw=s.scalar(select(RawSnapshot).where(RawSnapshot.run_id==result["run_id"]).order_by(RawSnapshot.page).limit(1))
                 source_timestamp=None
                 if schema.config.get("snapshot_version_path"):
                     for capture in s.scalars(select(RawSnapshot).where(RawSnapshot.run_id==result["run_id"])):
