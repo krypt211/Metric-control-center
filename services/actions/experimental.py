@@ -19,6 +19,7 @@ from pydantic import (
 from sqlalchemy import select
 
 from services.actions.factory import checked_write_state, credential_digest
+from services.actions.manual import prepare as prepare_manual
 from services.actions.manual import snapshot
 from services.actions.manual_schema import ManualDraftInput
 from services.actions.rule_pilot import (
@@ -481,22 +482,24 @@ async def prepare_experiment(
         )
 
         review_ad_enable_for_group(engine, actor, body.previous_ad_request_id, baseline)
-    draft = engine.prepare_manual(
-        actor,
-        ManualDraftInput(
-            entity_id=body.entity_id,
-            account_id=account_local_id,
-            meta_ad_id=current["external_id"],
-            entity_level=current["entity_level"],
-            provider="metricflow",
-            operation=body.operation,
-            expected_status=own_status(baseline),
-            simulation_id=body.simulation_id,
-            reason="Experimental pilot preparation only; WRITE ID is unverified",
-        ),
-        "experimental-" + str(uuid4()),
-    )
     with engine.sessions.begin() as s:
+        draft = prepare_manual(
+            engine,
+            actor,
+            ManualDraftInput(
+                entity_id=body.entity_id,
+                account_id=account_local_id,
+                meta_ad_id=current["external_id"],
+                entity_level=current["entity_level"],
+                provider="metricflow",
+                operation=body.operation,
+                expected_status=own_status(baseline),
+                simulation_id=body.simulation_id,
+                reason="Experimental pilot preparation only; WRITE ID is unverified",
+            ),
+            "experimental-" + str(uuid4()),
+            session=s,
+        )
         row = engine._locked_manual_row(s, actor, draft["id"])
         if body.simulation_id and (
             row.status != "DRAFT"

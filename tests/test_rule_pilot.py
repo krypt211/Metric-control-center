@@ -37,6 +37,7 @@ from services.economics.store import create_profile
 from services.providers.contracts import WriteDisabled
 from services.storage.models import (
     ActionExecution,
+    ActionLog,
     ActionRequest,
     EntityCurrentState,
     Rule,
@@ -305,3 +306,36 @@ def test_rule_preparation_cannot_replace_existing_bound_evidence(fixture, rule_c
     with sf() as s:
         assert s.get(ActionRequest, card["request_id"]).provenance == original
         assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
+
+
+def test_ineligible_rule_preparation_leaves_no_draft(fixture, rule_case):
+    _engine, sf, _vault, _clock = fixture
+    rule_case[1]["rows"][0]["eligible_for_rule_evaluation"] = False
+    with pytest.raises(WriteDisabled, match="RULE_PILOT_EVIDENCE_HELD"):
+        prepare_rule(fixture, rule_case)
+    with sf() as s:
+        assert s.scalar(select(func.count()).select_from(ActionRequest)) == 0
+        assert s.scalar(select(func.count()).select_from(ActionExecution)) == 0
+
+
+def test_failed_proof_rolls_back_draft_and_allows_retry(
+    fixture, rule_case, monkeypatch
+):
+    _engine, sf, _vault, _clock = fixture
+    from services.actions import experimental
+
+    original = experimental.bind_rule_source
+
+    def fail_proof(*args, **kwargs):
+        raise RuntimeError("SYNTHETIC_PROOF_FAILURE")
+
+    monkeypatch.setattr(experimental, "bind_rule_source", fail_proof)
+    with pytest.raises(RuntimeError, match="SYNTHETIC_PROOF_FAILURE"):
+        prepare_rule(fixture, rule_case)
+    with sf() as s:
+        assert s.scalar(select(func.count()).select_from(ActionRequest)) == 0
+        assert s.scalar(select(func.count()).select_from(ActionLog)) == 0
+    monkeypatch.setattr(experimental, "bind_rule_source", original)
+    card, calls = prepare_rule(fixture, rule_case)
+    assert card["status"] == "PREPARED_NO_POST_AUTHORIZATION"
+    assert len(calls) == 3 and all(c.method == "GET" for c in calls)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from contextlib import nullcontext
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -340,7 +341,10 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
     }
 
 
-def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
+def prepare(
+    engine, actor: dict, command: ManualDraftInput, key: str, *, session=None
+) -> dict:
+    """Prepare locally; an injected transaction remains owned by its caller."""
     if not key or len(key) > 128 or any(ord(c) < 33 for c in key):
         raise HTTPException(422, "INVALID_IDEMPOTENCY_KEY")
     fingerprint_input = command.model_dump()
@@ -351,7 +355,7 @@ def prepare(engine, actor: dict, command: ManualDraftInput, key: str) -> dict:
     ).hexdigest()
     now = engine.clock()
     try:
-        with engine.sessions.begin() as s:
+        with (nullcontext(session) if session is not None else engine.sessions.begin()) as s:
             from services.economics.store import lock
 
             lock(s, actor["workspace"])

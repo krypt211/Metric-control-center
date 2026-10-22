@@ -119,9 +119,12 @@ Implementation status: DEPLOYED / LOCAL AND MOCK VALIDATED.
 Rule LIVE execution status: NOT AUTHORIZED / NOT EXECUTED.
 
 The current saved Creo 03 simulation is KEEP, not a positive PAUSE signal.
-Its source attribution/action eligibility is also unconfirmed; this adapter
-still emits action_eligibility=false. This stage adds the execution admission
-but does not supply the missing production financial-evidence contract. Positive
+Its source attribution and Phase 2 evidence eligibility are unconfirmed.
+The action_eligibility=false flag is an intentional DRY_RUN marker, not an
+adapter defect or an execution-admission predicate. The pilot uses the separate
+safe_to_consider_for_future_action field, recomputed from current evidence.
+This stage adds execution admission but does not supply the missing production
+financial-evidence contract. Positive
 mock fixtures therefore do not prove a currently eligible production candidate.
 The existing pilot also requires both parents to be PAUSED; the last manual
 confirmation had the group enabled and campaign disabled. That prior observation
@@ -132,3 +135,46 @@ Next controlled step requires a genuine positive eligible rule decision under
 an agreed test rule, current eligible parent/status evidence, then a new exact
 request authorization. Do not change thresholds, fabricate attribution or reuse
 any of the three consumed manual authorizations to manufacture readiness.
+
+
+## Atomic preparation follow-up
+
+A regression reproduced a persisted orphan DRAFT when a saved WOULD_PAUSE was
+recomputed with ineligible financial evidence. Experimental preparation previously
+committed the manual draft before binding/revalidating its evidence. The later
+failure rolled back the proof transaction only, leaving a pending-action conflict.
+
+Manual preparation now accepts an internal caller-owned Session; ordinary callers
+still own a fresh transaction as before. Experimental preparation creates the
+draft and evidence in one transaction. Any binding/proof failure rolls back the
+new draft and its action log. Existing commands and consumed permits are not
+removed. External READs and quota accounting remain outside the transaction;
+failed preparation must not erase HTTP attempts or quota consumption.
+
+Regression coverage checks ineligible evidence, injected proof failure, empty
+action request/log tables after rollback, and successful preparation on retry.
+The isolated PostgreSQL role check also verifies no residual draft/log after
+refusal and then executes the normal successful path on mock transport only.
+
+Current saved simulation 500366ca-94d1-407d-bc81-b0945f08e448 was read from the
+local database without resimulation or provider calls. It remains rule revision 2,
+KEEP, eligible_for_rule_evaluation=false, safe_to_consider_for_future_action=false,
+with ATTRIBUTION_UNVERIFIED and PHASE2_EVIDENCE_NOT_ELIGIBLE. No rule/profile/data
+or eligibility flag was modified. No new user authorization was recorded.
+
+Transaction semantics verified against SQLAlchemy 2.0 official documentation:
+https://docs.sqlalchemy.org/en/20/orm/session_transaction.html
+(sessionmaker.begin commits only on success, rolls back on an exception).
+
+Atomic follow-up validation: 216 tests and 14 subtests PASS in 306.39 seconds;
+this is a targeted regression run, not an additional set of unique tests on top
+of the earlier 319. The new refusal test failed before the fix (1 residual DRAFT)
+and passed after it. Ruff and secret scan PASS. Isolated PostgreSQL checks PASS,
+including failed_preparation_rolled_back=true, excess privilege checks and mock
+execution; no real provider requests. Backend and Credential Manager deployed
+with metric-control-center-rule-atomic-20261022:prepared. Runtime probes PASS;
+all 14 protected table digests, environment hash and other five service identities
+remain unchanged. No new grants were required. Advertising executions remain 3;
+new advertising WRITE requests = 0. Frontend is unchanged; no browser test claimed.
+Evidence: .tools/rule-atomic-20261022/ and atomic-regressions.txt in the prior
+rule-pilot evidence folder. No production migration or data deletion performed.

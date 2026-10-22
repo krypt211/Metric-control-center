@@ -38,13 +38,20 @@ from services.automation.smart_store import save
 from services.economics.models import EconomicsEvaluation
 from services.economics.schema import ProfileInput
 from services.economics.store import create_profile
+from services.providers.contracts import WriteDisabled
 from services.providers.integration_models import WriteCredentialState
 from services.storage.credential_permissions import (
     RULE_READ_TABLES,
     grant_credential_access,
 )
 from services.storage.database import database_url, make_engine
-from services.storage.models import ActionExecution, Base, DailyMetric
+from services.storage.models import (
+    ActionExecution,
+    ActionLog,
+    ActionRequest,
+    Base,
+    DailyMetric,
+)
 
 
 def main():
@@ -245,21 +252,51 @@ def main():
                 with patch.dict(
                     os.environ, {"ACTIONS_ENABLED": "false", "LOCAL_READ_ONLY": "true"}
                 ):
-                    card = asyncio.run(
-                        prepare_experiment(
-                            engine,
-                            ACTOR,
-                            ExperimentalPrepareInput(
-                                entity_id="ad",
-                                simulation_id=run["id"],
-                                credential_revision=1,
-                                management_confirmed=True,
-                                statement="PREPARE_EXPERIMENT_ONLY_NO_POST",
-                            ),
-                            vault=vault,
-                            transport=httpx.MockTransport(respond),
+
+                    def prepare_card():
+                        return asyncio.run(
+                            prepare_experiment(
+                                engine,
+                                ACTOR,
+                                ExperimentalPrepareInput(
+                                    entity_id="ad",
+                                    simulation_id=run["id"],
+                                    credential_revision=1,
+                                    management_confirmed=True,
+                                    statement="PREPARE_EXPERIMENT_ONLY_NO_POST",
+                                ),
+                                vault=vault,
+                                transport=httpx.MockTransport(respond),
+                            )
                         )
-                    )
+
+                    with sf() as s:
+                        before_requests = s.scalar(
+                            select(func.count()).select_from(ActionRequest)
+                        )
+                        before_logs = s.scalar(
+                            select(func.count()).select_from(ActionLog)
+                        )
+                    row["eligible_for_rule_evaluation"] = False
+                    try:
+                        prepare_card()
+                    except WriteDisabled as error:
+                        assert error.code == "RULE_PILOT_EVIDENCE_HELD"
+                    else:
+                        raise AssertionError("INELIGIBLE_RULE_ACCEPTED")
+                    with sf() as s:
+                        assert (
+                            s.scalar(select(func.count()).select_from(ActionRequest))
+                            == before_requests
+                        )
+                        assert (
+                            s.scalar(select(func.count()).select_from(ActionLog))
+                            == before_logs
+                        )
+                    row["eligible_for_rule_evaluation"] = True
+                    assert calls == ["GET"] * 3
+                    calls.clear()
+                    card = prepare_card()
                     draft = {"id": card["request_id"], "revision": card["revision"]}
                     for event in ("preflight", "confirm"):
                         draft = engine.transition_manual(
@@ -317,6 +354,7 @@ def main():
                 "rule_mock_posts": 1,
                 "provider_requests": 0,
                 "select_only_rule_evaluation": True,
+                "failed_preparation_rolled_back": True,
                 "excess_privilege_checks": 5,
                 "schema_and_role_rolled_back": True,
             }
