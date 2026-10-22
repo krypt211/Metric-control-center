@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from services.actions.reported_spend import POLICY, STRICT
+from services.actions.reported_spend import STATEMENT as SPEND_STATEMENT
 from services.providers.contracts import WriteDisabled
 
 STATEMENT = "AUTHORIZE_ONE_EXPERIMENTAL_RULE_PAUSE_WITH_UNVERIFIED_ID"
@@ -17,6 +20,7 @@ class RulePilotBinding(BaseModel):
 
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     automation_generation: int = Field(ge=0)
+    evidence_policy: Literal["STRICT_FINANCIAL", "CREO03_REPORTED_SPEND15_V1"] = STRICT
 
 
 def require_rule_source(session, row, binding, now: datetime) -> None:
@@ -35,6 +39,7 @@ def require_rule_source(session, row, binding, now: datetime) -> None:
         or row.action != "PAUSE_AD"
         or source.get("operation") != row.action
         or fingerprint(source) != binding.source_sha256
+        or source.get("evidence_policy", STRICT) != binding.evidence_policy
     ):
         raise WriteDisabled("RULE_PILOT_BINDING_CHANGED")
     control = state(session, row.workspace_id)
@@ -57,9 +62,17 @@ def require_rule_source(session, row, binding, now: datetime) -> None:
             row.action,
             now,
             current_request_id=row.id,
+            evidence_policy=binding.evidence_policy,
         )
     except HTTPException:
         raise WriteDisabled("RULE_PILOT_CURRENT_DECISION_HELD") from None
+    if binding.evidence_policy == POLICY:
+        if (
+            card.get("decision_key") != source.get("decision_key")
+            or card.get("reported_spend_test_eligible") is not True
+        ):
+            raise WriteDisabled("RULE_PILOT_SPEND_EVIDENCE_HELD")
+        return
     if (
         card.get("decision_key") != source.get("decision_key")
         or card.get("status") != "WOULD_PAUSE"
@@ -80,6 +93,11 @@ def bind_rule_source(session, row, now: datetime) -> RulePilotBinding | None:
     binding = RulePilotBinding(
         source_sha256=fingerprint(source),
         automation_generation=state(session, row.workspace_id)["generation"],
+        evidence_policy=source.get("evidence_policy", STRICT),
     )
     require_rule_source(session, row, binding, now)
     return binding
+
+
+def authorization_statement(source: dict) -> str:
+    return SPEND_STATEMENT if source.get("evidence_policy") == POLICY else STATEMENT

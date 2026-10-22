@@ -90,13 +90,15 @@ class PilotContract:
     @property
     def authorization_statement(self) -> str:
         from services.actions.experimental import authorization_statement
-        from services.actions.rule_pilot import STATEMENT as RULE_STATEMENT
+        from services.actions.rule_pilot import (
+            authorization_statement as rule_statement,
+        )
 
         with self.sessions() as session:
             row = session.get(ActionRequest, self.request_id)
-            rule_source = bool(row and row.provenance.get("rule_source"))
+            rule_source = row.provenance.get("rule_source") if row else None
         if self.experimental and rule_source:
-            return RULE_STATEMENT
+            return rule_statement(rule_source)
         return (
             authorization_statement(self.operation)
             if self.experimental

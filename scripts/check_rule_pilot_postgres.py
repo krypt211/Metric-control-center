@@ -13,12 +13,15 @@ from uuid import uuid4
 
 import httpx
 from cryptography.fernet import Fernet
+from fastapi import HTTPException
 from psycopg import sql
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import sessionmaker
 
-from scripts.check_controlled_rehearsal_postgres import ACTOR, NOW, seed_rehearsal
+from scripts.check_controlled_rehearsal_postgres import ACTOR as BASE_ACTOR
+from scripts.check_controlled_rehearsal_postgres import NOW, TOKEN, seed_rehearsal
 from scripts.check_pilot_credential_permissions import denied
+from services.actions import reported_spend as spend
 from services.actions.engine import ActionEngine, ActionPolicy
 from services.actions.experimental import ExperimentalPrepareInput, prepare_experiment
 from services.actions.pilot import (
@@ -40,6 +43,11 @@ from services.economics.schema import ProfileInput
 from services.economics.store import create_profile
 from services.providers.contracts import WriteDisabled
 from services.providers.integration_models import WriteCredentialState
+from services.providers.models import (
+    ProviderAccountMapping,
+    ProviderConnection,
+    ProviderRoutingSetting,
+)
 from services.storage.credential_permissions import (
     RULE_READ_TABLES,
     grant_credential_access,
@@ -49,18 +57,34 @@ from services.storage.models import (
     ActionExecution,
     ActionLog,
     ActionRequest,
+    AdAccount,
     Base,
     DailyMetric,
+    Entity,
+    User,
 )
 
 
-def main():
+def main(*, reported_spend_test: bool = False):
+    actor = (
+        {**BASE_ACTOR, "workspace": "default"} if reported_spend_test else BASE_ACTOR
+    )
+    zone = "America/Los_Angeles" if reported_spend_test else "Europe/Moscow"
+    ids = (
+        (spend.CAMPAIGN, spend.ADSET, spend.AD)
+        if reported_spend_test
+        else ("1001", "1002", "1003")
+    )
     if not database_url().database.startswith("mcc_integrations_"):
         raise RuntimeError("ISOLATED_DATABASE_REQUIRED")
     db = make_engine()
     schema, role = "rule_pilot_" + uuid4().hex, "rule_pilot_" + uuid4().hex
     vault = WriteCredentialVault(Path("/tmp/unused-rule-test"), Fernet.generate_key())
-    first, last = (NOW - timedelta(days=8)).date(), (NOW - timedelta(days=2)).date()
+    first, last = (
+        (spend.DAY, spend.DAY)
+        if reported_spend_test
+        else ((NOW - timedelta(days=8)).date(), (NOW - timedelta(days=2)).date())
+    )
     with db.connect() as connection:
         outer = connection.begin()
         try:
@@ -85,17 +109,45 @@ def main():
                 join_transaction_mode="create_savepoint",
             )
             seed_rehearsal(sf, vault, NOW)
+            if reported_spend_test:
+                with sf.begin() as s:
+                    for model in (
+                        User,
+                        AdAccount,
+                        ProviderAccountMapping,
+                        ProviderConnection,
+                        ProviderRoutingSetting,
+                        WriteCredentialState,
+                    ):
+                        s.execute(
+                            update(model)
+                            .where(model.workspace_id == BASE_ACTOR["workspace"])
+                            .values(workspace_id=actor["workspace"])
+                        )
+                    s.get(
+                        WriteCredentialState, actor["workspace"]
+                    ).encrypted = vault.seal(actor["workspace"], TOKEN, 1).decode()
+                    account = s.get(AdAccount, "account")
+                    account.external_id = spend.ACCOUNT
+                    account.timezone = zone
+                    s.get(
+                        ProviderAccountMapping, "account"
+                    ).meta_account_id = spend.ACCOUNT
+                    for key, external in zip(
+                        ("campaign", "adset", "ad"), ids, strict=True
+                    ):
+                        s.get(Entity, key).external_id = external
             with sf.begin() as s:
-                s.get(WriteCredentialState, ACTOR["workspace"]).scopes = [
+                s.get(WriteCredentialState, actor["workspace"]).scopes = [
                     "entities:write",
                     "campaigns:read",
                 ]
                 profile = create_profile(
                     s,
-                    ACTOR,
+                    actor,
                     ProfileInput(
                         name="Synthetic verified IT",
-                        timezone="Europe/Moscow",
+                        timezone=zone,
                         payout="52",
                         currency="USD",
                         planned_approval_rate="0.2",
@@ -105,7 +157,7 @@ def main():
                 )
                 rule = save(
                     s,
-                    ACTOR,
+                    actor,
                     SmartRuleInput.model_validate(
                         {
                             "name": "Synthetic rule admission",
@@ -113,26 +165,50 @@ def main():
                             "period": "custom",
                             "start": str(first),
                             "end": str(last),
+                            "selection": {
+                                "target_mode": True,
+                                "targets": [
+                                    {
+                                        "scope_type": "AD",
+                                        "scope_id": "ad",
+                                        "account_id": "account",
+                                        "provider": "metricflow",
+                                    }
+                                ],
+                            }
+                            if reported_spend_test
+                            else {},
                             "expression": {
                                 "children": [
-                                    {"kind": "condition", "type": "CPL_ABOVE_LIMIT"}
+                                    {
+                                        "type": "SPEND_THRESHOLD",
+                                        "source": "actual",
+                                        "limit": "custom",
+                                        "value": "15",
+                                        "currency": "USD",
+                                    }
                                 ]
+                                if reported_spend_test
+                                else [{"kind": "condition", "type": "CPL_ABOVE_LIMIT"}]
                             },
                         }
                     ),
                 )
-                peer = dict(rule["definition"])
-                peer.update(
-                    name="Synthetic readonly peer", enabled=True, action="NOTIFY_ONLY"
-                )
-                save(s, ACTOR, SmartRuleInput.model_validate(peer))
+                if not reported_spend_test:
+                    peer = dict(rule["definition"])
+                    peer.update(
+                        name="Synthetic readonly peer",
+                        enabled=True,
+                        action="NOTIFY_ONLY",
+                    )
+                    save(s, actor, SmartRuleInput.model_validate(peer))
                 s.add(
                     DailyMetric(
                         entity_id="ad",
                         day=last,
                         source="metricflow",
                         currency="USD",
-                        timezone="Europe/Moscow",
+                        timezone=zone,
                         spend=90,
                         leads=10,
                         observed_at=NOW,
@@ -161,7 +237,7 @@ def main():
                 before = s.scalar(select(func.count()).select_from(EconomicsEvaluation))
                 data = economics_adapter(
                     s,
-                    ACTOR["workspace"],
+                    actor["workspace"],
                     SmartRuleInput.model_validate(rule["definition"]),
                     NOW,
                     persist_snapshot=False,
@@ -170,7 +246,7 @@ def main():
 
                 assess_scope(
                     s,
-                    ACTOR["workspace"],
+                    actor["workspace"],
                     s.get(Rule, rule["id"]),
                     SmartRuleInput.model_validate(rule["definition"]),
                     data,
@@ -186,30 +262,34 @@ def main():
                 source_stale=False,
                 window_complete=True,
                 source_window_status="complete",
-                source_attribution={"action_attribution_windows": ["7d_click"]},
-                eligible_for_rule_evaluation=True,
+                source_attribution=None
+                if reported_spend_test
+                else {"action_attribution_windows": ["7d_click"]},
+                eligible_for_rule_evaluation=not reported_spend_test,
                 actual_cpl="9",
                 maximum_cpl="8.81355932",
             )
+            if reported_spend_test:
+                row.update(spend="16.15", evaluation_timezone=zone)
             engine = ActionEngine(sf, ActionPolicy(enabled=True), clock=lambda: NOW)
             calls = []
             payloads = {
                 "campaigns": {
-                    "id": "1001",
+                    "id": ids[0],
                     "status": "PAUSED",
                     "effective_status": "PAUSED",
                 },
                 "adsets": {
-                    "id": "1002",
-                    "campaign_id": "1001",
-                    "parent_id": "1001",
+                    "id": ids[1],
+                    "campaign_id": ids[0],
+                    "parent_id": ids[0],
                     "status": "PAUSED",
                     "effective_status": "PAUSED",
                 },
                 "ads": {
-                    "id": "1003",
-                    "campaign_id": "1001",
-                    "parent_id": "1002",
+                    "id": ids[2],
+                    "campaign_id": ids[0],
+                    "parent_id": ids[1],
                     "status": "ACTIVE",
                     "effective_status": "ADSET_PAUSED",
                 },
@@ -230,10 +310,10 @@ def main():
                             },
                         },
                     )
-                assert request.url.path == "/api/v1/entities/1003/pause"
+                assert request.url.path == f"/api/v1/entities/{ids[2]}/pause"
                 assert json.loads(request.content) == {"level": "ad"}
                 return httpx.Response(
-                    200, json={"success": True, "entity_id": "1003", "message": "mock"}
+                    200, json={"success": True, "entity_id": ids[2], "message": "mock"}
                 )
 
             with patch(
@@ -243,12 +323,14 @@ def main():
                 # Simulations are prepared by the app role, never by the credential role.
                 connection.execute(text("RESET ROLE"))
                 with sf.begin() as s:
-                    run = simulate(s, ACTOR, rule["id"], 1, now=NOW)
+                    run = simulate(s, actor, rule["id"], 1, now=NOW)
                 with connection.connection.driver_connection.cursor() as cursor:
                     cursor.execute(
                         sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role))
                     )
-                assert run["rows"][0]["safe_to_consider_for_future_action"]
+                assert run["rows"][0]["safe_to_consider_for_future_action"] is (
+                    not reported_spend_test
+                )
                 with patch.dict(
                     os.environ, {"ACTIONS_ENABLED": "false", "LOCAL_READ_ONLY": "true"}
                 ):
@@ -257,13 +339,21 @@ def main():
                         return asyncio.run(
                             prepare_experiment(
                                 engine,
-                                ACTOR,
+                                actor,
                                 ExperimentalPrepareInput(
                                     entity_id="ad",
                                     simulation_id=run["id"],
                                     credential_revision=1,
                                     management_confirmed=True,
                                     statement="PREPARE_EXPERIMENT_ONLY_NO_POST",
+                                    **(
+                                        {
+                                            "rule_evidence_policy": spend.POLICY,
+                                            "reported_spend_acknowledgement": spend.ACK,
+                                        }
+                                        if reported_spend_test
+                                        else {}
+                                    ),
                                 ),
                                 vault=vault,
                                 transport=httpx.MockTransport(respond),
@@ -277,11 +367,17 @@ def main():
                         before_logs = s.scalar(
                             select(func.count()).select_from(ActionLog)
                         )
-                    row["eligible_for_rule_evaluation"] = False
+                    if reported_spend_test:
+                        row["source_stale"] = True
+                    else:
+                        row["eligible_for_rule_evaluation"] = False
                     try:
                         prepare_card()
-                    except WriteDisabled as error:
-                        assert error.code == "RULE_PILOT_EVIDENCE_HELD"
+                    except (WriteDisabled, HTTPException) as error:
+                        if reported_spend_test:
+                            assert error.detail == "REPORTED_SPEND_TEST_EVIDENCE_HELD"
+                        else:
+                            assert error.code == "RULE_PILOT_EVIDENCE_HELD"
                     else:
                         raise AssertionError("INELIGIBLE_RULE_ACCEPTED")
                     with sf() as s:
@@ -293,37 +389,42 @@ def main():
                             s.scalar(select(func.count()).select_from(ActionLog))
                             == before_logs
                         )
-                    row["eligible_for_rule_evaluation"] = True
+                    row["eligible_for_rule_evaluation"] = not reported_spend_test
+                    row["source_stale"] = False
                     assert calls == ["GET"] * 3
                     calls.clear()
                     card = prepare_card()
                     draft = {"id": card["request_id"], "revision": card["revision"]}
                     for event in ("preflight", "confirm"):
                         draft = engine.transition_manual(
-                            ACTOR, draft["id"], event, draft["revision"]
+                            actor, draft["id"], event, draft["revision"]
                         )
                 with patch.dict(
                     os.environ, {"ACTIONS_ENABLED": "true", "LOCAL_READ_ONLY": "false"}
                 ):
                     permit = authorize_pilot(
                         engine,
-                        ACTOR,
+                        actor,
                         draft["id"],
                         PilotAuthorizationInput(
                             revision=draft["revision"],
                             credential_revision=1,
-                            account_id="act_100",
-                            entity_id="1003",
+                            account_id=spend.ACCOUNT
+                            if reported_spend_test
+                            else "act_100",
+                            entity_id=ids[2],
                             operation="PAUSE_AD",
                             expected_status="ACTIVE",
-                            statement=STATEMENT,
+                            statement=spend.STATEMENT
+                            if reported_spend_test
+                            else STATEMENT,
                         ),
                     )
                     assert (
                         asyncio.run(
                             execute_pilot(
                                 engine,
-                                ACTOR,
+                                actor,
                                 draft["id"],
                                 permit["revision"],
                                 vault=vault,
@@ -351,6 +452,7 @@ def main():
         json.dumps(
             {
                 "result": "PASS",
+                "reported_spend_test": reported_spend_test,
                 "rule_mock_posts": 1,
                 "provider_requests": 0,
                 "select_only_rule_evaluation": True,

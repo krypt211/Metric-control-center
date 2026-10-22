@@ -22,13 +22,14 @@ from services.actions.factory import checked_write_state, credential_digest
 from services.actions.manual import prepare as prepare_manual
 from services.actions.manual import snapshot
 from services.actions.manual_schema import ManualDraftInput
-from services.actions.rule_pilot import (
-    STATEMENT as RULE_STATEMENT,
-)
+from services.actions.reported_spend import ACK, POLICY, STRICT
 from services.actions.rule_pilot import (
     RulePilotBinding,
     bind_rule_source,
     require_rule_source,
+)
+from services.actions.rule_pilot import (
+    authorization_statement as rule_authorization_statement,
 )
 from services.metricflow.errors import MetricFlowError, RateLimitExceeded
 from services.metricflow.reader import MetricFlowConnector
@@ -70,6 +71,12 @@ class ExperimentalPrepareInput(StrictModel):
     statement: Literal["PREPARE_EXPERIMENT_ONLY_NO_POST"]
     operation: Literal["PAUSE_AD", "ENABLE_AD", "ENABLE_ADSET"] = "PAUSE_AD"
     simulation_id: str | None = Field(default=None, min_length=1, max_length=36)
+    rule_evidence_policy: Literal["STRICT_FINANCIAL", "CREO03_REPORTED_SPEND15_V1"] = (
+        STRICT
+    )
+    reported_spend_acknowledgement: (
+        Literal["PREPARE_ONE_CREO03_SPEND_TEST_WITHOUT_FINANCIAL_CERTIFICATION"] | None
+    ) = None
     previous_pause_request_id: str | None = Field(
         default=None, min_length=1, max_length=36
     )
@@ -80,6 +87,17 @@ class ExperimentalPrepareInput(StrictModel):
 
     @model_validator(mode="after")
     def require_previous_pause(self) -> Self:
+        if self.rule_evidence_policy == POLICY:
+            if (
+                not self.simulation_id
+                or self.operation != "PAUSE_AD"
+                or self.reported_spend_acknowledgement != ACK
+            ):
+                raise ValueError(
+                    "Explicit spend-test preparation acknowledgment required"
+                )
+        elif self.reported_spend_acknowledgement is not None:
+            raise ValueError("Spend acknowledgment requires the spend-test policy")
         if self.simulation_id and self.operation != "PAUSE_AD":
             raise ValueError("Rule pilot supports only one PAUSE_AD")
         if (self.operation == "ENABLE_AD") != bool(self.previous_pause_request_id):
@@ -414,6 +432,23 @@ async def prepare_experiment(
             or account.provider != "metricflow"
         ):
             raise WriteDisabled("EXPERIMENTAL_SINGLE_AD_REQUIRED")
+        if body.rule_evidence_policy == POLICY:
+            from services.actions.reported_spend import require_config
+            from services.automation.smart_models import RuleSimulation
+            from services.automation.smart_schema import SmartRuleInput
+            from services.storage.models import Rule
+
+            run = s.get(RuleSimulation, body.simulation_id)
+            rule = (
+                s.get(Rule, run.rule_id)
+                if run and run.workspace_id == actor["workspace"]
+                else None
+            )
+            if not rule or rule.revision != run.revision:
+                raise WriteDisabled("RULE_PILOT_SIMULATION_CHANGED")
+            require_config(
+                s, rule, SmartRuleInput.model_validate(rule.payload), entity.id
+            )
         current = snapshot(s, entity, account)
         if not current["hierarchy_confirmed"] or not current["account_confirmed"]:
             raise WriteDisabled("EXPERIMENTAL_IDENTITY_UNCONFIRMED")
@@ -499,6 +534,7 @@ async def prepare_experiment(
             ),
             "experimental-" + str(uuid4()),
             session=s,
+            rule_evidence_policy=body.rule_evidence_policy,
         )
         row = engine._locked_manual_row(s, actor, draft["id"])
         if body.simulation_id and (
@@ -571,11 +607,13 @@ async def prepare_experiment(
             "max_post_attempts": 1,
             "max_prepost_get_attempts": 3,
             "authorization_statement_required": (
-                RULE_STATEMENT
+                rule_authorization_statement(row.provenance["rule_source"])
                 if review.rule_binding
                 else authorization_statement(body.operation)
             ),
             "rule_source": row.provenance.get("rule_source"),
+            "rule_evidence_policy": body.rule_evidence_policy,
+            "reported_spend_test_only": body.rule_evidence_policy == POLICY,
             "operation": body.operation,
             "previous_pause": previous_pause,
             "advertising_write_requests": 0,

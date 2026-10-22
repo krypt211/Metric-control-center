@@ -1,7 +1,9 @@
 # Creo 03: next LIVE rule test decision - 2026-10-22
 
-Status: USER POLICY DECISION REQUIRED. No advertising authorization requested
-or consumed by preparing this document. No new pilot, rule or permit created.
+Decision update: the user agreed to option A. Implementation, tests and local
+rule preparation are complete; see [spend-pilot result](REPORTED_SPEND_SINGLE_PAUSE_2026-10-22.md).
+The next manual checkpoint is the enabled group switch. No advertising POST
+authorization was provided. The text below records the original decision proposal.
 
 ## Completed implementation
 

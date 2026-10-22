@@ -846,6 +846,7 @@ def check_preparation(
     now: datetime,
     *,
     current_request_id: str | None = None,
+    evidence_policy: str = "STRICT_FINANCIAL",
 ) -> dict:
     """Recompute current conditions/conflicts locally before entering ActionEngine."""
     if current_request_id:
@@ -884,6 +885,20 @@ def check_preparation(
         )
         if c.get("source_entity_id") == entity_id
     ]
+    if evidence_policy != "STRICT_FINANCIAL":
+        from services.actions.reported_spend import POLICY, require_card
+
+        if evidence_policy != POLICY or operation != "PAUSE_AD" or len(cards) != 1:
+            raise HTTPException(409, "RULE_EVIDENCE_POLICY_INVALID")
+        return require_card(
+            s,
+            rule,
+            config,
+            entity_id,
+            cards[0],
+            now,
+            current_request_id=current_request_id,
+        )
     wanted = "WOULD_ENABLE" if operation == "ENABLE_AD" else "WOULD_PAUSE"
     if len(cards) != 1 or cards[0]["status"] != wanted or config.action != operation:
         raise HTTPException(409, "RULE_CURRENT_DECISION_HELD")

@@ -314,6 +314,7 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
                 checked = check_preparation(
                     s, row.workspace_id, sim, row.entity_id, row.action, now,
                     current_request_id=row.id,
+                    evidence_policy=source.get("evidence_policy", "STRICT_FINANCIAL"),
                 )
                 if checked["decision_key"] != source.get("decision_key"):
                     failures.append("RULE_DECISION_CHANGED_REEVALUATE")
@@ -342,7 +343,8 @@ def preflight(engine, s, row: ActionRequest, actor: dict, now: datetime) -> dict
 
 
 def prepare(
-    engine, actor: dict, command: ManualDraftInput, key: str, *, session=None
+    engine, actor: dict, command: ManualDraftInput, key: str, *, session=None,
+    rule_evidence_policy: str = "STRICT_FINANCIAL",
 ) -> dict:
     """Prepare locally; an injected transaction remains owned by its caller."""
     if not key or len(key) > 128 or any(ord(c) < 33 for c in key):
@@ -423,17 +425,20 @@ def prepare(
                     for r in candidates
                     if r.get("account_id") == captured["canonical_account_id"]
                 ]
-                if len(candidates) != 1 or candidates[0]["status"] != (
-                    "WOULD_ENABLE"
-                    if command.operation == "ENABLE_AD"
-                    else "WOULD_PAUSE"
+                from services.actions.reported_spend import POLICY as SPEND_POLICY
+
+                expected = "WOULD_ENABLE" if command.operation == "ENABLE_AD" else "WOULD_PAUSE"
+                if len(candidates) != 1 or (
+                    rule_evidence_policy != SPEND_POLICY
+                    and candidates[0]["status"] != expected
                 ):
                     raise HTTPException(422, "RULE_RECOMMENDATION_MISMATCH")
                 card = candidates[0]
                 from services.automation.smart_simulation import check_preparation
 
                 checked = check_preparation(
-                    s, actor["workspace"], sim, entity.id, command.operation, now
+                    s, actor["workspace"], sim, entity.id, command.operation, now,
+                    evidence_policy=rule_evidence_policy,
                 )
                 if (
                     not card.get("decision_key")
@@ -466,10 +471,15 @@ def prepare(
                     "rule_revision": sim.revision,
                     "reasons": card.get("reason_codes", []),
                     "expression": card.get("expression"),
-                    "ad_status": card.get("ad_status"),
+                    "ad_status": (
+                        command.expected_status if rule_evidence_policy == SPEND_POLICY
+                        else card.get("ad_status")
+                    ),
                     "provider": card.get("source_provider"),
                     "credential_revision": card.get("credential_revision"),
                 }
+                if rule_evidence_policy == SPEND_POLICY:
+                    rule_source["evidence_policy"] = SPEND_POLICY
             m = {
                 "phase": "4A",
                 "source": "manual",
