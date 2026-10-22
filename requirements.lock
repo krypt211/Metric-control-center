@@ -5,7 +5,7 @@ annotated-types==0.8.0
 anyio==4.15.1
 billiard==4.3.1
 celery==5.6.3
-certifi==2026.7.22
+certifi==2026.10.19
 click==8.5.0
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
@@ -43,4 +43,4 @@ argon2-cffi==25.1.0
 argon2-cffi-bindings==26.1.0
 cffi==2.1.1
 pycparser==3.0
-cryptography==46.0.5
+cryptography==50.0.2
